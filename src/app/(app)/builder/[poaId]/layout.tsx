@@ -27,10 +27,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POA as POASchemaType } from "@/lib/schema"; 
 import { AppHeader } from "@/components/layout/app-header";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -66,8 +67,11 @@ export default function BuilderLayout({
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
-  const { poa, loadPoa, createNew } = usePOA(); // Removed saveCurrentPOA as it's handled by forms
+  const { poa, loadPoa, createNew, isDirty, setIsDirty, saveCurrentPOA } = usePOA();
   const poaId = params.poaId as string;
+
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [nextPath, setNextPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (poaId && typeof window !== 'undefined') {
@@ -75,7 +79,6 @@ export default function BuilderLayout({
         if (!poa || poa.id !== "new") { 
           const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
-          // The dashboard is responsible for adding the summary if created from there.
         }
       } else if (!poa || poa.id !== poaId) {
         const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -94,6 +97,19 @@ export default function BuilderLayout({
     }
   }, [poaId, loadPoa, createNew, poa]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isDirty) {
+        event.preventDefault();
+        event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
 
   function loadFromSummaryOrMock() {
     const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
@@ -180,6 +196,32 @@ export default function BuilderLayout({
     }
   }
 
+  const handleNavigationAttempt = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isDirty) {
+      e.preventDefault();
+      setNextPath(href);
+      setShowUnsavedDialog(true);
+    }
+  };
+
+  const confirmNavigation = (discardChanges: boolean) => {
+    setShowUnsavedDialog(false);
+    if (nextPath) {
+      if (discardChanges) {
+        setIsDirty(false); // User chose to discard
+        router.push(nextPath);
+      } else {
+        // User chose to save, then navigate
+        saveCurrentPOA(); // saveCurrentPOA already sets isDirty to false
+        // Ensure save is complete before navigating (saveCurrentPOA is sync for localStorage)
+        // setTimeout allows state update from save to propagate before route change
+        setTimeout(() => router.push(nextPath), 0);
+      }
+    }
+    setNextPath(null);
+  };
+
+
   if (!poa && poaId !== "new") {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -200,65 +242,87 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-1 min-h-screen p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
-        <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
-          <SidebarHeader className="p-4">
-            <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
-                    <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
-                </Button>
-                <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
-            </div>
-            <div className="mt-4 flex items-center gap-3 h-10">
-              {/* Title elements moved to AppHeader */}
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
-                const itemPath = `/builder/${currentPoaId}/${item.href}`;
-                const isActive = pathname === itemPath || 
-                                 (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || // handles /builder/[poaId] redirecting to header
-                                 (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); // explicit header path
-                
-                return (
-                  <SidebarMenuItem key={item.name}>
-                    <Link href={itemPath} legacyBehavior passHref>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        className="justify-start text-sm"
-                        tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
-                      >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.name}</span>
-                      </SidebarMenuButton>
-                    </Link>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarContent>
-          <SidebarFooter className="p-2 border-t border-sidebar-border">
-             <Link href="/dashboard" legacyBehavior passHref>
-                <SidebarMenuButton
-                    className="justify-start text-sm w-full"
-                    tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
-                >
-                    <Home className="h-5 w-5" />
-                    <span>POA - Inicio</span>
-                </SidebarMenuButton>
-            </Link>
-          </SidebarFooter>
-        </Sidebar>
+      <div className="relative flex min-h-screen flex-col"> {/* Parent for sticky header */}
+        <div className="flex flex-1 p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
+          <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
+            <SidebarHeader className="p-4">
+              <div className="flex items-center justify-between">
+                  <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
+                      <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
+                  </Button>
+                  <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
+              </div>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarMenu>
+                {navItems.map((item) => {
+                  const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
+                  const itemPath = `/builder/${currentPoaId}/${item.href}`;
+                  const isActive = pathname === itemPath || 
+                                  (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || 
+                                  (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); 
+                  
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <Link href={itemPath} passHref legacyBehavior>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          className="justify-start text-sm"
+                          tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
+                        >
+                           <a onClick={(e) => handleNavigationAttempt(e, itemPath)}>
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.name}</span>
+                          </a>
+                        </SidebarMenuButton>
+                      </Link>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter className="p-2 border-t border-sidebar-border">
+              <Link href="/dashboard" legacyBehavior passHref>
+                  <SidebarMenuButton
+                      asChild
+                      className="justify-start text-sm w-full"
+                      tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+                  >
+                    <a onClick={(e) => handleNavigationAttempt(e, '/dashboard')}>
+                      <Home className="h-5 w-5" />
+                      <span>POA - Inicio</span>
+                    </a>
+                  </SidebarMenuButton>
+              </Link>
+            </SidebarFooter>
+          </Sidebar>
 
-        <div className="flex-1 flex flex-col"> {/* Right panel: Removed overflow-hidden */}
-          <AppHeader /> 
-          <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md">
-             {children}
-          </SidebarInset>
+          <div className="flex-1 flex flex-col"> {/* Right panel: Removed overflow-hidden from here */}
+            <AppHeader /> 
+            <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md">
+              {children}
+            </SidebarInset>
+          </div>
         </div>
       </div>
+      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cambios sin Guardar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tienes cambios sin guardar en esta sección. ¿Quieres guardar los cambios antes de salir?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowUnsavedDialog(false); setNextPath(null); }}>Cancelar Navegación</AlertDialogCancel>
+            <Button variant="outline" onClick={() => confirmNavigation(true)}>Descartar Cambios y Salir</Button>
+            <AlertDialogAction onClick={() => confirmNavigation(false)}>Guardar y Salir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarProvider>
   );
 }
+
+    

@@ -7,8 +7,8 @@ import type React from 'react';
 import { createContext, useCallback, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
-const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas"; // Key for the list of POA summaries
-const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_"; // Prefix for individual full POA details
+const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
+const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
 
 interface POAContextType {
   poa: POA | null;
@@ -20,15 +20,18 @@ interface POAContextType {
   deleteActivity: (activityId: string) => void;
   setActivities: (activities: POAActivity[]) => void;
   loadPoa: (poaData: POA) => void;
-  createNew: (id?: string, name?: string) => POA; // Returns the created POA
+  createNew: (id?: string, name?: string) => POA; 
   updatePoaName: (name: string) => void;
   saveCurrentPOA: () => void;
+  isDirty: boolean;
+  setIsDirty: (dirty: boolean) => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
 
 export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [poa, setPoa] = useState<POA | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const { toast } = useToast();
 
   const updatePoaListInStorage = (poaToUpdate: POA) => {
@@ -72,20 +75,22 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaToSave.id}`, JSON.stringify(poaToSave));
-          updatePoaListInStorage(poaToSave); // Update summary list as well
+          updatePoaListInStorage(poaToSave); 
           toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
+          setIsDirty(false); // Reset dirty state after save
         } catch (error) {
           console.error("Error saving POA to localStorage:", error);
           toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
         }
       }
-      return poaToSave; // Return the updated POA with new timestamp
+      return poaToSave; 
     });
   }, [toast]);
 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       return { 
         ...currentPoa, 
         name, 
@@ -98,6 +103,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeader = useCallback((updates: Partial<POAHeader>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
       if (updates.title && updates.title !== currentPoa.name) {
@@ -116,6 +122,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateField = useCallback((fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name'>, value: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       return { ...currentPoa, [fieldName]: value, updatedAt: new Date().toISOString() };
     });
   }, []);
@@ -123,6 +130,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addActivity = useCallback((activity?: Partial<POAActivity>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       const newActivity: POAActivity = {
         id: crypto.randomUUID(),
         number: (currentPoa.activities.length + 1).toString(),
@@ -141,6 +149,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateActivity = useCallback((activityId: string, updates: Partial<POAActivity>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       return {
         ...currentPoa,
         activities: currentPoa.activities.map(act =>
@@ -154,6 +163,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteActivity = useCallback((activityId: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       return {
         ...currentPoa,
         activities: currentPoa.activities.filter(act => act.id !== activityId),
@@ -165,6 +175,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setActivities = useCallback((activities: POAActivity[]) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      setIsDirty(true);
       return { ...currentPoa, activities, updatedAt: new Date().toISOString() };
     });
   }, []);
@@ -180,13 +191,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
     setPoa(loadedPoaInstance);
-    // No immediate save here, saveCurrentPOA will be called explicitly or by builder
+    setIsDirty(false); 
   }, []);
   
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
     const newPoaInstance = createNewPOASchema(id, name);
     setPoa(newPoaInstance);
-    // The new POA is set in state. The Dashboard or BuilderLayout will handle saving it to localStorage.
+    setIsDirty(false); // A new POA starts clean, though it will be saved by Dashboard or BuilderLayout immediately
     return newPoaInstance;
   }, []);
 
@@ -204,8 +215,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createNew,
       updatePoaName,
       saveCurrentPOA,
+      isDirty,
+      setIsDirty,
     }}>
       {children}
     </POAContext.Provider>
   );
 };
+
+    

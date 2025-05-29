@@ -12,34 +12,55 @@ import { generateIntroduction } from "@/ai/flows/generate-introduction";
 import { defineScope } from "@/ai/flows/define-scope";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { BookOpen, Target as ScopeIcon, Save, Wand2 } from "lucide-react"; 
+import { BookOpen, Target as ScopeIcon, Save, Wand2, Undo2 } from "lucide-react"; 
 
 export function IntroductionForm() { 
-  const { poa, updateField, saveCurrentPOA } = usePOA();
+  const { poa, updateField, saveCurrentPOA, setIsDirty } = usePOA();
   const [isEnhancingText, setIsEnhancingText] = useState(false);
   const [isGeneratingAiIntro, setIsGeneratingAiIntro] = useState(false); 
   const [isDefiningScope, setIsDefiningScope] = useState(false);
   const { toast } = useToast();
 
+  const [procedureDescriptionBeforeAi, setProcedureDescriptionBeforeAi] = useState<string | null>(null);
+  const [introductionSuggestionBeforeAi, setIntroductionSuggestionBeforeAi] = useState<string | null>(null);
+  const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
+
+
+  const handleProcedureDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateField("procedureDescription", e.target.value);
+    setProcedureDescriptionBeforeAi(null); 
+  };
+
   const handleAiEnhanceUserIntro = async () => {
     if (!poa?.procedureDescription) return;
+    setProcedureDescriptionBeforeAi(poa.procedureDescription);
     setIsEnhancingText(true);
     try {
-      const result = await enhanceText({ text: poa.procedureDescription });
+      const result = await enhanceText({ text: poa.procedureDescription, context: "introduction" });
       updateField("procedureDescription", result.enhancedText);
       toast({ title: "Introducción Editada con IA", description: "El texto de la introducción ha sido editado por IA." });
     } catch (error) {
       console.error("Error editando introducción con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar la introducción.", variant: "destructive" });
+      setProcedureDescriptionBeforeAi(null);
     }
     setIsEnhancingText(false);
   };
+   const handleUndoProcedureDescriptionAi = () => {
+    if (procedureDescriptionBeforeAi !== null && poa) {
+      updateField("procedureDescription", procedureDescriptionBeforeAi);
+      toast({ title: "Acción Deshecha", description: "Se restauró el texto original de la introducción." });
+      setProcedureDescriptionBeforeAi(null);
+    }
+  };
+
 
   const handleGenerateAiIntroduction = async () => {
     if (!poa?.procedureDescription) {
       toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });
       return;
     }
+    setIntroductionSuggestionBeforeAi(poa.introduction || ""); // Store current suggestion
     setIsGeneratingAiIntro(true);
     try {
       const result = await generateIntroduction({ procedureDescription: poa.procedureDescription });
@@ -48,15 +69,25 @@ export function IntroductionForm() {
     } catch (error) {
       console.error("Error generando sugerencia de introducción:", error);
       toast({ title: "Fallo al Generar Sugerencia", description: "No se pudo generar una sugerencia de introducción.", variant: "destructive" });
+      setIntroductionSuggestionBeforeAi(null);
     }
     setIsGeneratingAiIntro(false);
   };
+  const handleUndoIntroductionSuggestionAi = () => {
+    if (introductionSuggestionBeforeAi !== null && poa) {
+      updateField("introduction", introductionSuggestionBeforeAi);
+      toast({ title: "Acción Deshecha", description: "Se restauró la sugerencia de introducción anterior." });
+      setIntroductionSuggestionBeforeAi(null);
+    }
+  };
+
 
   const handleDefineScope = async () => {
     if (!poa?.procedureDescription) {
       toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });
       return;
     }
+    setScopeBeforeAi(poa.scope || ""); // Store current scope
     setIsDefiningScope(true);
     try {
       const result = await defineScope({ procedureDescription: poa.procedureDescription });
@@ -65,8 +96,16 @@ export function IntroductionForm() {
     } catch (error) {
       console.error("Error definiendo alcance:", error);
       toast({ title: "Fallo al Definir Alcance", description: "No se pudo definir el alcance.", variant: "destructive" });
+      setScopeBeforeAi(null);
     }
     setIsDefiningScope(false);
+  };
+  const handleUndoScopeAi = () => {
+    if (scopeBeforeAi !== null && poa) {
+      updateField("scope", scopeBeforeAi);
+      toast({ title: "Acción Deshecha", description: "Se restauró el alcance anterior." });
+      setScopeBeforeAi(null);
+    }
   };
 
   const handleSave = () => {
@@ -90,53 +129,78 @@ export function IntroductionForm() {
           <Textarea
             id="procedureDescription" 
             value={poa.procedureDescription || ""}
-            onChange={(e) => updateField("procedureDescription", e.target.value)}
+            onChange={handleProcedureDescriptionChange}
             placeholder="Escribe aquí la introducción del procedimiento..."
-            rows={12}
-            className="min-h-[250px] w-full"
+            rows={10} // Reduced rows
+            className="min-h-[200px] w-full" // Reduced min-height
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-2 justify-end">
+        <div className="mt-3 flex flex-wrap gap-2 justify-start items-center">
           <AiEnhanceButton
             onClick={handleAiEnhanceUserIntro}
             isLoading={isEnhancingText}
             textExists={userIntroTextExists}
             buttonText="Editar Introducción con IA"
+            onUndo={procedureDescriptionBeforeAi !== null ? handleUndoProcedureDescriptionAi : undefined}
+            canUndo={procedureDescriptionBeforeAi !== null}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             {isEnhancingText ? "Editando..." : "Editar Introducción con IA"}
           </AiEnhanceButton>
-          <AiEnhanceButton
-            onClick={handleGenerateAiIntroduction}
-            isLoading={isGeneratingAiIntro}
-            textExists={userIntroTextExists}
-            buttonText="Sugerir por IA"
-            disabled={!userIntroTextExists || isGeneratingAiIntro}
-            className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
-          >
-             <BookOpen className="mr-2 h-4 w-4" />
-             {isGeneratingAiIntro ? "Generando..." : "Sugerir por IA"}
-          </AiEnhanceButton>
-           <AiEnhanceButton
-            onClick={handleDefineScope}
-            isLoading={isDefiningScope}
-            textExists={userIntroTextExists}
-            buttonText="Definir Alcance con IA"
-            disabled={!userIntroTextExists || isDefiningScope}
-            className="bg-accent/10 hover:bg-accent/20 text-accent-foreground border-accent/30"
-          >
-            <ScopeIcon className="mr-2 h-4 w-4" />
-            {isDefiningScope ? "Definiendo..." : "Definir Alcance con IA"}
-          </AiEnhanceButton>
         </div>
+        
+        <hr className="my-4" />
+        
+        <h4 className="font-semibold text-md mb-2 text-primary">Asistentes de IA basados en la Introducción:</h4>
+        <div className="flex flex-wrap gap-2 justify-start items-center">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateAiIntroduction}
+              disabled={!userIntroTextExists || isGeneratingAiIntro}
+              className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              {isGeneratingAiIntro ? "Generando..." : "Sugerir Introducción (IA)"}
+            </Button>
+            {introductionSuggestionBeforeAi !== null && (
+               <Button variant="outline" size="icon" onClick={handleUndoIntroductionSuggestionAi} title="Deshacer sugerencia de IA">
+                 <Undo2 className="h-4 w-4" />
+               </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDefineScope}
+              disabled={!userIntroTextExists || isDefiningScope}
+              className="bg-accent/10 hover:bg-accent/20 text-accent-foreground border-accent/30"
+            >
+              <ScopeIcon className="mr-2 h-4 w-4" />
+              {isDefiningScope ? "Definiendo..." : "Definir Alcance (IA)"}
+            </Button>
+             {scopeBeforeAi !== null && (
+               <Button variant="outline" size="icon" onClick={handleUndoScopeAi} title="Deshacer definición de alcance con IA">
+                 <Undo2 className="h-4 w-4" />
+               </Button>
+            )}
+          </div>
+        </div>
+
          {poa.introduction && ( 
-          <div className="mt-4 p-4 border rounded-md bg-secondary/50">
-            <h4 className="font-semibold text-lg mb-2 text-primary">Sugerencia de Introducción por IA:</h4>
+          <div className="mt-4 p-3 border rounded-md bg-secondary/50">
+            <h4 className="font-semibold text-md mb-1 text-primary">Sugerencia de Introducción por IA:</h4>
             <p className="text-sm text-foreground/90 whitespace-pre-wrap">{poa.introduction}</p>
+            <Label htmlFor="poaIntroductionSuggestion" className="sr-only">Sugerencia de Introducción por IA</Label>
+            <Textarea id="poaIntroductionSuggestion" value={poa.introduction} readOnly className="hidden"/>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-4">
+      <CardFooter className="flex justify-start border-t pt-4">
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Introducción
@@ -145,3 +209,5 @@ export function IntroductionForm() {
     </Card>
   );
 }
+
+    

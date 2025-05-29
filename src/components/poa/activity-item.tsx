@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical, Wand2 } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
@@ -38,24 +38,38 @@ export function ActivityItem({
   isDragging
 }: ActivityItemProps) {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleAiEnhance = async () => {
     if (!activity.description) return;
+    setDescriptionBeforeAi(activity.description);
     setIsLoadingAi(true);
     try {
-      const result = await enhanceText({ text: activity.description }); // Max words not implemented for activity items yet
+      const result = await enhanceText({ text: activity.description, context: "activity_description" }); 
       onUpdate(activity.id, { description: result.enhancedText });
       toast({ title: "Actividad Editada con IA", description: "La descripción de la actividad ha sido editada por IA." });
     } catch (error) {
       console.error("Error editando actividad con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar la actividad.", variant: "destructive" });
+      setDescriptionBeforeAi(null);
     }
     setIsLoadingAi(false);
   };
 
+  const handleUndoAi = () => {
+    if (descriptionBeforeAi !== null) {
+      onUpdate(activity.id, { description: descriptionBeforeAi });
+      toast({ title: "Acción Deshecha", description: "Se restauró la descripción anterior de la actividad." });
+      setDescriptionBeforeAi(null);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     onUpdate(activity.id, { [e.target.name]: e.target.value });
+    if (e.target.name === "description") {
+      setDescriptionBeforeAi(null); // Clear undo if user types manually
+    }
   };
 
   const handleTypeChange = (value: string) => {
@@ -64,21 +78,21 @@ export function ActivityItem({
 
   return (
     <Card 
-      className={`w-full mb-4 p-1 bg-card shadow-md border rounded-lg transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      className={`w-full mb-3 p-1 bg-card shadow-md border rounded-lg transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, index)}
       onDragOver={onDragOver}
       onDrop={(e) => onDrop?.(e, index)}
     >
-      <CardContent className="p-4 space-y-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-3 space-y-3"> {/* Reduced padding and space */}
+        <div className="flex items-start gap-2"> {/* Reduced gap */}
           {onDragStart && (
              <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
                 <GripVertical className="h-5 w-5 mt-1" />
              </button>
           )}
-          <div className="flex-grow space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 items-start">
+          <div className="flex-grow space-y-2"> {/* Reduced space */}
+            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 items-start"> {/* Reduced gap */}
                 <div className="sm:col-span-2">
                     <Label htmlFor={`activity-number-${activity.id}`}>Número/ID de Actividad</Label>
                     <Input
@@ -100,8 +114,8 @@ export function ActivityItem({
                 value={activity.description}
                 onChange={handleInputChange}
                 placeholder="Describe la actividad o tarea"
-                rows={3}
-                className="mt-1 w-full"
+                rows={2} // Reduced rows
+                className="mt-1 w-full min-h-[60px]" // Reduced min-height
               />
             </div>
 
@@ -120,7 +134,7 @@ export function ActivityItem({
             </div>
             
             {activity.type === 'decision' && (
-              <div className="p-3 border-l-4 border-blue-500 bg-blue-50 rounded-md">
+              <div className="p-2 border-l-4 border-blue-500 bg-blue-50 rounded-md"> {/* Reduced padding */}
                 <p className="text-sm text-blue-700">
                   Punto de Decisión: Define resultados (ej., rutas Sí/No) usando sub-actividades o enlaces.
                   (UI detallada de ramificación por implementar)
@@ -128,7 +142,7 @@ export function ActivityItem({
               </div>
             )}
             {activity.type === 'alternatives' && (
-              <div className="p-3 border-l-4 border-green-500 bg-green-50 rounded-md">
+              <div className="p-2 border-l-4 border-green-500 bg-green-50 rounded-md"> {/* Reduced padding */}
                 <p className="text-sm text-green-700">
                   Rutas Alternativas: Define diferentes opciones y sus pasos subsecuentes.
                   (UI detallada de ramificación por implementar)
@@ -138,13 +152,18 @@ export function ActivityItem({
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-3 border-t">
+        <div className="flex justify-between items-center pt-2 border-t"> {/* Reduced padding-top */}
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAi}
             textExists={!!activity.description && activity.description.length > 5}
             className="text-xs px-2 py-1"
-          />
+            onUndo={descriptionBeforeAi !== null ? handleUndoAi : undefined}
+            canUndo={descriptionBeforeAi !== null}
+          >
+             <Wand2 className="mr-2 h-4 w-4" />
+            {isLoadingAi ? "Editando..." : "Edición con IA"}
+          </AiEnhanceButton>
           <Button
             type="button"
             variant="ghost"
@@ -159,3 +178,5 @@ export function ActivityItem({
     </Card>
   );
 }
+
+    
