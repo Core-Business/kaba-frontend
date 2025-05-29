@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POA as POASchemaType } from "@/lib/schema"; // For mock structure
+import type { POA as POASchemaType } from "@/lib/schema"; 
 
 const navItems = [
   { name: "Encabezado", href: "header", icon: ClipboardEdit },
@@ -44,11 +44,8 @@ type StoredPOASummary = {
   id: string;
   name: string;
   logo?: string;
-  // Add other relevant summary fields if needed
 };
 
-// These are the original mock POAs, used as a fallback if localStorage is empty
-// to allow accessing them by ID before the dashboard populates localStorage.
 const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
   { id: "1", name: "Plan de Despliegue de Software" },
   { id: "2", name: "Incorporación de Nuevos Empleados" },
@@ -81,12 +78,10 @@ export default function BuilderLayout({
             poaSummaryFromStorage = storedPoas.find(p => p.id === poaId);
           } catch (e) {
             console.error("Error parsing POAs from localStorage in builder:", e);
-            // Fallback strategy might be needed if critical
           }
         }
 
         if (poaSummaryFromStorage) {
-          // POA found in localStorage, load it (even if it's just a summary for the mock)
           console.log(`Cargando Procedimiento POA ID: ${poaId} (desde localStorage)`);
           const mockLoadedPoa: POASchemaType = { 
               id: poaId,
@@ -108,11 +103,9 @@ export default function BuilderLayout({
           };
           loadPoa(mockLoadedPoa);
         } else if (storedPoasRaw && !poaSummaryFromStorage) {
-          // localStorage exists, but POA ID is not in it (implies deleted)
-          console.warn(`Procedimiento POA ID: ${poaId} no encontrado en localStorage. Pudo haber sido borrado. Redirigiendo al dashboard.`);
+          console.warn(`Procedimiento POA ID: ${poaId} no encontrado en localStorage. Pudo haber sido borrado. Redirigiendo al panel.`);
           router.push('/dashboard');
         } else if (!storedPoasRaw) {
-          // localStorage is empty. Check if it's one of the original hardcoded mocks.
           const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
           if (originalMockSummary) {
             console.log(`Cargando Procedimiento POA ID: ${poaId} (mock original, localStorage vacío)`);
@@ -149,7 +142,6 @@ export default function BuilderLayout({
   }
   
   if (poaId === "new" && !poa) {
-    // This state might occur briefly while createNew is initializing
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
@@ -161,7 +153,7 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-[calc(100vh-4rem)]"> {/* Adjust for header height */}
+      <div className="flex min-h-[calc(100vh-4rem)]">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
@@ -204,7 +196,7 @@ export default function BuilderLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset className="flex-1 overflow-y-auto bg-background">
-          <div className="p-4 md:p-6 lg:p-8">
+          <div className="w-full p-4 md:p-6 lg:p-8">
             {children}
           </div>
         </SidebarInset>
