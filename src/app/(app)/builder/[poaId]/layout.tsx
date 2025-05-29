@@ -70,7 +70,7 @@ export default function BuilderLayout({
   useEffect(() => {
     if (poaId && typeof window !== 'undefined') {
       if (poaId === "new" && (!poa || poa.id !== "new")) {
-        createNew('new', 'Nuevo POA Sin Título');
+        createNew('new', 'Nuevo Procedimiento POA Sin Título');
       } else if (poaId !== "new" && (!poa || poa.id !== poaId)) {
         const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_KEY_BUILDER);
         let poaSummaryFromStorage: StoredPOASummary | undefined = undefined;
@@ -87,12 +87,12 @@ export default function BuilderLayout({
 
         if (poaSummaryFromStorage) {
           // POA found in localStorage, load it (even if it's just a summary for the mock)
-          console.log(`Cargando POA ID: ${poaId} (desde localStorage)`);
+          console.log(`Cargando Procedimiento POA ID: ${poaId} (desde localStorage)`);
           const mockLoadedPoa: POASchemaType = { 
               id: poaId,
-              name: poaSummaryFromStorage.name || `POA Cargado ${poaId.substring(0,6)}`,
+              name: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
               header: { 
-                title: poaSummaryFromStorage.name || `POA Cargado ${poaId.substring(0,6)}`, 
+                title: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`, 
                 author: 'Sistema (localStorage)', 
                 version: '1.0', 
                 date: new Date().toISOString().split('T')[0],
@@ -109,13 +109,13 @@ export default function BuilderLayout({
           loadPoa(mockLoadedPoa);
         } else if (storedPoasRaw && !poaSummaryFromStorage) {
           // localStorage exists, but POA ID is not in it (implies deleted)
-          console.warn(`POA ID: ${poaId} no encontrado en localStorage. Pudo haber sido borrado. Redirigiendo al dashboard.`);
+          console.warn(`Procedimiento POA ID: ${poaId} no encontrado en localStorage. Pudo haber sido borrado. Redirigiendo al dashboard.`);
           router.push('/dashboard');
         } else if (!storedPoasRaw) {
           // localStorage is empty. Check if it's one of the original hardcoded mocks.
           const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
           if (originalMockSummary) {
-            console.log(`Cargando POA ID: ${poaId} (mock original, localStorage vacío)`);
+            console.log(`Cargando Procedimiento POA ID: ${poaId} (mock original, localStorage vacío)`);
             const mockLoadedPoa: POASchemaType = {
                 id: poaId,
                 name: originalMockSummary.name,
@@ -130,7 +130,7 @@ export default function BuilderLayout({
             };
             loadPoa(mockLoadedPoa);
           } else {
-            console.warn(`POA ID: ${poaId} no es un mock original y localStorage está vacío. Redirigiendo.`);
+            console.warn(`Procedimiento POA ID: ${poaId} no es un mock original y localStorage está vacío. Redirigiendo.`);
             router.push('/dashboard');
           }
         }
@@ -143,7 +143,7 @@ export default function BuilderLayout({
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Cargando datos del POA...</p>
+        <p className="ml-4 text-lg">Cargando datos del Procedimiento POA...</p>
       </div>
     );
   }
@@ -153,7 +153,7 @@ export default function BuilderLayout({
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Inicializando nuevo POA...</p>
+        <p className="ml-4 text-lg">Inicializando nuevo Procedimiento POA...</p>
       </div>
     );
   }
@@ -173,8 +173,8 @@ export default function BuilderLayout({
             <div className="mt-4 flex items-center gap-3">
               <FileText className="h-8 w-8 text-sidebar-primary" />
               <div>
-                <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Plan de Acción"}>
-                  {poa?.name || "Plan de Acción"}
+                <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Procedimiento POA"}>
+                  {poa?.name || "Procedimiento POA"}
                 </h2>
                 <p className="text-xs text-sidebar-foreground/80">Modo Edición</p>
               </div>

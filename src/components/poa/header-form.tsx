@@ -86,16 +86,16 @@ export function HeaderForm() {
      toast({ title: "Logo Eliminado", description: "El logo ha sido borrado." });
   };
   
-  if (!poa) return <div>Cargando datos del POA...</div>;
+  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Encabezado del POA" description="Define los detalles principales de tu Plan de Acción." />
+        <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <Label htmlFor="poaName">Nombre/Título del POA</Label>
+          <Label htmlFor="poaName">Nombre/Título del Procedimiento POA</Label>
           <Input
             id="poaName"
             name="poaName"
@@ -104,7 +104,7 @@ export function HeaderForm() {
             placeholder="Ej., Estrategia de Marketing Q3"
             className="mt-1"
           />
-          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el POA en tu panel y como título en el documento.</p>
+          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

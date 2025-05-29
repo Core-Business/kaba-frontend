@@ -29,12 +29,12 @@ export function ScopeForm() {
     setIsLoadingAi(false);
   };
   
-  if (!poa) return <div>Cargando datos del POA...</div>;
+  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Alcance" description="Define los límites de este POA. Esto puede ser generado por IA desde la Descripción del Procedimiento o ingresado/editado manualmente." />
+        <SectionTitle title="Alcance" description="Define los límites de este Procedimiento POA. Esto puede ser generado por IA desde la Descripción del Procedimiento o ingresado/editado manualmente." />
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

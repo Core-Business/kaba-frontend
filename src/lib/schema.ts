@@ -21,7 +21,7 @@ export type POAHeader = z.infer<typeof poaHeaderSchema>;
 
 export const poaSchema = z.object({
   id: z.string(), 
-  name: z.string().min(1, "El Nombre/Título del POA es requerido."), // Primary name/title
+  name: z.string().min(1, "El Nombre/Título del Procedimiento POA es requerido."), // Primary name/title
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
@@ -43,7 +43,7 @@ export const defaultPOAHeader: POAHeader = {
   logoFileName: '',
 };
 
-export function createNewPOA(id: string = 'new', name: string = 'POA Sin Título'): POA {
+export function createNewPOA(id: string = 'new', name: string = 'Procedimiento POA Sin Título'): POA {
   const now = new Date().toISOString();
   return {
     id,

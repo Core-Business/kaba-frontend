@@ -30,12 +30,12 @@ export function ObjectiveForm() {
     setIsLoadingAi(false);
   };
 
-  if (!poa) return <div>Cargando datos del POA...</div>;
+  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Objetivo" description="Establece claramente la meta principal o propósito de este Plan de Acción." />
+        <SectionTitle title="Objetivo" description="Establece claramente la meta principal o propósito de este Procedimiento POA." />
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

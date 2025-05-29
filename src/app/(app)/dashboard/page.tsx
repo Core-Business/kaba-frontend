@@ -63,7 +63,7 @@ export default function DashboardPage() {
     if (!newPoaNameInput.trim()) {
       toast({
         title: "Nombre Requerido",
-        description: "Por favor, ingresa un nombre para el POA.",
+        description: "Por favor, ingresa un nombre para el Procedimiento POA.",
         variant: "destructive",
       });
       return;
@@ -95,7 +95,7 @@ export default function DashboardPage() {
   };
 
   const handleDeletePOA = (idToDelete: string) => {
-    if (window.confirm("¿Estás seguro de que quieres borrar este POA? Esta acción no se puede deshacer.")) {
+    if (window.confirm("¿Estás seguro de que quieres borrar este Procedimiento POA? Esta acción no se puede deshacer.")) {
       setDisplayedPoas(prevPoas => {
         const updatedPoas = prevPoas.filter(p => p.id !== idToDelete);
         if (typeof window !== 'undefined') {
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         }
         return updatedPoas;
       });
-      toast({ title: "POA Borrado", description: "El Plan de Acción ha sido eliminado." });
+      toast({ title: "Procedimiento POA Borrado", description: "El Procedimiento POA ha sido eliminado." });
     }
   };
 
@@ -112,20 +112,20 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">POA - Inicio</h1>
-          <p className="text-muted-foreground">Gestiona tus POA existentes o crea uno nuevo.</p>
+          <p className="text-muted-foreground">Gestiona tus Procedimientos POA existentes o crea uno nuevo.</p>
         </div>
         <Dialog open={isCreateDialogVisible} onOpenChange={setIsCreateDialogVisible}>
           <DialogTrigger asChild>
             <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
               <PlusCircle className="mr-2 h-5 w-5" />
-              Crear Nuevo POA
+              Crear Nuevo Procedimiento POA
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Nuevo Plan de Acción</DialogTitle>
+              <DialogTitle>Nuevo Procedimiento POA</DialogTitle>
               <DialogDescription>
-                Ingresa un nombre para tu nuevo POA. Este nombre se usará para identificarlo.
+                Ingresa un nombre para tu nuevo Procedimiento POA. Este nombre se usará para identificarlo.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -146,7 +146,7 @@ export default function DashboardPage() {
               <DialogClose asChild>
                 <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
               </DialogClose>
-              <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear POA</Button>
+              <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear Procedimiento POA</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -158,9 +158,9 @@ export default function DashboardPage() {
             <div className="mx-auto bg-secondary p-3 rounded-full w-fit">
               <FileText className="h-10 w-10 text-muted-foreground" />
             </div>
-            <CardTitle className="mt-4 text-2xl">Aún no hay POAs</CardTitle>
+            <CardTitle className="mt-4 text-2xl">Aún no hay Procedimientos POA</CardTitle>
             <CardDescription className="mt-2 text-lg">
-              Comienza creando tu primer Plan de Acción.
+              Comienza creando tu primer Procedimiento POA.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
@@ -168,15 +168,15 @@ export default function DashboardPage() {
               <DialogTrigger asChild>
                 <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
                   <PlusCircle className="mr-2 h-5 w-5" />
-                  Crea Tu Primer POA
+                  Crea Tu Primer Procedimiento POA
                 </Button>
               </DialogTrigger>
               {/* DialogContent is the same as above, consider extracting if used multiple times identically */}
                <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Nuevo Plan de Acción</DialogTitle>
+                  <DialogTitle>Nuevo Procedimiento POA</DialogTitle>
                   <DialogDescription>
-                    Ingresa un nombre para tu nuevo POA. Este nombre se usará para identificarlo.
+                    Ingresa un nombre para tu nuevo Procedimiento POA. Este nombre se usará para identificarlo.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                   <DialogClose asChild>
                     <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
                   </DialogClose>
-                  <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear POA</Button>
+                  <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear Procedimiento POA</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                 <Link href={`/builder/${poa.id}/header`} passHref legacyBehavior>
                   <Button variant="outline" className="w-full">
                     <Edit3 className="mr-2 h-4 w-4" />
-                    Editar POA
+                    Editar Procedimiento POA
                   </Button>
                 </Link>
                 <Button 
@@ -239,7 +239,7 @@ export default function DashboardPage() {
                   onClick={() => handleDeletePOA(poa.id)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Borrar POA
+                  Borrar Procedimiento POA
                 </Button>
               </CardFooter>
             </Card>

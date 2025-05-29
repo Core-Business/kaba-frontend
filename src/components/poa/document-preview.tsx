@@ -23,14 +23,14 @@ export function DocumentPreview() {
 
   const handleDownloadHTML = () => {
     if (!poa) {
-      toast({ title: "Error", description: "No hay datos del POA para descargar.", variant: "destructive" });
+      toast({ title: "Error", description: "No hay datos del Procedimiento POA para descargar.", variant: "destructive" });
       return;
     }
     const htmlContent = generatePOAHTML(poa);
     const blob = new Blob([htmlContent], { type: "text/html" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    const fileName = poa.header.title ? poa.header.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'plan_de_accion';
+    const fileName = poa.header.title ? poa.header.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'procedimiento_poa';
     link.download = `${fileName}.html`;
     document.body.appendChild(link);
     link.click();
@@ -39,12 +39,12 @@ export function DocumentPreview() {
     toast({ title: "Descarga Iniciada", description: `${fileName}.html se está descargando.` });
   };
 
-  if (!poa) return <div>Cargando datos del POA...</div>;
+  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Vista Previa y Exportación del Documento" description="Revisa tu Plan de Acción y descárgalo como archivo HTML." />
+        <SectionTitle title="Vista Previa y Exportación del Documento" description="Revisa tu Procedimiento POA y descárgalo como archivo HTML." />
       </CardHeader>
       <CardContent>
         <div className="flex justify-end mb-6">
@@ -57,7 +57,7 @@ export function DocumentPreview() {
         <div className="border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> 
            <iframe
             srcDoc={htmlPreview}
-            title="Vista previa del POA"
+            title="Vista previa del Procedimiento POA"
             className="w-full h-full border-0"
             sandbox="allow-scripts" 
           />

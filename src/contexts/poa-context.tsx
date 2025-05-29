@@ -117,7 +117,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadPoa = useCallback((poaData: POA) => {
     // Ensure consistency when loading
-    const name = poaData.name || poaData.header.title || 'POA Cargado';
+    const name = poaData.name || poaData.header.title || 'Procedimiento POA Cargado';
     setPoa({
         ...poaData,
         name: name,
@@ -128,7 +128,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
   
-  const createNew = useCallback((id: string = 'new', name: string = 'Nuevo POA Sin Título') => {
+  const createNew = useCallback((id: string = 'new', name: string = 'Nuevo Procedimiento POA Sin Título') => {
     setPoa(createNewPOA(id, name));
   }, []);
 
