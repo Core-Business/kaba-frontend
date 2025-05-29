@@ -12,8 +12,11 @@ export type POAActivity = z.infer<typeof poaActivitySchema>;
 export const poaHeaderSchema = z.object({
   title: z.string().min(1, "El título es requerido."), // This will mirror poa.name
   author: z.string().optional(),
-  companyName: z.string().optional(), // Added for screenshot consistency
-  documentCode: z.string().optional(), // Added for screenshot consistency
+  companyName: z.string().optional(),
+  documentCode: z.string().optional(),
+  departmentArea: z.string().optional(), // Nuevo campo
+  status: z.enum(['Borrador', 'Activo', 'Cancelado', 'Obsoleto']).default('Borrador').optional(), // Nuevo campo
+  fileLocation: z.string().optional(), // Nuevo campo
   version: z.string().optional(),
   date: z.string().optional(), 
   logoUrl: z.string().optional(), 
@@ -27,8 +30,8 @@ export const poaSchema = z.object({
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
-  procedureDescription: z.string().optional(),
-  introduction: z.string().optional(), 
+  procedureDescription: z.string().optional(), // User-written intro
+  introduction: z.string().optional(), // AI-generated intro
   scope: z.string().optional(), 
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(), 
@@ -41,6 +44,9 @@ export const defaultPOAHeader: POAHeader = {
   author: '',
   companyName: '',
   documentCode: '',
+  departmentArea: '',
+  status: 'Borrador',
+  fileLocation: '',
   version: '1.0',
   date: new Date().toISOString().split('T')[0],
   logoUrl: '',

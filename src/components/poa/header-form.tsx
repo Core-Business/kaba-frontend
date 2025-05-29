@@ -12,10 +12,13 @@ import { UploadCloud, XCircle, Save } from "lucide-react";
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX_FILE_SIZE_MB = 2;
 const MAX_DIMENSION = 200; 
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
+const POA_STATUSES = ['Borrador', 'Activo', 'Cancelado', 'Obsoleto'] as const;
+
 
 export function HeaderForm() {
   const { poa, updateHeader, updatePoaName, saveCurrentPOA } = usePOA();
@@ -37,6 +40,10 @@ export function HeaderForm() {
     } else {
       updateHeader({ [name]: value });
     }
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    updateHeader({ [name]: value });
   };
 
   const handleLogoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,24 +118,49 @@ export function HeaderForm() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
           <div>
-            <Label htmlFor="author">Autor</Label>
-            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Tu Nombre/Departamento" className="mt-1 w-full" />
+            <Label htmlFor="author">Nombre del Autor</Label>
+            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
+          </div>
+          <div>
+            <Label htmlFor="departmentArea">Área o Departamento</Label>
+            <Input id="departmentArea" name="departmentArea" value={poa.header.departmentArea || ""} onChange={handleInputChange} placeholder="Ej., Marketing, Operaciones" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="companyName">Nombre de la Empresa (Opcional)</Label>
             <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="version">Versión</Label>
-            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1 w-full" />
-          </div>
-          <div>
             <Label htmlFor="documentCode">Código del Documento (Opcional)</Label>
             <Input id="documentCode" name="documentCode" value={poa.header.documentCode || ""} onChange={handleInputChange} placeholder="Ej., RH-PROC-001" className="mt-1 w-full" />
           </div>
           <div>
+            <Label htmlFor="version">Versión</Label>
+            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1 w-full" />
+          </div>
+           <div>
+            <Label htmlFor="status">Estado</Label>
+            <Select 
+              name="status" 
+              value={poa.header.status || 'Borrador'} 
+              onValueChange={(value) => handleSelectChange('status', value)}
+            >
+              <SelectTrigger id="status" className="mt-1 w-full">
+                <SelectValue placeholder="Seleccionar estado" />
+              </SelectTrigger>
+              <SelectContent>
+                {POA_STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="date">Fecha</Label>
             <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
+          </div>
+          <div>
+            <Label htmlFor="fileLocation">Ubicación del Archivo (Opcional)</Label>
+            <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
           </div>
         </div>
 

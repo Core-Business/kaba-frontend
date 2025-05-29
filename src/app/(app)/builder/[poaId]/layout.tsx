@@ -11,17 +11,18 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
+  SidebarFooter, // Import SidebarFooter
 } from "@/components/ui/sidebar";
 import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ClipboardEdit, // Encabezado
-  Target,         // Objetivo
-  ListTree,       // Actividades (antes ListChecks for Procedure Desc)
-  ScanSearch,     // Alcance
-  BookOpenText,   // Introducción (nuevo icono, antes ListChecks for Procedure Desc)
-  Printer,        // Vista Previa
-  FileText,
+  ClipboardEdit, 
+  Target,       
+  ListTree,      
+  ScanSearch,   
+  BookOpenText,  
+  Printer,       
+  Home, // Icon for POA - Inicio
   ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { usePOA } from "@/hooks/use-poa";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POA as POASchemaType } from "@/lib/schema"; 
+import { AppHeader } from "@/components/layout/app-header"; // Import AppHeader
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -38,15 +40,15 @@ const navItems = [
   { name: "Objetivo", href: "objective", icon: Target },
   { name: "Actividades", href: "activities", icon: ListTree },
   { name: "Alcance", href: "scope", icon: ScanSearch },
-  { name: "Introducción", href: "introduction", icon: BookOpenText }, // Changed from "Descripción del Procedimiento", new href
-  { name: "Vista Previa", href: "document", icon: Printer }, // Renamed
+  { name: "Introducción", href: "introduction", icon: BookOpenText }, 
+  { name: "Vista Previa", href: "document", icon: Printer },
 ];
 
 type StoredPOASummary = {
   id: string;
   name: string;
   logo?: string;
-  updatedAt?: string; // Added for consistency
+  updatedAt?: string; 
 };
 
 const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
@@ -70,12 +72,11 @@ export default function BuilderLayout({
   useEffect(() => {
     if (poaId && typeof window !== 'undefined') {
       if (poaId === "new") {
-        if (!poa || poa.id !== "new") { // Only create if not already set or different
+        if (!poa || poa.id !== "new") { 
           const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
-          // The dashboard is responsible for adding the summary to poaApp_poas.
-          // Here, we ensure the full detail is saved if it's truly new.
-           // Saving is now handled by the save button or when navigating away.
-           // For a brand new "new" poa, it's just in memory until first save.
+          localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
+          // The dashboard is responsible for adding the summary if created from there.
+          // If navigated directly to /builder/new, this ensures the detail exists.
         }
       } else if (!poa || poa.id !== poaId) {
         const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -85,7 +86,6 @@ export default function BuilderLayout({
             loadPoa(parsedFullPoa);
           } catch (e) {
             console.error("Error parsing full POA from localStorage:", e);
-            // Fallback to summary or mock if full parse fails
             loadFromSummaryOrMock();
           }
         } else {
@@ -93,8 +93,8 @@ export default function BuilderLayout({
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poaId, loadPoa, createNew]); // Removed poa, saveCurrentPOA from deps to avoid loops on save
+  }, [poaId, loadPoa, createNew, poa]);
+
 
   function loadFromSummaryOrMock() {
     const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
@@ -121,11 +121,14 @@ export default function BuilderLayout({
             author: 'Sistema (localStorage)', 
             version: '1.0', 
             date: new Date().toISOString().split('T')[0],
-            logoUrl: poaSummaryFromStorage.logo || ''
+            logoUrl: poaSummaryFromStorage.logo || '',
+            departmentArea: '',
+            status: 'Borrador',
+            fileLocation: '',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
           procedureDescription: 'Introducción cargada (desde resumen). Edita y guarda para más detalles.',
-          introduction: '', // AI generated intro
+          introduction: '', 
           scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
           activities: [],
           createdAt: new Date().toISOString(),
@@ -142,10 +145,18 @@ export default function BuilderLayout({
         poaToLoad = {
             id: poaId,
             name: originalMockSummary.name,
-            header: { title: originalMockSummary.name, author: 'Sistema (mock original)', version: '1.0', date: new Date().toISOString().split('T')[0] },
+            header: { 
+              title: originalMockSummary.name, 
+              author: 'Sistema (mock original)', 
+              version: '1.0', 
+              date: new Date().toISOString().split('T')[0],
+              departmentArea: '',
+              status: 'Borrador',
+              fileLocation: '',
+            },
             objective: 'Este es un objetivo de mock original. Edita y guarda.',
             procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
-            introduction: '', // AI generated intro
+            introduction: '', 
             scope: 'Alcance de mock original. Edita y guarda.',
             activities: [],
             createdAt: new Date().toISOString(),
@@ -160,11 +171,10 @@ export default function BuilderLayout({
     
     if (poaToLoad) {
       loadPoa(poaToLoad);
-      // Save this constructed/mock version to detail storage so subsequent saves work on a full object
-      // This is tricky, as saveCurrentPOA is useCallback and might not have the latest poaToLoad.
-      // A better approach is that `loadPoa` itself doesn't save, but the first "Save Section" action will.
-      // Or, if we want to ensure it's saved on load if not present:
-      // setTimeout(() => saveCurrentPOA(), 0); // Defer to ensure poa state is updated
+      // Ensure it's saved on load if not present in detail storage or if loading mock
+      if (!localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`)) {
+        localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaToLoad));
+      }
     }
   }
 
@@ -178,8 +188,6 @@ export default function BuilderLayout({
   }
   
   if (poaId === "new" && !poa) {
-     // This case should be handled by the createNew call above, 
-     // but as a fallback if poa isn't set yet by createNew.
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
@@ -191,34 +199,35 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-1 min-h-[calc(100vh-4rem)] p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
+      <div className="flex flex-1 min-h-screen"> {/* Main container for sidebar and content */}
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
+                {/* This Button is kept for consistency, though AppHeader now shows title */}
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
                     <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
                 </Button>
                 <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
             </div>
-            <div className="mt-4 flex items-center gap-3">
-              <FileText className="h-8 w-8 text-sidebar-primary" />
+             {/* Title is now in AppHeader, keeping placeholder for structure if needed later */}
+            <div className="mt-4 flex items-center gap-3 h-10"> {/* Adjusted height for alignment */}
+              {/* <FileText className="h-8 w-8 text-sidebar-primary" />
               <div>
                 <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Procedimiento POA"}>
                   {poa?.name || "Procedimiento POA"}
                 </h2>
                 <p className="text-xs text-sidebar-foreground/80">Modo Edición</p>
-              </div>
+              </div> */}
             </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                // Ensure poaId used for link construction is the actual current poaId, not "new" if it has been assigned one
                 const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
                 const itemPath = `/builder/${currentPoaId}/${item.href}`;
                 const isActive = pathname === itemPath || 
                                  (item.href === 'header' && pathname === `/builder/${currentPoaId}`) ||
-                                 (item.href === 'introduction' && pathname.endsWith('/introduction')); // Handle potential trailing slash or exact match
+                                 (item.href === 'introduction' && pathname.endsWith('/introduction')); 
 
                 return (
                   <SidebarMenuItem key={item.name}>
@@ -237,12 +246,27 @@ export default function BuilderLayout({
               })}
             </SidebarMenu>
           </SidebarContent>
+          <SidebarFooter className="p-2 border-t border-sidebar-border">
+             <Link href="/dashboard" legacyBehavior passHref>
+                <SidebarMenuButton
+                    className="justify-start text-sm w-full"
+                    tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+                >
+                    <Home className="h-5 w-5" />
+                    <span>POA - Inicio</span>
+                </SidebarMenuButton>
+            </Link>
+          </SidebarFooter>
         </Sidebar>
-        <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md p-0">
-          {children}
-        </SidebarInset>
+
+        <div className="flex-1 flex flex-col overflow-hidden"> {/* Right panel: Header + Content */}
+          <AppHeader /> {/* AppHeader specific to this panel */}
+          <SidebarInset className="flex-1 overflow-y-auto bg-background p-4 md:p-6 lg:p-8">
+            {/* The children (section forms) will be rendered here */}
+            {children}
+          </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );
 }
-

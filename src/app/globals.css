@@ -20,13 +20,13 @@ body {
     --secondary-foreground: 210 10% 23%;
     --muted: 0 0% 90%;
     --muted-foreground: 210 7% 50%; /* Lighter gray text */
-    --accent: 158 7.1% 19.6%; /* Bottle green #2C3531 */
-    --accent-foreground: 210 40% 98%; /* Light text on bottle green */
+    --accent: 158 17% 45%; /* Lighter Green (was #2C3531) */
+    --accent-foreground: 0 0% 100%; /* White text on lighter green */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 85%;
     --input: 0 0% 85%; /* Input border color */
-    --ring: 158 7.1% 19.6%; /* Accent color for focus rings */
+    --ring: 158 17% 45%; /* Accent color for focus rings - updated to lighter green */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -37,12 +37,12 @@ body {
     /* Sidebar specific colors */
     --sidebar-background: 220 100% 19%; /* Dark blue #002060 */
     --sidebar-foreground: 210 40% 90%; /* Light text for sidebar */
-    --sidebar-primary: 158 7.1% 25%; /* Brighter accent for active/hover in sidebar */
-    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-primary: 158 17% 50%; /* Brighter accent for active/hover in sidebar - updated */
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 100% 25%; /* Lighter blue for hover in sidebar */
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 220 100% 15%; /* Darker border for sidebar elements */
-    --sidebar-ring: 158 7.1% 25%;
+    --sidebar-ring: 158 17% 50%; /* updated */
   }
 
   .dark {
@@ -59,22 +59,22 @@ body {
     --secondary-foreground: 0 0% 95%;
     --muted: 220 10% 18%;
     --muted-foreground: 0 0% 60%;
-    --accent: 158 7.1% 30%; /* Brighter green for dark mode */
+    --accent: 158 17% 55%; /* Brighter green for dark mode - updated */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
     --border: 220 10% 25%;
     --input: 220 10% 25%;
-    --ring: 158 7.1% 30%;
+    --ring: 158 17% 55%; /* updated */
 
     --sidebar-background: 220 10% 10%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 158 7.1% 35%;
+    --sidebar-primary: 158 17% 60%; /* updated */
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 220 10% 20%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 220 10% 15%;
-    --sidebar-ring: 158 7.1% 35%;
+    --sidebar-ring: 158 17% 60%; /* updated */
   }
 }
 
