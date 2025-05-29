@@ -13,9 +13,9 @@ import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea if fileLocation becomes one
 
-const MAX_FILE_SIZE_MB = 2;
-const MAX_DIMENSION = 200; 
+const MAX_FILE_SIZE_KB = 100; // 100KB
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
 const POA_STATUSES = ['Borrador', 'Activo', 'Cancelado', 'Obsoleto'] as const;
 
@@ -33,7 +33,7 @@ export function HeaderForm() {
     }
   }, [poa?.header.logoUrl]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (name === "poaName") { 
       updatePoaName(value); 
@@ -55,19 +55,16 @@ export function HeaderForm() {
       return;
     }
     
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast({ title: "Archivo Demasiado Grande", description: `El logo debe ser menor a ${MAX_FILE_SIZE_MB}MB.`, variant: "destructive" });
+    if (file.size > MAX_FILE_SIZE_KB * 1024) { // Check against KB
+        toast({ title: "Archivo Demasiado Grande", description: `El logo debe ser menor a ${MAX_FILE_SIZE_KB}KB.`, variant: "destructive" });
         return;
     }
 
     const reader = new FileReader();
     reader.onload = (e) => {
-      const img = document.createElement("img");
+      const img = document.createElement("img"); // Still need img to read properties if necessary, but not for dimension check
       img.onload = () => {
-        if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
-          toast({ title: "Dimensiones de Imagen Demasiado Grandes", description: `El logo debe estar dentro de ${MAX_DIMENSION}x${MAX_DIMENSION} píxeles.`, variant: "destructive" });
-          return;
-        }
+        // Dimension check removed
         const resultDataUrl = e.target?.result as string;
         setLogoPreview(resultDataUrl);
         updateHeader({ logoUrl: resultDataUrl, logoFileName: file.name });
@@ -103,39 +100,43 @@ export function HeaderForm() {
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="col-span-1 md:col-span-2"> 
-          <Label htmlFor="poaName">Nombre/Título del Procedimiento POA</Label>
-          <Input
-            id="poaName"
-            name="poaName"
-            value={poa.name || ""}
-            onChange={handleInputChange}
-            placeholder="Ej., Estrategia de Marketing Q3, Manual de Operaciones X"
-            className="mt-1 w-full"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
-        </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+          <div className="md:col-span-2"> 
+            <Label htmlFor="poaName">Nombre del Procedimiento</Label>
+            <Input
+              id="poaName"
+              name="poaName"
+              value={poa.name || ""}
+              onChange={handleInputChange}
+              placeholder="Ej., Estrategia de Marketing Q3, Manual de Operaciones X"
+              className="mt-1 w-full"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
+          </div>
+          
           <div>
-            <Label htmlFor="author">Nombre del Autor</Label>
-            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
+            <Label htmlFor="companyName">Nombre de la Empresa</Label>
+            <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="departmentArea">Área o Departamento</Label>
             <Input id="departmentArea" name="departmentArea" value={poa.header.departmentArea || ""} onChange={handleInputChange} placeholder="Ej., Marketing, Operaciones" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="companyName">Nombre de la Empresa (Opcional)</Label>
-            <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
+            <Label htmlFor="author">Nombre del Autor</Label>
+            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="documentCode">Código del Documento (Opcional)</Label>
             <Input id="documentCode" name="documentCode" value={poa.header.documentCode || ""} onChange={handleInputChange} placeholder="Ej., RH-PROC-001" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="version">Versión</Label>
-            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1 w-full" />
+            <Label htmlFor="version">Versión (Opcional)</Label>
+            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="Ej., 1.0" className="mt-1 w-full" />
+          </div>
+           <div>
+            <Label htmlFor="date">Fecha</Label>
+            <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
           </div>
            <div>
             <Label htmlFor="status">Estado</Label>
@@ -154,18 +155,14 @@ export function HeaderForm() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="date">Fecha</Label>
-            <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
-          </div>
-          <div>
-            <Label htmlFor="fileLocation">Ubicación del Archivo (Opcional)</Label>
+          <div className="md:col-span-2">
+            <Label htmlFor="fileLocation">Ubicación del Archivo</Label>
             <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="logo-upload">Logo de la Empresa (máx {MAX_DIMENSION}x{MAX_DIMENSION}px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
+          <Label htmlFor="logo-upload">Logo de la Compañía (máx {MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
               <div className="relative group">
@@ -216,3 +213,4 @@ export function HeaderForm() {
     </Card>
   );
 }
+

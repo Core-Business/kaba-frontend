@@ -7,20 +7,47 @@ import { Building, FileText } from "lucide-react";
 import { usePOA } from "@/hooks/use-poa";
 import { usePathname } from "next/navigation";
 
+// Definición de navItems para usarla aquí, podría moverse a un archivo compartido si se usa en más lugares.
+const navItemsForTitle = [
+  { name: "Encabezado", href: "header" },
+  { name: "Objetivo", href: "objective" },
+  { name: "Actividades", href: "activities" },
+  { name: "Alcance", href: "scope" },
+  { name: "Introducción", href: "introduction" }, 
+  { name: "Vista Previa", href: "document" },
+];
+
 export function AppHeader() {
   const { poa } = usePOA();
   const pathname = usePathname();
 
   let leftContent;
+
   if (poa && pathname.startsWith('/builder/')) {
+    const pathSegments = pathname.split('/');
+    const currentSectionSlug = pathSegments[pathSegments.length - 1];
+    let currentSectionName = "";
+
+    // Casos especiales para la ruta base del builder o si el slug es el ID del POA (redirige a header)
+    if (currentSectionSlug === poa.id || pathSegments.length === 3) {
+      currentSectionName = "Encabezado";
+    } else {
+      const currentNavItem = navItemsForTitle.find(item => item.href === currentSectionSlug);
+      currentSectionName = currentNavItem ? currentNavItem.name : "";
+    }
+    
     leftContent = (
       <div className="flex items-center space-x-3">
         <FileText className="h-7 w-7 text-primary flex-shrink-0" />
-        <div className="flex flex-col min-w-0"> {/* min-w-0 for truncation */}
+        <div className="flex items-baseline min-w-0"> {/* min-w-0 for truncation, items-baseline for alignment */}
           <span className="text-lg font-semibold text-primary truncate" title={poa.name}>
             {poa.name}
           </span>
-          <span className="text-xs text-muted-foreground">Modo Edición</span>
+          {currentSectionName && (
+            <span className="text-lg text-muted-foreground ml-1.5">
+              / {currentSectionName}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -46,3 +73,4 @@ export function AppHeader() {
     </header>
   );
 }
+
