@@ -3,6 +3,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { PlusCircle, Edit3, FileText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,6 +37,8 @@ export default function DashboardPage() {
   const { createNew } = usePOA();
   const [displayedPoas, setDisplayedPoas] = useState<DisplayedPOA[]>([]);
   const { toast } = useToast();
+  const [isCreateDialogVisible, setIsCreateDialogVisible] = useState(false);
+  const [newPoaNameInput, setNewPoaNameInput] = useState("");
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -54,18 +59,26 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const handleCreateNewPOA = () => {
+  const handleConfirmCreateNewPOA = () => {
+    if (!newPoaNameInput.trim()) {
+      toast({
+        title: "Nombre Requerido",
+        description: "Por favor, ingresa un nombre para el POA.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newPoaId = crypto.randomUUID(); 
-    const newPoaName = "Nuevo POA Sin Título";
+    const newPoaName = newPoaNameInput.trim();
     
-    // This updates the POAContext for the builder
     createNew(newPoaId, newPoaName); 
     
     const newPoaEntry: DisplayedPOA = {
       id: newPoaId,
       name: newPoaName,
-      updatedAt: new Date().toISOString(), // Use full ISO string
-      logo: "https://placehold.co/40x40.png" // Default logo
+      updatedAt: new Date().toISOString(),
+      logo: "https://placehold.co/40x40.png" 
     };
 
     setDisplayedPoas(prevPoas => {
@@ -77,6 +90,8 @@ export default function DashboardPage() {
     });
     
     router.push(`/builder/${newPoaId}/header`);
+    setIsCreateDialogVisible(false); // Close dialog
+    setNewPoaNameInput(""); // Reset input
   };
 
   const handleDeletePOA = (idToDelete: string) => {
@@ -99,10 +114,42 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight">POA - Inicio</h1>
           <p className="text-muted-foreground">Gestiona tus POA existentes o crea uno nuevo.</p>
         </div>
-        <Button onClick={handleCreateNewPOA} size="lg">
-          <PlusCircle className="mr-2 h-5 w-5" />
-          Crear Nuevo POA
-        </Button>
+        <Dialog open={isCreateDialogVisible} onOpenChange={setIsCreateDialogVisible}>
+          <DialogTrigger asChild>
+            <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Crear Nuevo POA
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Nuevo Plan de Acción</DialogTitle>
+              <DialogDescription>
+                Ingresa un nombre para tu nuevo POA. Este nombre se usará para identificarlo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="poaName" className="text-right col-span-1">
+                  Nombre del Procedimiento (POA)
+                </Label>
+                <Input
+                  id="poaName"
+                  value={newPoaNameInput}
+                  onChange={(e) => setNewPoaNameInput(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Ej., Despliegue de Software Q4"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
+              </DialogClose>
+              <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear POA</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {displayedPoas.length === 0 ? (
@@ -117,10 +164,43 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
-            <Button onClick={handleCreateNewPOA} size="lg">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Crea Tu Primer POA
-            </Button>
+             <Dialog open={isCreateDialogVisible} onOpenChange={setIsCreateDialogVisible}>
+              <DialogTrigger asChild>
+                <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Crea Tu Primer POA
+                </Button>
+              </DialogTrigger>
+              {/* DialogContent is the same as above, consider extracting if used multiple times identically */}
+               <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Nuevo Plan de Acción</DialogTitle>
+                  <DialogDescription>
+                    Ingresa un nombre para tu nuevo POA. Este nombre se usará para identificarlo.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="poaNameModal" className="text-right col-span-1">
+                      Nombre del Procedimiento (POA)
+                    </Label>
+                    <Input
+                      id="poaNameModal"
+                      value={newPoaNameInput}
+                      onChange={(e) => setNewPoaNameInput(e.target.value)}
+                      className="col-span-3"
+                      placeholder="Ej., Despliegue de Software Q4"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
+                  </DialogClose>
+                  <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear POA</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardFooter>
         </Card>
       ) : (
@@ -169,3 +249,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
