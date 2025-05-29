@@ -9,33 +9,37 @@ export const poaActivitySchema = z.object({
 });
 export type POAActivity = z.infer<typeof poaActivitySchema>;
 
+// Define a more specific type for status based on the new checkbox logic
+export const poaStatusType = z.enum(['Activo', 'Borrador']);
+export type POAStatusType = z.infer<typeof poaStatusType>;
+
 export const poaHeaderSchema = z.object({
   title: z.string().min(1, "El título es requerido."), // This will mirror poa.name
   author: z.string().optional(),
   companyName: z.string().optional(),
   documentCode: z.string().optional(),
-  departmentArea: z.string().optional(), // Nuevo campo
-  status: z.enum(['Borrador', 'Activo', 'Cancelado', 'Obsoleto']).default('Borrador').optional(), // Nuevo campo
-  fileLocation: z.string().optional(), // Nuevo campo
+  departmentArea: z.string().optional(),
+  status: poaStatusType.default('Borrador').optional(), // Changed from multi-enum to Activo/Borrador
+  fileLocation: z.string().optional(),
   version: z.string().optional(),
-  date: z.string().optional(), 
-  logoUrl: z.string().optional(), 
+  date: z.string().optional(),
+  logoUrl: z.string().optional(),
   logoFileName: z.string().optional(),
 });
 export type POAHeader = z.infer<typeof poaHeaderSchema>;
 
 export const poaSchema = z.object({
-  id: z.string(), 
+  id: z.string(),
   name: z.string().min(1, "El Nombre/Título del Procedimiento POA es requerido."), // Primary name/title
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
   procedureDescription: z.string().optional(), // User-written intro
   introduction: z.string().optional(), // AI-generated intro
-  scope: z.string().optional(), 
+  scope: z.string().optional(),
   activities: z.array(poaActivitySchema),
-  createdAt: z.string().optional(), 
-  updatedAt: z.string().optional(), 
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 export type POA = z.infer<typeof poaSchema>;
 
@@ -45,7 +49,7 @@ export const defaultPOAHeader: POAHeader = {
   companyName: '',
   documentCode: '',
   departmentArea: '',
-  status: 'Borrador',
+  status: 'Borrador', // Default to Borrador
   fileLocation: '',
   version: '1.0',
   date: new Date().toISOString().split('T')[0],
