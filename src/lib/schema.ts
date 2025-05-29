@@ -9,17 +9,16 @@ export const poaActivitySchema = z.object({
 });
 export type POAActivity = z.infer<typeof poaActivitySchema>;
 
-// Define a more specific type for status based on the new checkbox logic
-export const poaStatusType = z.enum(['Activo', 'Borrador']);
+export const poaStatusType = z.enum(['Borrador', 'Vigente', 'Revisión', 'Obsoleto', 'Cancelado']);
 export type POAStatusType = z.infer<typeof poaStatusType>;
 
 export const poaHeaderSchema = z.object({
-  title: z.string().min(1, "El título es requerido."), // This will mirror poa.name
+  title: z.string().min(1, "El título es requerido."), 
   author: z.string().optional(),
   companyName: z.string().optional(),
   documentCode: z.string().optional(),
   departmentArea: z.string().optional(),
-  status: poaStatusType.default('Borrador').optional(), // Changed from multi-enum to Activo/Borrador
+  status: poaStatusType.default('Borrador').optional(),
   fileLocation: z.string().optional(),
   version: z.string().optional(),
   date: z.string().optional(),
@@ -30,12 +29,12 @@ export type POAHeader = z.infer<typeof poaHeaderSchema>;
 
 export const poaSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "El Nombre/Título del Procedimiento POA es requerido."), // Primary name/title
+  name: z.string().min(1, "El Nombre del Procedimiento es requerido."), 
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
-  procedureDescription: z.string().optional(), // User-written intro
-  introduction: z.string().optional(), // AI-generated intro
+  procedureDescription: z.string().optional(), 
+  introduction: z.string().optional(), 
   scope: z.string().optional(),
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),
@@ -44,12 +43,12 @@ export const poaSchema = z.object({
 export type POA = z.infer<typeof poaSchema>;
 
 export const defaultPOAHeader: POAHeader = {
-  title: '', // Will be set by poa.name initially
+  title: '', 
   author: '',
   companyName: '',
   documentCode: '',
   departmentArea: '',
-  status: 'Borrador', // Default to Borrador
+  status: 'Borrador',
   fileLocation: '',
   version: '1.0',
   date: new Date().toISOString().split('T')[0],
@@ -61,8 +60,8 @@ export function createNewPOA(id: string = 'new', name: string = 'Procedimiento P
   const now = new Date().toISOString();
   return {
     id,
-    name, // Set primary name
-    header: { ...defaultPOAHeader, title: name }, // header.title mirrors name
+    name, 
+    header: { ...defaultPOAHeader, title: name }, 
     objective: '',
     procedureDescription: '',
     introduction: '',

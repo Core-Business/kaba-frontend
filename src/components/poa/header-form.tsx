@@ -12,12 +12,13 @@ import { UploadCloud, XCircle, Save } from "lucide-react";
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
-import type { POAStatusType } from "@/lib/schema"; // Import the specific status type
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import type { POAStatusType } from "@/lib/schema"; 
 
 const MAX_FILE_SIZE_KB = 100; // 100KB
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
-// POA_STATUSES constant is no longer needed as we use a checkbox for Activo/Borrador
+const POA_STATUSES: POAStatusType[] = ['Borrador', 'Vigente', 'Revisión', 'Obsoleto', 'Cancelado'];
+
 
 export function HeaderForm() {
   const { poa, updateHeader, updatePoaName, saveCurrentPOA } = usePOA();
@@ -34,16 +35,15 @@ export function HeaderForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "poaName") {
+    if (name === "poaName") { // "poaName" refers to the main name/title of the POA
       updatePoaName(value);
     } else {
       updateHeader({ [name]: value });
     }
   };
 
-  const handleStatusChange = (checked: boolean | 'indeterminate') => {
-    const newStatus: POAStatusType = typeof checked === 'boolean' && checked ? 'Activo' : 'Borrador';
-    updateHeader({ status: newStatus });
+  const handleStatusChange = (value: string) => {
+    updateHeader({ status: value as POAStatusType });
   };
 
   const handleLogoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,24 +94,24 @@ export function HeaderForm() {
       <CardHeader>
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4"> {/* Reduced space-y-6 to space-y-4 */}
         {/* Nombre del Procedimiento - Full Width */}
         <div className="md:col-span-2">
           <Label htmlFor="poaName">Nombre del Procedimiento</Label>
           <Input
             id="poaName"
-            name="poaName"
+            name="poaName" // This input updates poa.name, which also updates poa.header.title
             value={poa.name || ""}
             onChange={handleInputChange}
             placeholder="Ej., Estrategia de Marketing Q3, Manual de Operaciones X"
             className="mt-1 w-full"
-            maxLength={60} // Approx 10-12 words
+            maxLength={60} 
           />
           <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento (máx. ~10 palabras).</p>
         </div>
 
-        {/* Two-column grid for the rest of the fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
+        {/* Two-column grid for some of the fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> {/* Reduced gap-y-6 to gap-y-4 */}
           <div>
             <Label htmlFor="companyName">Nombre de la Empresa</Label>
             <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
@@ -136,31 +136,35 @@ export function HeaderForm() {
             <Label htmlFor="date">Fecha</Label>
             <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
           </div>
-          {/* Estado - Checkbox */}
-          <div>
-            <Label>Estado</Label>
-            <div className="flex items-center space-x-2 mt-2"> {/* Adjusted margin for alignment with other inputs */}
-              <Checkbox
-                id="statusCheckbox"
-                checked={poa.header.status === 'Activo'}
-                onCheckedChange={handleStatusChange}
-              />
-              <Label htmlFor="statusCheckbox" className="font-normal">
-                Activo
-              </Label>
-            </div>
-             <p className="text-xs text-muted-foreground mt-1">Marcado: Activo, Desmarcado: Borrador.</p>
-          </div>
         </div>
 
-        {/* Ubicación del Archivo - Full Width below the grid */}
-        <div className="mt-6 md:col-span-2"> {/* Ensure it spans full width if needed, or just keep it as part of sequential flow */}
+        {/* Estado - RadioGroup */}
+        <div className="space-y-2">
+            <Label>Estado</Label>
+            <RadioGroup
+                value={poa.header.status || 'Borrador'}
+                onValueChange={handleStatusChange}
+                className="flex flex-wrap gap-x-4 gap-y-2 mt-1"
+            >
+                {POA_STATUSES.map((statusVal) => (
+                <div key={statusVal} className="flex items-center space-x-2">
+                    <RadioGroupItem value={statusVal} id={`status-${statusVal}`} />
+                    <Label htmlFor={`status-${statusVal}`} className="font-normal">
+                    {statusVal}
+                    </Label>
+                </div>
+                ))}
+            </RadioGroup>
+        </div>
+
+        {/* Ubicación del Archivo - Full Width */}
+        <div className="mt-4"> {/* Reduced margin from mt-6 */}
           <Label htmlFor="fileLocation">Ubicación del Archivo</Label>
           <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
         </div>
 
         {/* Logo de la Compañía */}
-        <div className="mt-6">
+        <div className="mt-4"> {/* Reduced margin from mt-6 */}
           <Label htmlFor="logo-upload">Logo de la Compañía (máx {MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
@@ -203,7 +207,7 @@ export function HeaderForm() {
           <p className="text-xs text-muted-foreground mt-1">Formatos aceptados: JPEG, PNG, SVG, BMP, TIFF.</p>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-start border-t pt-6"> {/* Changed justify-end to justify-start */}
+      <CardFooter className="flex justify-start border-t pt-6"> 
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Encabezado

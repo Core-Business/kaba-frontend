@@ -11,9 +11,9 @@ interface SectionTitleProps {
 
 export function SectionTitle({ title, description }: SectionTitleProps) {
   return (
-    <div className="mb-6">
+    <div className="mb-3"> {/* Reduced mb-6 to mb-3 */}
       <h2 className="text-2xl font-semibold tracking-tight text-primary">{title}</h2>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>} {/* Added mt-1 for slight separation if description exists */}
     </div>
   );
 }
