@@ -64,7 +64,7 @@ export function ActivityItem({
 
   return (
     <Card 
-      className={`mb-4 p-1 bg-card shadow-md border rounded-lg transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      className={`w-full mb-4 p-1 bg-card shadow-md border rounded-lg transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, index)}
       onDragOver={onDragOver}
@@ -87,7 +87,7 @@ export function ActivityItem({
                         value={activity.number}
                         onChange={handleInputChange}
                         placeholder="Ej., 1.1, A.2"
-                        className="mt-1 w-full sm:w-40"
+                        className="mt-1 w-full"
                     />
                 </div>
             </div>
@@ -108,7 +108,7 @@ export function ActivityItem({
             <div>
               <Label htmlFor={`activity-type-${activity.id}`}>Tipo</Label>
               <Select value={activity.type} onValueChange={handleTypeChange}>
-                <SelectTrigger id={`activity-type-${activity.id}`} className="w-full sm:w-[200px] mt-1">
+                <SelectTrigger id={`activity-type-${activity.id}`} className="w-full mt-1">
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>

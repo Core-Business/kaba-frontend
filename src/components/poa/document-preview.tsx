@@ -54,7 +54,7 @@ export function DocumentPreview() {
           </Button>
         </div>
         
-        <div className="border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> 
+        <div className="w-full border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> 
            <iframe
             srcDoc={htmlPreview}
             title="Vista previa del Procedimiento POA"
