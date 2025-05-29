@@ -8,33 +8,86 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePOA } from "@/hooks/use-poa";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { FormattedDateClient } from "@/components/shared/formatted-date"; // Import the new component
+import { FormattedDateClient } from "@/components/shared/formatted-date";
 
-// Mock data for POAs - replace with actual data fetching
+const LOCAL_STORAGE_KEY = "poaApp_poas";
+
+// Mock data for POAs - only used if localStorage is empty
 const initialMockPoas = [
-  { id: "1", name: "Plan de Despliegue de Software", updatedAt: "2024-07-20", logo: "https://placehold.co/40x40.png" },
-  { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: "2024-07-18", logo: "https://placehold.co/40x40.png" },
-  { id: "3", name: "Campaña de Marketing Q3", updatedAt: "2024-07-15", logo: "https://placehold.co/40x40.png" },
+  { id: "1", name: "Plan de Despliegue de Software", updatedAt: "2024-07-20T10:00:00Z", logo: "https://placehold.co/40x40.png" },
+  { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: "2024-07-18T11:00:00Z", logo: "https://placehold.co/40x40.png" },
+  { id: "3", name: "Campaña de Marketing Q3", updatedAt: "2024-07-15T12:00:00Z", logo: "https://placehold.co/40x40.png" },
 ];
+
+// Define the type for the items stored in displayedPoas and localStorage
+type DisplayedPOA = {
+  id: string;
+  name: string;
+  updatedAt: string;
+  logo?: string;
+};
 
 export default function DashboardPage() {
   const router = useRouter();
   const { createNew } = usePOA();
-  const [displayedPoas, setDisplayedPoas] = useState(initialMockPoas);
+  const [displayedPoas, setDisplayedPoas] = useState<DisplayedPOA[]>([]);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (storedPoasRaw) {
+        try {
+          const parsedPoas: DisplayedPOA[] = JSON.parse(storedPoasRaw);
+          setDisplayedPoas(parsedPoas);
+        } catch (error) {
+          console.error("Error parsing POAs from localStorage", error);
+          setDisplayedPoas(initialMockPoas);
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialMockPoas));
+        }
+      } else {
+        setDisplayedPoas(initialMockPoas);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialMockPoas));
+      }
+    }
+  }, []);
 
   const handleCreateNewPOA = () => {
     const newPoaId = crypto.randomUUID(); 
-    createNew(newPoaId, "Nuevo POA Sin Título"); 
+    const newPoaName = "Nuevo POA Sin Título";
+    
+    // This updates the POAContext for the builder
+    createNew(newPoaId, newPoaName); 
+    
+    const newPoaEntry: DisplayedPOA = {
+      id: newPoaId,
+      name: newPoaName,
+      updatedAt: new Date().toISOString(), // Use full ISO string
+      logo: "https://placehold.co/40x40.png" // Default logo
+    };
+
+    setDisplayedPoas(prevPoas => {
+      const updatedPoas = [...prevPoas, newPoaEntry];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPoas));
+      }
+      return updatedPoas;
+    });
+    
     router.push(`/builder/${newPoaId}/header`);
   };
 
   const handleDeletePOA = (idToDelete: string) => {
     if (window.confirm("¿Estás seguro de que quieres borrar este POA? Esta acción no se puede deshacer.")) {
-      setDisplayedPoas(prevPoas => prevPoas.filter(p => p.id !== idToDelete));
-      // En una aplicación real, aquí se llamaría a una API para borrarlo del backend.
+      setDisplayedPoas(prevPoas => {
+        const updatedPoas = prevPoas.filter(p => p.id !== idToDelete);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPoas));
+        }
+        return updatedPoas;
+      });
       toast({ title: "POA Borrado", description: "El Plan de Acción ha sido eliminado." });
     }
   };

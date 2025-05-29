@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type { POA as POASchemaType } from "@/lib/schema"; // For mock structure
 
 const navItems = [
   { name: "Encabezado", href: "header", icon: ClipboardEdit },
@@ -37,6 +38,23 @@ const navItems = [
   { name: "Actividades", href: "activities", icon: ListTree },
   { name: "Vista Previa del Documento", href: "document", icon: Printer },
 ];
+
+const LOCAL_STORAGE_KEY_BUILDER = "poaApp_poas";
+type StoredPOASummary = {
+  id: string;
+  name: string;
+  logo?: string;
+  // Add other relevant summary fields if needed
+};
+
+// These are the original mock POAs, used as a fallback if localStorage is empty
+// to allow accessing them by ID before the dashboard populates localStorage.
+const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
+  { id: "1", name: "Plan de Despliegue de Software" },
+  { id: "2", name: "Incorporación de Nuevos Empleados" },
+  { id: "3", name: "Campaña de Marketing Q3" },
+];
+
 
 export default function BuilderLayout({
   children,
@@ -50,27 +68,75 @@ export default function BuilderLayout({
   const poaId = params.poaId as string;
 
   useEffect(() => {
-    if (poaId) {
+    if (poaId && typeof window !== 'undefined') {
       if (poaId === "new" && (!poa || poa.id !== "new")) {
         createNew('new', 'Nuevo POA Sin Título');
       } else if (poaId !== "new" && (!poa || poa.id !== poaId)) {
-        console.log(`Simulando carga para POA ID: ${poaId}`);
-        const mockLoadedPoa = { 
-            id: poaId,
-            name: `POA Cargado ${poaId.substring(0,6)}`,
-            header: { title: `POA Cargado ${poaId.substring(0,6)}`, author: 'Sistema', version: '1.0', date: new Date().toISOString().split('T')[0] },
-            objective: 'Este es un objetivo cargado.',
-            procedureDescription: 'Descripción detallada del procedimiento cargada desde el mock.',
-            introduction: 'Introducción autogenerada para el POA cargado.',
-            scope: 'Alcance definido para el POA cargado.',
-            activities: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-        loadPoa(mockLoadedPoa);
+        const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_KEY_BUILDER);
+        let poaSummaryFromStorage: StoredPOASummary | undefined = undefined;
+
+        if (storedPoasRaw) {
+          try {
+            const storedPoas: StoredPOASummary[] = JSON.parse(storedPoasRaw);
+            poaSummaryFromStorage = storedPoas.find(p => p.id === poaId);
+          } catch (e) {
+            console.error("Error parsing POAs from localStorage in builder:", e);
+            // Fallback strategy might be needed if critical
+          }
+        }
+
+        if (poaSummaryFromStorage) {
+          // POA found in localStorage, load it (even if it's just a summary for the mock)
+          console.log(`Cargando POA ID: ${poaId} (desde localStorage)`);
+          const mockLoadedPoa: POASchemaType = { 
+              id: poaId,
+              name: poaSummaryFromStorage.name || `POA Cargado ${poaId.substring(0,6)}`,
+              header: { 
+                title: poaSummaryFromStorage.name || `POA Cargado ${poaId.substring(0,6)}`, 
+                author: 'Sistema (localStorage)', 
+                version: '1.0', 
+                date: new Date().toISOString().split('T')[0],
+                logoUrl: poaSummaryFromStorage.logo || ''
+              },
+              objective: 'Objetivo cargado (mock desde localStorage).',
+              procedureDescription: 'Descripción cargada (mock desde localStorage).',
+              introduction: 'Introducción cargada (mock desde localStorage).',
+              scope: 'Alcance cargado (mock desde localStorage).',
+              activities: [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+          };
+          loadPoa(mockLoadedPoa);
+        } else if (storedPoasRaw && !poaSummaryFromStorage) {
+          // localStorage exists, but POA ID is not in it (implies deleted)
+          console.warn(`POA ID: ${poaId} no encontrado en localStorage. Pudo haber sido borrado. Redirigiendo al dashboard.`);
+          router.push('/dashboard');
+        } else if (!storedPoasRaw) {
+          // localStorage is empty. Check if it's one of the original hardcoded mocks.
+          const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
+          if (originalMockSummary) {
+            console.log(`Cargando POA ID: ${poaId} (mock original, localStorage vacío)`);
+            const mockLoadedPoa: POASchemaType = {
+                id: poaId,
+                name: originalMockSummary.name,
+                header: { title: originalMockSummary.name, author: 'Sistema (mock original)', version: '1.0', date: new Date().toISOString().split('T')[0] },
+                objective: 'Este es un objetivo de mock original.',
+                procedureDescription: 'Descripción de mock original.',
+                introduction: 'Introducción de mock original.',
+                scope: 'Alcance de mock original.',
+                activities: [],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            loadPoa(mockLoadedPoa);
+          } else {
+            console.warn(`POA ID: ${poaId} no es un mock original y localStorage está vacío. Redirigiendo.`);
+            router.push('/dashboard');
+          }
+        }
       }
     }
-  }, [poaId, poa, loadPoa, createNew]);
+  }, [poaId, poa, loadPoa, createNew, router]);
 
 
   if (!poa && poaId !== "new") {
@@ -83,6 +149,7 @@ export default function BuilderLayout({
   }
   
   if (poaId === "new" && !poa) {
+    // This state might occur briefly while createNew is initializing
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
@@ -145,3 +212,4 @@ export default function BuilderLayout({
     </SidebarProvider>
   );
 }
+
