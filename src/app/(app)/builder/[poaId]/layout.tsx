@@ -195,9 +195,9 @@ export default function BuilderLayout({
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>
-        <SidebarInset className="flex-1 overflow-y-auto bg-background">
-          {/* Make this div a flex container to allow children (Cards with w-full) to expand */}
-          <div className="flex flex-col w-full p-4 md:p-6 lg:p-8">
+        <SidebarInset className="flex-1 overflow-y-auto bg-background p-4 md:p-6 lg:p-8">
+          {/* The div below now ensures its children (the Cards) can expand to its full width within the padding of SidebarInset */}
+          <div className="flex flex-col w-full h-full"> {/* Added h-full to potentially help with vertical expansion if needed by children */}
             {children}
           </div>
         </SidebarInset>
@@ -205,4 +205,3 @@ export default function BuilderLayout({
     </SidebarProvider>
   );
 }
-
