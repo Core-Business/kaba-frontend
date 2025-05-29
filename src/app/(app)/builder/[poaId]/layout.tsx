@@ -9,7 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
+  // SidebarInset is being replaced by a standard <main> tag for clarity
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
@@ -127,7 +127,6 @@ export default function BuilderLayout({
     let poaToLoad: POASchemaType | null = null;
 
     if (poaSummaryFromStorage) {
-      console.log(`Construyendo Procedimiento POA ID: ${poaId} (desde resumen localStorage)`);
       poaToLoad = { 
           id: poaId,
           name: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
@@ -158,7 +157,6 @@ export default function BuilderLayout({
     } else if (!storedPoasRaw) {
       const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
       if (originalMockSummary) {
-        console.log(`Construyendo Procedimiento POA ID: ${poaId} (mock original, localStorage vacío)`);
         poaToLoad = {
             id: poaId,
             name: originalMockSummary.name,
@@ -208,13 +206,10 @@ export default function BuilderLayout({
     setShowUnsavedDialog(false);
     if (nextPath) {
       if (discardChanges) {
-        setIsDirty(false); // User chose to discard
+        setIsDirty(false); 
         router.push(nextPath);
       } else {
-        // User chose to save, then navigate
-        saveCurrentPOA(); // saveCurrentPOA already sets isDirty to false
-        // Ensure save is complete before navigating (saveCurrentPOA is sync for localStorage)
-        // setTimeout allows state update from save to propagate before route change
+        saveCurrentPOA(); 
         setTimeout(() => router.push(nextPath), 0);
       }
     }
@@ -242,70 +237,71 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="relative flex min-h-screen flex-col"> {/* Parent for sticky header */}
-        <div className="flex flex-1 p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
-          <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
-            <SidebarHeader className="p-4">
-              <div className="flex items-center justify-between">
-                  <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
-                      <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
-                  </Button>
-                  <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                {navItems.map((item) => {
-                  const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
-                  const itemPath = `/builder/${currentPoaId}/${item.href}`;
-                  const isActive = pathname === itemPath || 
-                                  (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || 
-                                  (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); 
-                  
-                  return (
-                    <SidebarMenuItem key={item.name}>
-                      <Link href={itemPath} passHref legacyBehavior>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          className="justify-start text-sm"
-                          tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
-                        >
-                           <a onClick={(e) => handleNavigationAttempt(e, itemPath)}>
-                            <item.icon className="h-5 w-5" />
-                            <span>{item.name}</span>
-                          </a>
-                        </SidebarMenuButton>
-                      </Link>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarContent>
-            <SidebarFooter className="p-2 border-t border-sidebar-border">
-              <Link href="/dashboard" legacyBehavior passHref>
-                  <SidebarMenuButton
-                      asChild
-                      className="justify-start text-sm w-full"
-                      tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
-                  >
-                    <a onClick={(e) => handleNavigationAttempt(e, '/dashboard')}>
-                      <Home className="h-5 w-5" />
-                      <span>POA - Inicio</span>
-                    </a>
-                  </SidebarMenuButton>
-              </Link>
-            </SidebarFooter>
-          </Sidebar>
+      {/* Main container for Sidebar and Content Area */}
+      <div className="flex min-h-screen bg-background"> {/* Outer container */}
+        <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0"> {/* Sidebar takes its own width */}
+          <SidebarHeader className="p-4">
+            <div className="flex items-center justify-between">
+                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
+                    <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
+                </Button>
+                <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
+            </div>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
+                const itemPath = `/builder/${currentPoaId}/${item.href}`;
+                const isActive = pathname === itemPath || 
+                                (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || 
+                                (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); 
+                
+                return (
+                  <SidebarMenuItem key={item.name}>
+                    <Link href={itemPath} passHref legacyBehavior>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        className="justify-start text-sm"
+                        tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
+                      >
+                         <a onClick={(e) => handleNavigationAttempt(e, itemPath)}>
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.name}</span>
+                        </a>
+                      </SidebarMenuButton>
+                    </Link>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-2 border-t border-sidebar-border">
+            <Link href="/dashboard" legacyBehavior passHref>
+                <SidebarMenuButton
+                    asChild
+                    className="justify-start text-sm w-full"
+                    tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+                >
+                  <a onClick={(e) => handleNavigationAttempt(e, '/dashboard')}>
+                    <Home className="h-5 w-5" />
+                    <span>POA - Inicio</span>
+                  </a>
+                </SidebarMenuButton>
+            </Link>
+          </SidebarFooter>
+        </Sidebar>
 
-          <div className="flex-1 flex flex-col"> {/* Right panel: Removed overflow-hidden from here */}
-            <AppHeader /> 
-            <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md">
-              {children}
-            </SidebarInset>
-          </div>
+        {/* Content Area: Header + Scrollable Main Content */}
+        <div className="flex flex-col flex-1"> {/* Takes remaining width, stacks header and main */}
+          <AppHeader /> {/* Sticky header, should be w-full of this container */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/40 rounded-tl-lg"> {/* Scrollable content with padding */}
+            {children} {/* The Card components will be rendered here */}
+          </main>
         </div>
       </div>
+
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -324,5 +320,3 @@ export default function BuilderLayout({
     </SidebarProvider>
   );
 }
-
-    
