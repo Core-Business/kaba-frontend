@@ -21,7 +21,6 @@ export function HeaderForm() {
   const { poa, updateHeader, updatePoaName } = usePOA();
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  // const [logoFile, setLogoFile] = useState<File | null>(null); // No longer needed to store the file itself here
 
   useEffect(() => {
     if (poa?.header.logoUrl) {
@@ -34,7 +33,7 @@ export function HeaderForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "poaName") {
+    if (name === "poaName") { // This input is for poa.name which is the primary title
       updatePoaName(value); 
     } else {
       updateHeader({ [name]: value });
@@ -65,7 +64,6 @@ export function HeaderForm() {
         }
         const resultDataUrl = e.target?.result as string;
         setLogoPreview(resultDataUrl);
-        // setLogoFile(file); // No longer strictly needed here if context handles the Data URL
         updateHeader({ logoUrl: resultDataUrl, logoFileName: file.name });
         toast({ title: "Logo Subido", description: "Vista previa del logo actualizada." });
       };
@@ -79,7 +77,6 @@ export function HeaderForm() {
 
   const removeLogo = () => {
     setLogoPreview(null);
-    // setLogoFile(null); // No longer strictly needed here
     updateHeader({ logoUrl: "", logoFileName: "" });
     const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
@@ -94,36 +91,47 @@ export function HeaderForm() {
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div>
+        <div className="col-span-1 md:col-span-2"> {/* Make this span full width */}
           <Label htmlFor="poaName">Nombre/Título del Procedimiento POA</Label>
           <Input
             id="poaName"
             name="poaName"
             value={poa.name || ""}
             onChange={handleInputChange}
-            placeholder="Ej., Estrategia de Marketing Q3"
+            placeholder="Ej., Estrategia de Marketing Q3, Manual de Operaciones X"
             className="mt-1 w-full"
           />
           <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Grid for other fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
           <div>
             <Label htmlFor="author">Autor</Label>
             <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Tu Nombre/Departamento" className="mt-1 w-full" />
+          </div>
+          <div>
+            <Label htmlFor="companyName">Nombre de la Empresa (Opcional)</Label>
+            <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="version">Versión</Label>
             <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1 w-full" />
           </div>
           <div>
+            <Label htmlFor="documentCode">Código del Documento (Opcional)</Label>
+            <Input id="documentCode" name="documentCode" value={poa.header.documentCode || ""} onChange={handleInputChange} placeholder="Ej., RH-PROC-001" className="mt-1 w-full" />
+          </div>
+          <div>
             <Label htmlFor="date">Fecha</Label>
             <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
           </div>
+           {/* Add more fields here if needed to match screenshot, e.g., Estado, Ubicación del Archivo */}
         </div>
 
+
         <div>
-          <Label htmlFor="logo-upload">Logo de la Empresa (máx 200x200px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
+          <Label htmlFor="logo-upload">Logo de la Empresa (máx {MAX_DIMENSION}x{MAX_DIMENSION}px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
               <div className="relative group">

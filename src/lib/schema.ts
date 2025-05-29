@@ -12,6 +12,8 @@ export type POAActivity = z.infer<typeof poaActivitySchema>;
 export const poaHeaderSchema = z.object({
   title: z.string().min(1, "El título es requerido."), // This will mirror poa.name
   author: z.string().optional(),
+  companyName: z.string().optional(), // Added for screenshot consistency
+  documentCode: z.string().optional(), // Added for screenshot consistency
   version: z.string().optional(),
   date: z.string().optional(), 
   logoUrl: z.string().optional(), 
@@ -37,6 +39,8 @@ export type POA = z.infer<typeof poaSchema>;
 export const defaultPOAHeader: POAHeader = {
   title: '', // Will be set by poa.name initially
   author: '',
+  companyName: '',
+  documentCode: '',
   version: '1.0',
   date: new Date().toISOString().split('T')[0],
   logoUrl: '',

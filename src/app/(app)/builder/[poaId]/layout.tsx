@@ -153,7 +153,8 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-[calc(100vh-4rem)]">
+      {/* This parent div now controls padding for the entire builder area (sidebar + content) */}
+      <div className="flex flex-1 min-h-[calc(100vh-4rem)] p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
@@ -195,8 +196,10 @@ export default function BuilderLayout({
             </SidebarMenu>
           </SidebarContent>
         </Sidebar>
-        <SidebarInset className="flex-1 overflow-y-auto bg-background p-4 md:p-6 lg:p-8">
-          {/* The Card components rendered by {children} should now expand to the padded width of SidebarInset */}
+        {/* SidebarInset no longer has padding; its parent div above controls it. */}
+        {/* It takes flex-1 to fill remaining space next to the sidebar. */}
+        <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md">
+          {/* The Card components rendered by {children} should now expand to the width of SidebarInset */}
           {children}
         </SidebarInset>
       </div>
