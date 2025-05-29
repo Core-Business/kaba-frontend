@@ -196,10 +196,8 @@ export default function BuilderLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset className="flex-1 overflow-y-auto bg-background p-4 md:p-6 lg:p-8">
-          {/* The div below now ensures its children (the Cards) can expand to its full width within the padding of SidebarInset */}
-          <div className="flex flex-col w-full h-full"> {/* Added h-full to potentially help with vertical expansion if needed by children */}
-            {children}
-          </div>
+          {/* The Card components rendered by {children} should now expand to the padded width of SidebarInset */}
+          {children}
         </SidebarInset>
       </div>
     </SidebarProvider>
