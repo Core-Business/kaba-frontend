@@ -3,7 +3,7 @@
 
 import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { generatePOAHTML } from "@/lib/html-generator";
 import { Download, Eye } from "lucide-react";
@@ -42,7 +42,7 @@ export function DocumentPreview() {
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
         <SectionTitle title="Vista Previa y Exportación del Documento" description="Revisa tu Procedimiento POA y descárgalo como archivo HTML." />
       </CardHeader>

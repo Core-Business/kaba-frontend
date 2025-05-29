@@ -25,7 +25,7 @@ export type GenerateIntroductionInput = z.infer<typeof GenerateIntroductionInput
 const GenerateIntroductionOutputSchema = z.object({
   introduction: z
     .string()
-    .describe('Una introducción concisa (hasta 200 palabras) que resume la descripción del procedimiento. La respuesta DEBE ser en español.'),
+    .describe('Una introducción concisa (hasta 200 palabras) que resume la descripción del procedimiento. La respuesta DEBE ser en español y directa, sin frases introductorias genéricas.'),
 });
 
 export type GenerateIntroductionOutput = z.infer<typeof GenerateIntroductionOutputSchema>;
@@ -35,13 +35,14 @@ const generateIntroductionPrompt = ai.definePrompt({
   input: {schema: GenerateIntroductionInputSchema},
   output: {schema: GenerateIntroductionOutputSchema},
   prompt: `Eres un experto en crear introducciones concisas e informativas para Procedimientos POA.
-  Dada la siguiente descripción del procedimiento, genera una introducción que no tenga más de 200 palabras.
-  La introducción debe proporcionar una visión general clara del procedimiento para el lector.
+  Basado en la siguiente descripción del procedimiento, crea una introducción que no tenga más de 200 palabras.
+  La introducción debe proporcionar una visión general clara y directa del procedimiento para el lector.
+  Evita frases introductorias como "La presente introducción..." o "Este documento describe...". Ve directamente al resumen del procedimiento.
   La respuesta DEBE estar en español.
 
   Descripción del Procedimiento: {{{procedureDescription}}}
 
-  Introducción en español:`,
+  Introducción en español (directa y concisa):`,
 });
 
 const generateIntroductionFlow = ai.defineFlow(

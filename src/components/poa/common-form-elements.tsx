@@ -28,7 +28,7 @@ interface AiEnhanceButtonProps {
   children?: React.ReactNode; // Allow children to override icon and text
 }
 
-export function AiEnhanceButton({ onClick, isLoading, textExists, className, buttonText = "Mejorar con IA", disabled = false, children }: AiEnhanceButtonProps) {
+export function AiEnhanceButton({ onClick, isLoading, textExists, className, buttonText = "Edición con IA", disabled = false, children }: AiEnhanceButtonProps) {
   return (
     <Button
       type="button"
@@ -39,7 +39,7 @@ export function AiEnhanceButton({ onClick, isLoading, textExists, className, but
       className={className}
     >
       {children ? (
-        isLoading ? <><LoadingSpinner className="mr-2 h-4 w-4" /> Mejorando...</> : children
+        isLoading ? <><LoadingSpinner className="mr-2 h-4 w-4" /> Editando...</> : children
       ) : (
         <>
           {isLoading ? (
@@ -47,7 +47,7 @@ export function AiEnhanceButton({ onClick, isLoading, textExists, className, but
           ) : (
             <Wand2 className="mr-2 h-4 w-4" />
           )}
-          {isLoading ? "Mejorando..." : buttonText}
+          {isLoading ? "Editando..." : buttonText}
         </>
       )}
     </Button>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Wand2, GripVertical } from "lucide-react";
+import { Trash2, GripVertical } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
@@ -44,12 +44,12 @@ export function ActivityItem({
     if (!activity.description) return;
     setIsLoadingAi(true);
     try {
-      const result = await enhanceText({ text: activity.description });
+      const result = await enhanceText({ text: activity.description }); // Max words not implemented for activity items yet
       onUpdate(activity.id, { description: result.enhancedText });
-      toast({ title: "Actividad Mejorada", description: "La descripción de la actividad ha sido mejorada por IA." });
+      toast({ title: "Actividad Editada con IA", description: "La descripción de la actividad ha sido editada por IA." });
     } catch (error) {
-      console.error("Error mejorando actividad:", error);
-      toast({ title: "Fallo al Mejorar con IA", description: "No se pudo mejorar la actividad.", variant: "destructive" });
+      console.error("Error editando actividad con IA:", error);
+      toast({ title: "Fallo en Edición con IA", description: "No se pudo editar la actividad.", variant: "destructive" });
     }
     setIsLoadingAi(false);
   };
@@ -101,14 +101,14 @@ export function ActivityItem({
                 onChange={handleInputChange}
                 placeholder="Describe la actividad o tarea"
                 rows={3}
-                className="mt-1"
+                className="mt-1 w-full"
               />
             </div>
 
             <div>
               <Label htmlFor={`activity-type-${activity.id}`}>Tipo</Label>
               <Select value={activity.type} onValueChange={handleTypeChange}>
-                <SelectTrigger id={`activity-type-${activity.id}`} className="w-full sm:w-[180px] mt-1">
+                <SelectTrigger id={`activity-type-${activity.id}`} className="w-full sm:w-[200px] mt-1">
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>

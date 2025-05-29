@@ -23,7 +23,7 @@ const DefineScopeOutputSchema = z.object({
   scopeDefinition: z
     .string()
     .describe(
-      'Una definición de alcance coherente e informativa para el procedimiento, incluyendo departamentos, procesos y roles involucrados. La respuesta DEBE ser en español.'
+      'Una definición de alcance coherente, informativa y directa para el procedimiento, incluyendo departamentos, procesos y roles involucrados. La respuesta DEBE ser en español y evitar frases introductorias genéricas.'
     ),
 });
 export type DefineScopeOutput = z.infer<typeof DefineScopeOutputSchema>;
@@ -37,14 +37,13 @@ const prompt = ai.definePrompt({
   input: {schema: DefineScopeInputSchema},
   output: {schema: DefineScopeOutputSchema},
   prompt: `Eres un experto en definir el alcance de los procedimientos.
-
-  Basado en la descripción del procedimiento proporcionada, tu tarea es crear una definición de alcance concisa e informativa que incluya los departamentos, procesos y roles involucrados.
-
+  A partir de la descripción del procedimiento proporcionada, tu tarea es crear una definición de alcance concisa, informativa y directa que incluya los departamentos, procesos y roles involucrados.
+  Evita frases como "El alcance de este procedimiento es..." o "Este documento define el alcance como...". Ve directamente a la definición.
   La respuesta DEBE estar en español.
 
   Descripción del Procedimiento: {{{procedureDescription}}}
 
-  Definición del Alcance:`,
+  Definición del Alcance en español (directa y concisa):`,
 });
 
 const defineScopeFlow = ai.defineFlow(

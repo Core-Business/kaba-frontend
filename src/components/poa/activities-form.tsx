@@ -3,7 +3,7 @@
 
 import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { ActivityItem } from "./activity-item";
 import { PlusCircle, ListChecks } from "lucide-react";
@@ -51,42 +51,25 @@ export function ActivitiesForm() {
     const draggedItem = newActivities.splice(draggedItemIndex, 1)[0];
     newActivities.splice(dropIndex, 0, draggedItem);
     
-    const renumberedActivities = newActivities.map((act, index) => {
-        // Only renumber top-level activities (those without a dot in their number)
-        // Sub-activities maintain their relative numbering based on their parent
-        // This simplistic approach might need refinement for complex nested reordering
-        if (!act.number.includes('.')) { 
-             // Find previous top-level activity to infer the new top-level number
-            let currentTopLevel = 0;
-            for (let i = 0; i < index; i++) {
-                if (!newActivities[i].number.includes('.')) {
-                    currentTopLevel = parseInt(newActivities[i].number);
-                }
-            }
-            // This logic is still flawed for robust renumbering of mixed top/sub levels.
-            // A more robust solution would parse all numbers, identify hierarchy, and rebuild.
-            // For now, this renumbers top-level and assumes sub-activities are manually adjusted or handled by a future feature.
-            return { ...act, number: (currentTopLevel + 1).toString() };
-        }
-        return act; // Keep sub-activity numbers as they are, assuming they are relative or will be adjusted
-    });
-    
     // A simpler renumbering for now for only top level:
-    const renumberedTopLevelActivities = newActivities.map((act, idx) => {
+    // This basic renumbering assumes top-level items are dragged.
+    // Proper hierarchical renumbering is complex and out of scope for this quick fix.
+    let topLevelCounter = 1;
+    const renumberedActivities = newActivities.map((act) => {
       if(!act.number.includes('.')) { // Only renumber top level items
-        return {...act, number: (idx + 1).toString()};
+        return {...act, number: (topLevelCounter++).toString()};
       }
-      return act;
+      // Sub-items would need more complex logic to renumber relative to their (potentially new) parent.
+      return act; 
     });
 
-
-    setActivities(renumberedTopLevelActivities);
+    setActivities(renumberedActivities);
     setDraggedItemIndex(null);
   };
 
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
         <SectionTitle title="Actividades del Procedimiento" description="Define los pasos individuales, decisiones y rutas alternativas para este Procedimiento POA." />
       </CardHeader>

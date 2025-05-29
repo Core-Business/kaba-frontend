@@ -16,12 +16,13 @@ import {z} from 'genkit';
 
 const EnhanceTextInputSchema = z.object({
   text: z.string().describe('The text to enhance.'),
+  maxWords: z.number().optional().describe('El número máximo de palabras para el texto mejorado.'),
 });
 
 export type EnhanceTextInput = z.infer<typeof EnhanceTextInputSchema>;
 
 const EnhanceTextOutputSchema = z.object({
-  enhancedText: z.string().describe('The enhanced text, in Spanish.'),
+  enhancedText: z.string().describe('The enhanced text, in Spanish. Debe ser directo y evitar frases introductorias innecesarias.'),
 });
 
 export type EnhanceTextOutput = z.infer<typeof EnhanceTextOutputSchema>;
@@ -34,12 +35,15 @@ const enhanceTextPrompt = ai.definePrompt({
   name: 'enhanceTextPrompt',
   input: {schema: EnhanceTextInputSchema},
   output: {schema: EnhanceTextOutputSchema},
-  prompt: `Eres un asistente de escritura experto. Por favor, mejora el siguiente texto para que se adhiera a las normas establecidas y mantenga un tono consistente. La respuesta DEBE estar en español.
+  prompt: `Eres un asistente de escritura experto. Por favor, reformula y mejora el siguiente texto para asegurar claridad, concisión y un tono profesional y directo.
+  Evita frases introductorias innecesarias como "El texto proporcionado..." o "El objetivo de este texto es...".
+  {{#if maxWords}}El texto mejorado no debe exceder las {{{maxWords}}} palabras.{{/if}}
+  La respuesta DEBE estar en español.
 
 Texto original:
 {{{text}}}
 
-Texto mejorado en español:`,
+Texto mejorado en español (directo y conciso):`,
 });
 
 const enhanceTextFlow = ai.defineFlow(

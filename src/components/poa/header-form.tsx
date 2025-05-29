@@ -5,7 +5,7 @@ import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import Image from "next/image";
 import { UploadCloud, XCircle } from "lucide-react";
@@ -21,7 +21,7 @@ export function HeaderForm() {
   const { poa, updateHeader, updatePoaName } = usePOA();
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  // const [logoFile, setLogoFile] = useState<File | null>(null); // No longer needed to store the file itself here
 
   useEffect(() => {
     if (poa?.header.logoUrl) {
@@ -36,7 +36,6 @@ export function HeaderForm() {
     const { name, value } = e.target;
     if (name === "poaName") {
       updatePoaName(value); 
-      // updateHeader({ title: value }); // Context's updatePoaName now handles syncing header.title
     } else {
       updateHeader({ [name]: value });
     }
@@ -64,9 +63,10 @@ export function HeaderForm() {
           toast({ title: "Dimensiones de Imagen Demasiado Grandes", description: `El logo debe estar dentro de ${MAX_DIMENSION}x${MAX_DIMENSION} píxeles.`, variant: "destructive" });
           return;
         }
-        setLogoPreview(e.target?.result as string);
-        setLogoFile(file);
-        updateHeader({ logoUrl: e.target?.result as string, logoFileName: file.name });
+        const resultDataUrl = e.target?.result as string;
+        setLogoPreview(resultDataUrl);
+        // setLogoFile(file); // No longer strictly needed here if context handles the Data URL
+        updateHeader({ logoUrl: resultDataUrl, logoFileName: file.name });
         toast({ title: "Logo Subido", description: "Vista previa del logo actualizada." });
       };
       img.onerror = () => {
@@ -79,7 +79,7 @@ export function HeaderForm() {
 
   const removeLogo = () => {
     setLogoPreview(null);
-    setLogoFile(null);
+    // setLogoFile(null); // No longer strictly needed here
     updateHeader({ logoUrl: "", logoFileName: "" });
     const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
@@ -89,7 +89,7 @@ export function HeaderForm() {
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
@@ -102,7 +102,7 @@ export function HeaderForm() {
             value={poa.name || ""}
             onChange={handleInputChange}
             placeholder="Ej., Estrategia de Marketing Q3"
-            className="mt-1"
+            className="mt-1 w-full"
           />
           <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
         </div>
@@ -110,15 +110,15 @@ export function HeaderForm() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <Label htmlFor="author">Autor</Label>
-            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Tu Nombre/Departamento" className="mt-1" />
+            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Tu Nombre/Departamento" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="version">Versión</Label>
-            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1" />
+            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1 w-full" />
           </div>
           <div>
             <Label htmlFor="date">Fecha</Label>
-            <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1" />
+            <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
           </div>
         </div>
 

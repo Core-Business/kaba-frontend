@@ -2,7 +2,6 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -12,7 +11,7 @@ import { generateIntroduction } from "@/ai/flows/generate-introduction";
 import { defineScope } from "@/ai/flows/define-scope";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, BookOpen, Target as ScopeIcon } from "lucide-react"; 
+import { BookOpen, Target as ScopeIcon } from "lucide-react"; 
 
 export function ProcedureDescriptionForm() {
   const { poa, updateField } = usePOA();
@@ -27,10 +26,10 @@ export function ProcedureDescriptionForm() {
     try {
       const result = await enhanceText({ text: poa.procedureDescription });
       updateField("procedureDescription", result.enhancedText);
-      toast({ title: "Descripción del Procedimiento Mejorada", description: "El texto ha sido mejorado por IA." });
+      toast({ title: "Descripción del Procedimiento Editada", description: "El texto ha sido editado por IA." });
     } catch (error) {
-      console.error("Error mejorando descripción del procedimiento:", error);
-      toast({ title: "Fallo al Mejorar con IA", description: "No se pudo mejorar el texto.", variant: "destructive" });
+      console.error("Error editando descripción del procedimiento con IA:", error);
+      toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto.", variant: "destructive" });
     }
     setIsEnhancingText(false);
   };
@@ -74,7 +73,7 @@ export function ProcedureDescriptionForm() {
   const procedureTextExists = !!poa.procedureDescription && poa.procedureDescription.length > 10;
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg w-full">
       <CardHeader>
         <SectionTitle title="Descripción del Procedimiento" description="Detalla el procedimiento general. Esta información puede ser usada por IA para ayudar a generar otras secciones." />
       </CardHeader>
@@ -87,7 +86,7 @@ export function ProcedureDescriptionForm() {
             onChange={(e) => updateField("procedureDescription", e.target.value)}
             placeholder="Describe el procedimiento paso a paso, incluyendo contexto relevante, partes involucradas o sistemas..."
             rows={12}
-            className="min-h-[250px]"
+            className="min-h-[250px] w-full"
           />
         </div>
         <div className="mt-4 flex flex-wrap gap-2 justify-end">
@@ -105,6 +104,7 @@ export function ProcedureDescriptionForm() {
             className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
           >
              <BookOpen className="mr-2 h-4 w-4" />
+             {isGeneratingIntro ? "Generando..." : "Generar Introducción"}
           </AiEnhanceButton>
            <AiEnhanceButton
             onClick={handleDefineScope}
@@ -115,6 +115,7 @@ export function ProcedureDescriptionForm() {
             className="bg-accent/10 hover:bg-accent/20 text-accent-foreground border-accent/30"
           >
             <ScopeIcon className="mr-2 h-4 w-4" />
+            {isDefiningScope ? "Definiendo..." : "Definir Alcance"}
           </AiEnhanceButton>
         </div>
          {poa.introduction && (
