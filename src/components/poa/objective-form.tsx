@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateObjective } from "@/ai/flows/generate-objective";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, PlusCircle, Trash2, Brain, Wand2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -42,9 +42,18 @@ export function ObjectiveForm() {
     kpis: [''],
   });
 
+  // Effect to load helper data from POA if it exists (example of persisting helper data)
+  useEffect(() => {
+    if (poa?.objectiveHelperData) {
+      setHelperData(poa.objectiveHelperData);
+    }
+  }, [poa?.objectiveHelperData]);
+
   const handleHelperInputChange = (field: keyof Omit<ObjectiveHelperData, 'kpis'>, value: string) => {
     setHelperData(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true); // Consider helper fields as part of main form dirtiness for now
+    // Optionally, update POA context if helper data is part of POA schema
+    // updateField('objectiveHelperData', { ...helperData, [field]: value }); 
+    setIsDirty(true);
   };
 
   const handleKpiChange = (index: number, value: string) => {
@@ -61,7 +70,7 @@ export function ObjectiveForm() {
 
   const removeKpiField = (index: number) => {
     const newKpis = helperData.kpis.filter((_, i) => i !== index);
-    setHelperData(prev => ({ ...prev, kpis: newKpis.length > 0 ? newKpis : [''] })); // Ensure at least one KPI field
+    setHelperData(prev => ({ ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }));
     setIsDirty(true);
   };
 
@@ -76,14 +85,14 @@ export function ObjectiveForm() {
     } catch (error) {
       console.error("Error editando objetivo con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
-      setObjectiveBeforeAi(null); // Clear undo state on error
+      setObjectiveBeforeAi(null); 
     }
     setIsLoadingAiEnhance(false);
   };
 
   const handleGenerateObjective = async () => {
     if (!poa) return;
-    setObjectiveBeforeAi(poa.objective); // Store current objective for potential undo
+    setObjectiveBeforeAi(poa.objective); 
     setIsLoadingAiGenerate(true);
     try {
       const result = await generateObjective({
@@ -92,10 +101,12 @@ export function ObjectiveForm() {
         purposeOrExpectedResult: helperData.purposeOrExpectedResult,
         targetAudience: helperData.targetAudience,
         desiredImpact: helperData.desiredImpact,
-        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''), // Send only non-empty KPIs
+        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''),
         maxWords: maxWords,
       });
       updateField("objective", result.generatedObjective);
+      // Persist helperData if desired (e.g., update POA context with helperData)
+      // updateField('objectiveHelperData', helperData); 
       toast({ title: "Objetivo Generado con IA", description: "Se ha generado un nuevo objetivo utilizando las preguntas de ayuda." });
     } catch (error)
     {
@@ -107,7 +118,7 @@ export function ObjectiveForm() {
   };
 
   const handleUndoAi = () => {
-    if (objectiveBeforeAi !== null) {
+    if (objectiveBeforeAi !== null && poa) {
       updateField("objective", objectiveBeforeAi);
       toast({ title: "Acción Deshecha", description: "Se restauró el texto anterior del objetivo." });
       setObjectiveBeforeAi(null);
@@ -116,14 +127,15 @@ export function ObjectiveForm() {
   
   const handleObjectiveChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("objective", e.target.value);
-    setObjectiveBeforeAi(null); // Clear undo state if user types manually
+    setObjectiveBeforeAi(null); 
   };
 
   const handleSave = () => {
     if (poa) {
+      // If objectiveHelperData were part of the POA schema, it would be saved automatically.
+      // For now, it's component state. If you want to save it, you'd update the POA in context:
+      // updateField('objectiveHelperData', helperData); // Assuming objectiveHelperData is a field in POA
       saveCurrentPOA();
-      // Clear helper fields after save if needed, or persist them as part of POA schema
-      // For now, helper fields are component state and not saved with POA
     }
   };
 
@@ -139,7 +151,7 @@ export function ObjectiveForm() {
         <SectionTitle title="Objetivo" description="Establece claramente la meta principal o propósito de este Procedimiento POA." />
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-1 w-full">
           <Label htmlFor="objective">Declaración del Objetivo</Label>
           <Textarea
             id="objective"
@@ -151,7 +163,7 @@ export function ObjectiveForm() {
           />
         </div>
 
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3 w-full">
           <div className="flex justify-between items-center">
             <Label htmlFor="maxWordsSliderAi">Máximo de Palabras para IA: {maxWords}</Label>
           </div>
@@ -167,7 +179,7 @@ export function ObjectiveForm() {
           />
         </div>
         
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-end items-center w-full">
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAiEnhance}
@@ -180,55 +192,55 @@ export function ObjectiveForm() {
           </AiEnhanceButton>
         </div>
 
-        <hr className="my-6" />
+        <hr className="my-4 w-full" />
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-primary">Ayuda para Redactar el Objetivo</h3>
+        <div className="space-y-3 w-full"> {/* Reduced space-y from 4 to 3 for compactness */}
+          <h3 className="text-lg font-semibold text-primary mb-1">Ayuda para Redactar el Objetivo</h3> {/* Reduced mb from 2 to 1 */}
           
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <Label htmlFor="generalDescription">Descripción general de la acción (¿Qué se hace?)</Label>
-            <Textarea id="generalDescription" value={helperData.generalDescription} onChange={(e) => handleHelperInputChange('generalDescription', e.target.value)} rows={3} placeholder="Ej., Implementar un nuevo sistema de gestión de inventario."/>
+            <Textarea id="generalDescription" value={helperData.generalDescription} onChange={(e) => handleHelperInputChange('generalDescription', e.target.value)} rows={2} placeholder="Ej., Implementar un nuevo sistema de gestión de inventario." className="w-full min-h-[60px]"/>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <Label htmlFor="needOrProblem">Necesidad o problema que atiende (¿Por qué se hace?)</Label>
-            <Textarea id="needOrProblem" value={helperData.needOrProblem} onChange={(e) => handleHelperInputChange('needOrProblem', e.target.value)} rows={3} placeholder="Ej., Para reducir las pérdidas por obsolescencia y mejorar la precisión del stock."/>
+            <Textarea id="needOrProblem" value={helperData.needOrProblem} onChange={(e) => handleHelperInputChange('needOrProblem', e.target.value)} rows={2} placeholder="Ej., Para reducir las pérdidas por obsolescencia y mejorar la precisión del stock." className="w-full min-h-[60px]"/>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <Label htmlFor="purposeOrExpectedResult">Finalidad o resultado esperado (¿Para qué se hace?)</Label>
-            <Textarea id="purposeOrExpectedResult" value={helperData.purposeOrExpectedResult} onChange={(e) => handleHelperInputChange('purposeOrExpectedResult', e.target.value)} rows={3} placeholder="Ej., Lograr una reducción del 15% en pérdidas y una precisión del 99% en el inventario."/>
+            <Textarea id="purposeOrExpectedResult" value={helperData.purposeOrExpectedResult} onChange={(e) => handleHelperInputChange('purposeOrExpectedResult', e.target.value)} rows={2} placeholder="Ej., Lograr una reducción del 15% en pérdidas y una precisión del 99% en el inventario." className="w-full min-h-[60px]"/>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <Label htmlFor="targetAudience">A quién va dirigido o quién se beneficia (Aplicación)</Label>
-            <Textarea id="targetAudience" value={helperData.targetAudience} onChange={(e) => handleHelperInputChange('targetAudience', e.target.value)} rows={3} placeholder="Ej., El departamento de logística y finanzas."/>
+            <Textarea id="targetAudience" value={helperData.targetAudience} onChange={(e) => handleHelperInputChange('targetAudience', e.target.value)} rows={2} placeholder="Ej., El departamento de logística y finanzas." className="w-full min-h-[60px]"/>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 w-full">
             <Label htmlFor="desiredImpact">Impacto que se busca generar (mejora, control, cumplimiento, eficiencia, etc.)</Label>
-            <Textarea id="desiredImpact" value={helperData.desiredImpact} onChange={(e) => handleHelperInputChange('desiredImpact', e.target.value)} rows={3} placeholder="Ej., Mejora de la eficiencia operativa, control de costos y cumplimiento normativo."/>
+            <Textarea id="desiredImpact" value={helperData.desiredImpact} onChange={(e) => handleHelperInputChange('desiredImpact', e.target.value)} rows={2} placeholder="Ej., Mejora de la eficiencia operativa, control de costos y cumplimiento normativo." className="w-full min-h-[60px]"/>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 w-full">
             <Label>Indicadores Clave de Desempeño (KPIs)</Label>
             {helperData.kpis.map((kpi, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={index} className="flex items-center gap-2 w-full">
                 <Input 
                   value={kpi} 
                   onChange={(e) => handleKpiChange(index, e.target.value)} 
                   placeholder={`KPI ${index + 1}`}
-                  className="flex-grow"
+                  className="flex-grow w-full"
                 />
                 {helperData.kpis.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeKpiField(index)} className="text-destructive">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => removeKpiField(index)} className="text-destructive shrink-0">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
               </div>
             ))}
-            <Button type="button" variant="outline" size="sm" onClick={addKpiField}>
+            <Button type="button" variant="outline" size="sm" onClick={addKpiField} className="mt-1">
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
             </Button>
           </div>
           
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-3 w-full">
             <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
               {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
               {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
@@ -247,4 +259,3 @@ export function ObjectiveForm() {
   );
 }
 
-    
