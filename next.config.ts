@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -17,6 +18,15 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: '/builder/:poaId/procedure-description',
+        destination: '/builder/:poaId/introduction',
+        permanent: true,
+      },
+    ]
   },
 };
 
