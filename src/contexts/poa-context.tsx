@@ -28,16 +28,30 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      return { ...currentPoa, name, updatedAt: new Date().toISOString() };
+      return { 
+        ...currentPoa, 
+        name, 
+        header: { ...currentPoa.header, title: name }, // Sync header.title with poa.name
+        updatedAt: new Date().toISOString() 
+      };
     });
   }, []);
   
   const updateHeader = useCallback((updates: Partial<POAHeader>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      // If title is being updated directly through updateHeader, ensure poa.name is also synced.
+      // However, primary title updates should go through updatePoaName.
+      const newHeader = { ...currentPoa.header, ...updates };
+      let newName = currentPoa.name;
+      if (updates.title && updates.title !== currentPoa.name) {
+        newName = updates.title; // If header.title is changed, reflect it in poa.name too.
+      }
+      
       return {
         ...currentPoa,
-        header: { ...currentPoa.header, ...updates },
+        name: newName,
+        header: newHeader,
         updatedAt: new Date().toISOString(),
       };
     });
@@ -102,10 +116,19 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
   const loadPoa = useCallback((poaData: POA) => {
-    setPoa(poaData);
+    // Ensure consistency when loading
+    const name = poaData.name || poaData.header.title || 'POA Cargado';
+    setPoa({
+        ...poaData,
+        name: name,
+        header: {
+            ...poaData.header,
+            title: name 
+        }
+    });
   }, []);
   
-  const createNew = useCallback((id: string = 'new', name: string = 'POA Sin Título') => {
+  const createNew = useCallback((id: string = 'new', name: string = 'Nuevo POA Sin Título') => {
     setPoa(createNewPOA(id, name));
   }, []);
 

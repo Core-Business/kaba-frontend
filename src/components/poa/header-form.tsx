@@ -36,6 +36,7 @@ export function HeaderForm() {
     const { name, value } = e.target;
     if (name === "poaName") {
       updatePoaName(value); 
+      // updateHeader({ title: value }); // Context's updatePoaName now handles syncing header.title
     } else {
       updateHeader({ [name]: value });
     }
@@ -93,31 +94,17 @@ export function HeaderForm() {
         <SectionTitle title="Encabezado del POA" description="Define los detalles principales de tu Plan de Acción." />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <Label htmlFor="poaName">Nombre/Título del POA (para listado)</Label>
-            <Input
-              id="poaName"
-              name="poaName"
-              value={poa.name || ""}
-              onChange={handleInputChange}
-              placeholder="Ej., Estrategia de Marketing Q3"
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el POA en tu panel.</p>
-          </div>
-          <div>
-            <Label htmlFor="title">Título del Documento (aparece en el encabezado)</Label>
-            <Input
-              id="title"
-              name="title"
-              value={poa.header.title}
-              onChange={handleInputChange}
-              placeholder="Ej., Plan de Acción: Marketing Q3"
-              className="mt-1"
-            />
-             <p className="text-xs text-muted-foreground mt-1">Este título aparecerá en el encabezado del documento generado.</p>
-          </div>
+        <div>
+          <Label htmlFor="poaName">Nombre/Título del POA</Label>
+          <Input
+            id="poaName"
+            name="poaName"
+            value={poa.name || ""}
+            onChange={handleInputChange}
+            placeholder="Ej., Estrategia de Marketing Q3"
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el POA en tu panel y como título en el documento.</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
