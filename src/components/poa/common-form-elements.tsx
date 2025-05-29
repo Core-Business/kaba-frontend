@@ -1,3 +1,4 @@
+
 "use client";
 import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
@@ -24,9 +25,10 @@ interface AiEnhanceButtonProps {
   className?: string;
   buttonText?: string;
   disabled?: boolean;
+  children?: React.ReactNode; // Allow children to override icon and text
 }
 
-export function AiEnhanceButton({ onClick, isLoading, textExists, className, buttonText = "Enhance with AI", disabled = false }: AiEnhanceButtonProps) {
+export function AiEnhanceButton({ onClick, isLoading, textExists, className, buttonText = "Mejorar con IA", disabled = false, children }: AiEnhanceButtonProps) {
   return (
     <Button
       type="button"
@@ -36,12 +38,18 @@ export function AiEnhanceButton({ onClick, isLoading, textExists, className, but
       disabled={isLoading || !textExists || disabled}
       className={className}
     >
-      {isLoading ? (
-        <LoadingSpinner className="mr-2 h-4 w-4" />
+      {children ? (
+        isLoading ? <><LoadingSpinner className="mr-2 h-4 w-4" /> Mejorando...</> : children
       ) : (
-        <Wand2 className="mr-2 h-4 w-4" />
+        <>
+          {isLoading ? (
+            <LoadingSpinner className="mr-2 h-4 w-4" />
+          ) : (
+            <Wand2 className="mr-2 h-4 w-4" />
+          )}
+          {isLoading ? "Mejorando..." : buttonText}
+        </>
       )}
-      {isLoading ? "Enhancing..." : buttonText}
     </Button>
   );
 }

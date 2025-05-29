@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
@@ -21,29 +22,29 @@ export function ObjectiveForm() {
     try {
       const result = await enhanceText({ text: poa.objective });
       updateField("objective", result.enhancedText);
-      toast({ title: "Objective Enhanced", description: "The objective text has been improved by AI." });
+      toast({ title: "Objetivo Mejorado", description: "El texto del objetivo ha sido mejorado por IA." });
     } catch (error) {
-      console.error("Error enhancing objective:", error);
-      toast({ title: "AI Enhancement Failed", description: "Could not enhance the objective text.", variant: "destructive" });
+      console.error("Error mejorando objetivo:", error);
+      toast({ title: "Fallo al Mejorar con IA", description: "No se pudo mejorar el texto del objetivo.", variant: "destructive" });
     }
     setIsLoadingAi(false);
   };
 
-  if (!poa) return <div>Loading POA data...</div>;
+  if (!poa) return <div>Cargando datos del POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Objective" description="Clearly state the main goal or purpose of this Plan of Action." />
+        <SectionTitle title="Objetivo" description="Establece claramente la meta principal o propósito de este Plan de Acción." />
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <Label htmlFor="objective">Objective Statement</Label>
+          <Label htmlFor="objective">Declaración del Objetivo</Label>
           <Textarea
             id="objective"
             value={poa.objective || ""}
             onChange={(e) => updateField("objective", e.target.value)}
-            placeholder="Describe the primary objective here..."
+            placeholder="Describe el objetivo principal aquí..."
             rows={8}
             className="min-h-[150px]"
           />
@@ -52,7 +53,7 @@ export function ObjectiveForm() {
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAi}
-            textExists={!!poa.objective && poa.objective.length > 10} // Only enable if there's enough text
+            textExists={!!poa.objective && poa.objective.length > 10} 
           />
         </div>
       </CardContent>

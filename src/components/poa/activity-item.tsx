@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { POAActivity } from "@/lib/schema";
@@ -45,10 +46,10 @@ export function ActivityItem({
     try {
       const result = await enhanceText({ text: activity.description });
       onUpdate(activity.id, { description: result.enhancedText });
-      toast({ title: "Activity Enhanced", description: "The activity description has been improved by AI." });
+      toast({ title: "Actividad Mejorada", description: "La descripción de la actividad ha sido mejorada por IA." });
     } catch (error) {
-      console.error("Error enhancing activity:", error);
-      toast({ title: "AI Enhancement Failed", description: "Could not enhance the activity.", variant: "destructive" });
+      console.error("Error mejorando actividad:", error);
+      toast({ title: "Fallo al Mejorar con IA", description: "No se pudo mejorar la actividad.", variant: "destructive" });
     }
     setIsLoadingAi(false);
   };
@@ -72,66 +73,65 @@ export function ActivityItem({
       <CardContent className="p-4 space-y-4">
         <div className="flex items-start gap-3">
           {onDragStart && (
-             <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Drag to reorder">
+             <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
                 <GripVertical className="h-5 w-5 mt-1" />
              </button>
           )}
           <div className="flex-grow space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 items-start">
                 <div className="sm:col-span-2">
-                    <Label htmlFor={`activity-number-${activity.id}`}>Activity Number / ID</Label>
+                    <Label htmlFor={`activity-number-${activity.id}`}>Número/ID de Actividad</Label>
                     <Input
                         id={`activity-number-${activity.id}`}
                         name="number"
                         value={activity.number}
                         onChange={handleInputChange}
-                        placeholder="e.g., 1.1, A.2"
+                        placeholder="Ej., 1.1, A.2"
                         className="mt-1 w-full sm:w-40"
                     />
                 </div>
             </div>
             
             <div>
-              <Label htmlFor={`activity-description-${activity.id}`}>Description</Label>
+              <Label htmlFor={`activity-description-${activity.id}`}>Descripción</Label>
               <Textarea
                 id={`activity-description-${activity.id}`}
                 name="description"
                 value={activity.description}
                 onChange={handleInputChange}
-                placeholder="Describe the activity or task"
+                placeholder="Describe la actividad o tarea"
                 rows={3}
                 className="mt-1"
               />
             </div>
 
             <div>
-              <Label htmlFor={`activity-type-${activity.id}`}>Type</Label>
+              <Label htmlFor={`activity-type-${activity.id}`}>Tipo</Label>
               <Select value={activity.type} onValueChange={handleTypeChange}>
                 <SelectTrigger id={`activity-type-${activity.id}`} className="w-full sm:w-[180px] mt-1">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="individual">Individual Task</SelectItem>
-                  <SelectItem value="decision">Decision Point</SelectItem>
-                  <SelectItem value="alternatives">Alternative Paths</SelectItem>
+                  <SelectItem value="individual">Tarea Individual</SelectItem>
+                  <SelectItem value="decision">Punto de Decisión</SelectItem>
+                  <SelectItem value="alternatives">Rutas Alternativas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
-            {/* Placeholder for branching logic based on type */}
             {activity.type === 'decision' && (
               <div className="p-3 border-l-4 border-blue-500 bg-blue-50 rounded-md">
                 <p className="text-sm text-blue-700">
-                  Decision Point: Define outcomes (e.g., Yes/No paths) using sub-activities or linking.
-                  (Detailed branching UI to be implemented)
+                  Punto de Decisión: Define resultados (ej., rutas Sí/No) usando sub-actividades o enlaces.
+                  (UI detallada de ramificación por implementar)
                 </p>
               </div>
             )}
             {activity.type === 'alternatives' && (
               <div className="p-3 border-l-4 border-green-500 bg-green-50 rounded-md">
                 <p className="text-sm text-green-700">
-                  Alternative Paths: Define different options and their subsequent steps.
-                  (Detailed branching UI to be implemented)
+                  Rutas Alternativas: Define diferentes opciones y sus pasos subsecuentes.
+                  (UI detallada de ramificación por implementar)
                 </p>
               </div>
             )}
@@ -152,7 +152,7 @@ export function ActivityItem({
             onClick={() => onDelete(activity.id)}
             className="text-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="mr-1 h-4 w-4" /> Delete
+            <Trash2 className="mr-1 h-4 w-4" /> Eliminar
           </Button>
         </div>
       </CardContent>

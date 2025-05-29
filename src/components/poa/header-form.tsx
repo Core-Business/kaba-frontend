@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
@@ -34,7 +35,7 @@ export function HeaderForm() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === "poaName") {
-      updatePoaName(value); // Update overall POA name/title
+      updatePoaName(value); 
     } else {
       updateHeader({ [name]: value });
     }
@@ -44,15 +45,13 @@ export function HeaderForm() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate format
     if (!ALLOWED_FORMATS.includes(file.type)) {
-      toast({ title: "Invalid File Format", description: "Please upload JPEG, PNG, SVG, BMP, or TIFF.", variant: "destructive" });
+      toast({ title: "Formato de Archivo Inválido", description: "Por favor sube JPEG, PNG, SVG, BMP, o TIFF.", variant: "destructive" });
       return;
     }
     
-    // Validate file size (client-side rough check)
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        toast({ title: "File Too Large", description: `Logo must be smaller than ${MAX_FILE_SIZE_MB}MB.`, variant: "destructive" });
+        toast({ title: "Archivo Demasiado Grande", description: `El logo debe ser menor a ${MAX_FILE_SIZE_MB}MB.`, variant: "destructive" });
         return;
     }
 
@@ -60,18 +59,17 @@ export function HeaderForm() {
     reader.onload = (e) => {
       const img = document.createElement("img");
       img.onload = () => {
-        // Validate dimensions
         if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
-          toast({ title: "Image Dimensions Too Large", description: `Logo must be within ${MAX_DIMENSION}x${MAX_DIMENSION} pixels.`, variant: "destructive" });
+          toast({ title: "Dimensiones de Imagen Demasiado Grandes", description: `El logo debe estar dentro de ${MAX_DIMENSION}x${MAX_DIMENSION} píxeles.`, variant: "destructive" });
           return;
         }
         setLogoPreview(e.target?.result as string);
         setLogoFile(file);
         updateHeader({ logoUrl: e.target?.result as string, logoFileName: file.name });
-        toast({ title: "Logo Uploaded", description: "Logo preview updated." });
+        toast({ title: "Logo Subido", description: "Vista previa del logo actualizada." });
       };
       img.onerror = () => {
-        toast({ title: "Invalid Image", description: "Could not load image file.", variant: "destructive" });
+        toast({ title: "Imagen Inválida", description: "No se pudo cargar el archivo de imagen.", variant: "destructive" });
       };
       img.src = e.target?.result as string;
     };
@@ -82,70 +80,69 @@ export function HeaderForm() {
     setLogoPreview(null);
     setLogoFile(null);
     updateHeader({ logoUrl: "", logoFileName: "" });
-    // Also clear the file input if possible, or just rely on state
     const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = "";
-     toast({ title: "Logo Removed", description: "Logo has been cleared." });
+     toast({ title: "Logo Eliminado", description: "El logo ha sido borrado." });
   };
   
-  if (!poa) return <div>Loading POA data...</div>;
+  if (!poa) return <div>Cargando datos del POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="POA Header" description="Define the main details of your Plan of Action." />
+        <SectionTitle title="Encabezado del POA" description="Define los detalles principales de tu Plan de Acción." />
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="poaName">POA Name/Title (for listing)</Label>
+            <Label htmlFor="poaName">Nombre/Título del POA (para listado)</Label>
             <Input
               id="poaName"
               name="poaName"
               value={poa.name || ""}
               onChange={handleInputChange}
-              placeholder="E.g., Q3 Marketing Strategy"
+              placeholder="Ej., Estrategia de Marketing Q3"
               className="mt-1"
             />
-            <p className="text-xs text-muted-foreground mt-1">This name is used to identify the POA in your dashboard.</p>
+            <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el POA en tu panel.</p>
           </div>
           <div>
-            <Label htmlFor="title">Document Title (appears in header)</Label>
+            <Label htmlFor="title">Título del Documento (aparece en el encabezado)</Label>
             <Input
               id="title"
               name="title"
               value={poa.header.title}
               onChange={handleInputChange}
-              placeholder="E.g., Plan of Action: Q3 Marketing"
+              placeholder="Ej., Plan de Acción: Marketing Q3"
               className="mt-1"
             />
-             <p className="text-xs text-muted-foreground mt-1">This title will appear in the generated document's header.</p>
+             <p className="text-xs text-muted-foreground mt-1">Este título aparecerá en el encabezado del documento generado.</p>
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <Label htmlFor="author">Author</Label>
-            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Your Name/Department" className="mt-1" />
+            <Label htmlFor="author">Autor</Label>
+            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Tu Nombre/Departamento" className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="version">Version</Label>
+            <Label htmlFor="version">Versión</Label>
             <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1" />
           </div>
           <div>
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Fecha</Label>
             <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1" />
           </div>
         </div>
 
         <div>
-          <Label htmlFor="logo-upload">Company Logo (max 200x200px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
+          <Label htmlFor="logo-upload">Logo de la Empresa (máx 200x200px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
               <div className="relative group">
                 <Image 
                   src={logoPreview} 
-                  alt="Logo preview" 
+                  alt="Vista previa del logo" 
                   width={80} 
                   height={80} 
                   className="rounded border object-contain bg-muted"
@@ -156,7 +153,7 @@ export function HeaderForm() {
                   size="icon" 
                   className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={removeLogo}
-                  aria-label="Remove logo"
+                  aria-label="Eliminar logo"
                 >
                   <XCircle className="h-4 w-4" />
                 </Button>
@@ -174,11 +171,11 @@ export function HeaderForm() {
               className="hidden" 
             />
             <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}>
-              {logoPreview ? "Change Logo" : "Upload Logo"}
+              {logoPreview ? "Cambiar Logo" : "Subir Logo"}
             </Button>
-             {poa.header.logoFileName && <span className="text-sm text-muted-foreground truncate max-w-xs">Current: {poa.header.logoFileName}</span>}
+             {poa.header.logoFileName && <span className="text-sm text-muted-foreground truncate max-w-xs">Actual: {poa.header.logoFileName}</span>}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Accepted formats: JPEG, PNG, SVG, BMP, TIFF.</p>
+          <p className="text-xs text-muted-foreground mt-1">Formatos aceptados: JPEG, PNG, SVG, BMP, TIFF.</p>
         </div>
       </CardContent>
     </Card>

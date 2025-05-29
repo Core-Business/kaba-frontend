@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,9 @@ import Image from "next/image";
 
 // Mock data for POAs - replace with actual data fetching
 const mockPoas = [
-  { id: "1", name: "Software Deployment Plan", updatedAt: "2024-07-20", logo: "https://placehold.co/40x40.png?text=SDP" },
-  { id: "2", name: "New Employee Onboarding", updatedAt: "2024-07-18", logo: "https://placehold.co/40x40.png?text=NEO" },
-  { id: "3", name: "Marketing Campaign Q3", updatedAt: "2024-07-15", logo: "https://placehold.co/40x40.png?text=MCQ3" },
+  { id: "1", name: "Plan de Despliegue de Software", updatedAt: "2024-07-20", logo: "https://placehold.co/40x40.png?text=PDS" },
+  { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: "2024-07-18", logo: "https://placehold.co/40x40.png?text=INE" },
+  { id: "3", name: "Campaña de Marketing Q3", updatedAt: "2024-07-15", logo: "https://placehold.co/40x40.png?text=CMQ3" },
 ];
 
 export default function DashboardPage() {
@@ -21,7 +22,7 @@ export default function DashboardPage() {
 
   const handleCreateNewPOA = () => {
     const newPoaId = crypto.randomUUID(); // Generate a unique ID for the new POA
-    createNew(newPoaId, "New POA"); // Initialize context with this new POA
+    createNew(newPoaId, "Nuevo POA"); // Initialize context with this new POA
     router.push(`/builder/${newPoaId}/header`);
   };
 
@@ -29,12 +30,12 @@ export default function DashboardPage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Plans of Action</h1>
-          <p className="text-muted-foreground">Manage your existing POAs or create a new one.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Mis Planes de Acción</h1>
+          <p className="text-muted-foreground">Gestiona tus POA existentes o crea uno nuevo.</p>
         </div>
         <Button onClick={handleCreateNewPOA} size="lg">
           <PlusCircle className="mr-2 h-5 w-5" />
-          Create New POA
+          Crear Nuevo POA
         </Button>
       </div>
 
@@ -44,15 +45,15 @@ export default function DashboardPage() {
             <div className="mx-auto bg-secondary p-3 rounded-full w-fit">
               <FileText className="h-10 w-10 text-muted-foreground" />
             </div>
-            <CardTitle className="mt-4 text-2xl">No POAs Yet</CardTitle>
+            <CardTitle className="mt-4 text-2xl">Aún no hay POAs</CardTitle>
             <CardDescription className="mt-2 text-lg">
-              Start by creating your first Plan of Action.
+              Comienza creando tu primer Plan de Acción.
             </CardDescription>
           </CardHeader>
           <CardFooter className="justify-center">
             <Button onClick={handleCreateNewPOA} size="lg">
               <PlusCircle className="mr-2 h-5 w-5" />
-              Create Your First POA
+              Crea Tu Primer POA
             </Button>
           </CardFooter>
         </Card>
@@ -73,7 +74,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg">{poa.name}</CardTitle>
-                  <CardDescription>Last updated: {new Date(poa.updatedAt).toLocaleDateString()}</CardDescription>
+                  <CardDescription>Última actualización: {new Date(poa.updatedAt).toLocaleDateString()}</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
@@ -83,7 +84,7 @@ export default function DashboardPage() {
                 <Link href={`/builder/${poa.id}/header`} passHref legacyBehavior>
                   <Button variant="outline" className="w-full">
                     <Edit3 className="mr-2 h-4 w-4" />
-                    Edit POA
+                    Editar POA
                   </Button>
                 </Link>
               </CardFooter>

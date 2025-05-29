@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -29,12 +30,12 @@ import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const navItems = [
-  { name: "Header", href: "header", icon: ClipboardEdit },
-  { name: "Objective", href: "objective", icon: Target },
-  { name: "Procedure Description", href: "procedure-description", icon: ListChecks },
-  { name: "Scope", href: "scope", icon: ScanSearch },
-  { name: "Activities", href: "activities", icon: ListTree },
-  { name: "Document Preview", href: "document", icon: Printer },
+  { name: "Encabezado", href: "header", icon: ClipboardEdit },
+  { name: "Objetivo", href: "objective", icon: Target },
+  { name: "Descripción del Procedimiento", href: "procedure-description", icon: ListChecks },
+  { name: "Alcance", href: "scope", icon: ScanSearch },
+  { name: "Actividades", href: "activities", icon: ListTree },
+  { name: "Vista Previa del Documento", href: "document", icon: Printer },
 ];
 
 export default function BuilderLayout({
@@ -51,22 +52,17 @@ export default function BuilderLayout({
   useEffect(() => {
     if (poaId) {
       if (poaId === "new" && (!poa || poa.id !== "new")) {
-        // If navigating to /builder/new directly or context is stale
-        createNew('new', 'New Untitled POA');
+        createNew('new', 'Nuevo POA Sin Título');
       } else if (poaId !== "new" && (!poa || poa.id !== poaId)) {
-        // This is where you would fetch existing POA data
-        // For now, simulate loading or create a new one if not found
-        console.log(`Simulating load for POA ID: ${poaId}`);
-        // Mock: if it's not 'new' and not loaded, create it with its ID.
-        // In a real app, you'd fetch from a DB. If not found, redirect or show error.
-        const mockLoadedPoa = { // Replace with actual fetch logic
+        console.log(`Simulando carga para POA ID: ${poaId}`);
+        const mockLoadedPoa = { 
             id: poaId,
-            name: `Loaded POA ${poaId.substring(0,6)}`,
-            header: { title: `Loaded POA ${poaId.substring(0,6)}`, author: 'System', version: '1.0', date: new Date().toISOString().split('T')[0] },
-            objective: 'This is a loaded objective.',
-            procedureDescription: 'Detailed procedure description loaded from mock.',
-            introduction: 'Auto-generated intro for loaded POA.',
-            scope: 'Scope defined for loaded POA.',
+            name: `POA Cargado ${poaId.substring(0,6)}`,
+            header: { title: `POA Cargado ${poaId.substring(0,6)}`, author: 'Sistema', version: '1.0', date: new Date().toISOString().split('T')[0] },
+            objective: 'Este es un objetivo cargado.',
+            procedureDescription: 'Descripción detallada del procedimiento cargada desde el mock.',
+            introduction: 'Introducción autogenerada para el POA cargado.',
+            scope: 'Alcance definido para el POA cargado.',
             activities: [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -78,24 +74,19 @@ export default function BuilderLayout({
 
 
   if (!poa && poaId !== "new") {
-     // Still loading or poaId is invalid (not "new" and not found)
-     // For "new", context handles it. For existing IDs, we show loading.
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Loading POA data...</p>
+        <p className="ml-4 text-lg">Cargando datos del POA...</p>
       </div>
     );
   }
   
-  // If poaId is 'new' and poa context is not yet initialized for 'new'
   if (poaId === "new" && !poa) {
-     // This case should ideally be handled by useEffect initializing it.
-     // But as a fallback or if useEffect hasn't run yet:
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Initializing new POA...</p>
+        <p className="ml-4 text-lg">Inicializando nuevo POA...</p>
       </div>
     );
   }
@@ -108,17 +99,17 @@ export default function BuilderLayout({
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
-                    <ChevronLeft className="h-5 w-5 mr-1" /> Back to Dashboard
+                    <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
                 </Button>
                 <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
             </div>
             <div className="mt-4 flex items-center gap-3">
               <FileText className="h-8 w-8 text-sidebar-primary" />
               <div>
-                <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Plan of Action"}>
-                  {poa?.name || "Plan of Action"}
+                <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Plan de Acción"}>
+                  {poa?.name || "Plan de Acción"}
                 </h2>
-                <p className="text-xs text-sidebar-foreground/80">Editing Mode</p>
+                <p className="text-xs text-sidebar-foreground/80">Modo Edición</p>
               </div>
             </div>
           </SidebarHeader>

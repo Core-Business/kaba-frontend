@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { POA, POAActivity, POAHeader } from '@/lib/schema';
@@ -104,7 +105,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoa(poaData);
   }, []);
   
-  const createNew = useCallback((id: string = 'new', name: string = 'Untitled POA') => {
+  const createNew = useCallback((id: string = 'new', name: string = 'POA Sin Título') => {
     setPoa(createNewPOA(id, name));
   }, []);
 

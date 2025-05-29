@@ -1,3 +1,4 @@
+
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
@@ -22,47 +23,47 @@ export function DocumentPreview() {
 
   const handleDownloadHTML = () => {
     if (!poa) {
-      toast({ title: "Error", description: "No POA data to download.", variant: "destructive" });
+      toast({ title: "Error", description: "No hay datos del POA para descargar.", variant: "destructive" });
       return;
     }
     const htmlContent = generatePOAHTML(poa);
     const blob = new Blob([htmlContent], { type: "text/html" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    const fileName = poa.header.title ? poa.header.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'plan_of_action';
+    const fileName = poa.header.title ? poa.header.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'plan_de_accion';
     link.download = `${fileName}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
-    toast({ title: "Download Started", description: `${fileName}.html is being downloaded.` });
+    toast({ title: "Descarga Iniciada", description: `${fileName}.html se está descargando.` });
   };
 
-  if (!poa) return <div>Loading POA data...</div>;
+  if (!poa) return <div>Cargando datos del POA...</div>;
 
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <SectionTitle title="Document Preview & Export" description="Review your Plan of Action and download it as an HTML file." />
+        <SectionTitle title="Vista Previa y Exportación del Documento" description="Revisa tu Plan de Acción y descárgalo como archivo HTML." />
       </CardHeader>
       <CardContent>
         <div className="flex justify-end mb-6">
           <Button onClick={handleDownloadHTML}>
             <Download className="mr-2 h-4 w-4" />
-            Download HTML
+            Descargar HTML
           </Button>
         </div>
         
-        <div className="border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> {/* A4-like aspect ratio for preview frame */}
+        <div className="border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> 
            <iframe
             srcDoc={htmlPreview}
-            title="POA Preview"
+            title="Vista previa del POA"
             className="w-full h-full border-0"
-            sandbox="allow-scripts" // Be cautious with scripts if user input can generate them
+            sandbox="allow-scripts" 
           />
         </div>
          <p className="text-xs text-muted-foreground mt-2 text-center">
-            <Eye className="inline mr-1 h-3 w-3" /> Live preview of the generated HTML document.
+            <Eye className="inline mr-1 h-3 w-3" /> Vista previa en vivo del documento HTML generado.
           </p>
       </CardContent>
     </Card>

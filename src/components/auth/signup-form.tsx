@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export function SignupForm() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
     setIsLoading(true);
@@ -46,15 +47,15 @@ export function SignupForm() {
         <div className="flex justify-center mb-4">
              <Building className="h-10 w-10 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Create an Account</CardTitle>
+        <CardTitle className="text-2xl font-bold">Crear una Cuenta</CardTitle>
         <CardDescription>
-          Enter your email and password to create an account
+          Ingresa tu correo electrónico y contraseña para crear una cuenta
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo Electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -66,7 +67,7 @@ export function SignupForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -77,7 +78,7 @@ export function SignupForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -91,12 +92,12 @@ export function SignupForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Sign Up"}
+            {isLoading ? "Creando cuenta..." : "Registrarse"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            ¿Ya tienes una cuenta?{" "}
             <Link href="/login" className="font-semibold text-primary hover:underline">
-              Login
+              Iniciar Sesión
             </Link>
           </p>
         </CardFooter>

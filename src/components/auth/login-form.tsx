@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -31,14 +32,15 @@ export function LoginForm() {
     await new Promise(resolve => setTimeout(resolve, 1000));
     // TODO: Implement actual Firebase login
     // For now, always succeed and redirect to dashboard
-    if (email === "user@example.com" && password === "password") {
-      router.push("/dashboard");
-    } else {
-      // Simulate login failure
-      // setError("Invalid email or password. Please try again.");
-      // For demo, let's allow any login to proceed
-       router.push("/dashboard");
-    }
+    // if (email === "user@example.com" && password === "password") {
+    //   router.push("/dashboard");
+    // } else {
+    //   // Simulate login failure
+    //   // setError("Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.");
+    //   // For demo, let's allow any login to proceed
+    //    router.push("/dashboard");
+    // }
+    router.push("/dashboard");
     setIsLoading(false);
   };
 
@@ -48,15 +50,15 @@ export function LoginForm() {
         <div className="flex justify-center mb-4">
             <Building className="h-10 w-10 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Login to POA Builder</CardTitle>
+        <CardTitle className="text-2xl font-bold">Iniciar Sesión en POA Builder</CardTitle>
         <CardDescription>
-          Enter your email below to login to your account
+          Ingresa tu correo electrónico para acceder a tu cuenta
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Correo Electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -68,7 +70,7 @@ export function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -82,12 +84,12 @@ export function LoginForm() {
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            ¿No tienes una cuenta?{" "}
             <Link href="/signup" className="font-semibold text-primary hover:underline">
-              Sign up
+              Regístrate
             </Link>
           </p>
         </CardFooter>

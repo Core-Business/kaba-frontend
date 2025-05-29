@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const poaActivitySchema = z.object({
@@ -46,7 +47,7 @@ export const defaultPOAHeader: POAHeader = {
 };
 
 // Used when creating a new POA
-export function createNewPOA(id: string = 'new', name: string = 'Untitled POA'): POA {
+export function createNewPOA(id: string = 'new', name: string = 'POA Sin Título'): POA {
   const now = new Date().toISOString();
   return {
     id,
