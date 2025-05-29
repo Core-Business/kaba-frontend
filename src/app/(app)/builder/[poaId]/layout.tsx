@@ -11,7 +11,7 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarFooter, // Import SidebarFooter
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -22,7 +22,7 @@ import {
   ScanSearch,   
   BookOpenText,  
   Printer,       
-  Home, // Icon for POA - Inicio
+  Home,
   ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import { usePOA } from "@/hooks/use-poa";
 import { useEffect } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POA as POASchemaType } from "@/lib/schema"; 
-import { AppHeader } from "@/components/layout/app-header"; // Import AppHeader
+import { AppHeader } from "@/components/layout/app-header";
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -66,7 +66,7 @@ export default function BuilderLayout({
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
-  const { poa, loadPoa, createNew, saveCurrentPOA } = usePOA();
+  const { poa, loadPoa, createNew } = usePOA(); // Removed saveCurrentPOA as it's handled by forms
   const poaId = params.poaId as string;
 
   useEffect(() => {
@@ -76,7 +76,6 @@ export default function BuilderLayout({
           const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
           // The dashboard is responsible for adding the summary if created from there.
-          // If navigated directly to /builder/new, this ensures the detail exists.
         }
       } else if (!poa || poa.id !== poaId) {
         const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -122,9 +121,11 @@ export default function BuilderLayout({
             version: '1.0', 
             date: new Date().toISOString().split('T')[0],
             logoUrl: poaSummaryFromStorage.logo || '',
-            departmentArea: '',
+            companyName: 'Empresa Ejemplo (desde resumen)',
+            departmentArea: 'Área Ejemplo (desde resumen)',
             status: 'Borrador',
-            fileLocation: '',
+            fileLocation: 'Ubicación Ejemplo (desde resumen)',
+            documentCode: 'POA-RES-001',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
           procedureDescription: 'Introducción cargada (desde resumen). Edita y guarda para más detalles.',
@@ -150,9 +151,11 @@ export default function BuilderLayout({
               author: 'Sistema (mock original)', 
               version: '1.0', 
               date: new Date().toISOString().split('T')[0],
-              departmentArea: '',
+              companyName: 'Empresa Ejemplo (mock)',
+              departmentArea: 'Área Ejemplo (mock)',
               status: 'Borrador',
-              fileLocation: '',
+              fileLocation: 'Ubicación Ejemplo (mock)',
+              documentCode: 'POA-MOCK-001',
             },
             objective: 'Este es un objetivo de mock original. Edita y guarda.',
             procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
@@ -171,7 +174,6 @@ export default function BuilderLayout({
     
     if (poaToLoad) {
       loadPoa(poaToLoad);
-      // Ensure it's saved on load if not present in detail storage or if loading mock
       if (!localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`)) {
         localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaToLoad));
       }
@@ -196,28 +198,19 @@ export default function BuilderLayout({
     );
   }
 
-
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-1 min-h-screen"> {/* Main container for sidebar and content */}
+      <div className="flex flex-1 min-h-screen p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
-                {/* This Button is kept for consistency, though AppHeader now shows title */}
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
                     <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
                 </Button>
                 <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
             </div>
-             {/* Title is now in AppHeader, keeping placeholder for structure if needed later */}
-            <div className="mt-4 flex items-center gap-3 h-10"> {/* Adjusted height for alignment */}
-              {/* <FileText className="h-8 w-8 text-sidebar-primary" />
-              <div>
-                <h2 className="text-lg font-semibold text-sidebar-foreground truncate" title={poa?.name || "Procedimiento POA"}>
-                  {poa?.name || "Procedimiento POA"}
-                </h2>
-                <p className="text-xs text-sidebar-foreground/80">Modo Edición</p>
-              </div> */}
+            <div className="mt-4 flex items-center gap-3 h-10">
+              {/* Title elements moved to AppHeader */}
             </div>
           </SidebarHeader>
           <SidebarContent>
@@ -226,9 +219,9 @@ export default function BuilderLayout({
                 const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
                 const itemPath = `/builder/${currentPoaId}/${item.href}`;
                 const isActive = pathname === itemPath || 
-                                 (item.href === 'header' && pathname === `/builder/${currentPoaId}`) ||
-                                 (item.href === 'introduction' && pathname.endsWith('/introduction')); 
-
+                                 (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || // handles /builder/[poaId] redirecting to header
+                                 (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); // explicit header path
+                
                 return (
                   <SidebarMenuItem key={item.name}>
                     <Link href={itemPath} legacyBehavior passHref>
@@ -259,11 +252,10 @@ export default function BuilderLayout({
           </SidebarFooter>
         </Sidebar>
 
-        <div className="flex-1 flex flex-col overflow-hidden"> {/* Right panel: Header + Content */}
-          <AppHeader /> {/* AppHeader specific to this panel */}
-          <SidebarInset className="flex-1 overflow-y-auto bg-background p-4 md:p-6 lg:p-8">
-            {/* The children (section forms) will be rendered here */}
-            {children}
+        <div className="flex-1 flex flex-col"> {/* Right panel: Removed overflow-hidden */}
+          <AppHeader /> 
+          <SidebarInset className="flex-1 overflow-y-auto bg-background rounded-lg shadow-md">
+             {children}
           </SidebarInset>
         </div>
       </div>
