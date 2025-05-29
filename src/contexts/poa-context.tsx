@@ -2,9 +2,13 @@
 "use client";
 
 import type { POA, POAActivity, POAHeader } from '@/lib/schema';
-import { createNewPOA } from '@/lib/schema';
+import { createNewPOA as createNewPOASchema } from '@/lib/schema';
 import type React from 'react';
 import { createContext, useCallback, useState } from 'react';
+import { useToast } from "@/hooks/use-toast";
+
+const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas"; // Key for the list of POA summaries
+const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_"; // Prefix for individual full POA details
 
 interface POAContextType {
   poa: POA | null;
@@ -16,14 +20,68 @@ interface POAContextType {
   deleteActivity: (activityId: string) => void;
   setActivities: (activities: POAActivity[]) => void;
   loadPoa: (poaData: POA) => void;
-  createNew: (id?: string, name?: string) => void;
+  createNew: (id?: string, name?: string) => POA; // Returns the created POA
   updatePoaName: (name: string) => void;
+  saveCurrentPOA: () => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
 
 export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [poa, setPoa] = useState<POA | null>(null);
+  const { toast } = useToast();
+
+  const updatePoaListInStorage = (poaToUpdate: POA) => {
+    if (typeof window !== 'undefined') {
+      const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
+      let poasList: { id: string; name: string; updatedAt: string; logo?: string }[] = [];
+      if (storedPoasRaw) {
+        try {
+          poasList = JSON.parse(storedPoasRaw);
+        } catch (e) {
+          console.error("Error parsing POA list from localStorage for update", e);
+        }
+      }
+      
+      const existingIndex = poasList.findIndex(p => p.id === poaToUpdate.id);
+      const summary = {
+        id: poaToUpdate.id,
+        name: poaToUpdate.name,
+        updatedAt: poaToUpdate.updatedAt!,
+        logo: poaToUpdate.header.logoUrl || "https://placehold.co/40x40.png"
+      };
+
+      if (existingIndex > -1) {
+        poasList[existingIndex] = summary;
+      } else {
+        poasList.push(summary);
+      }
+      localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(poasList));
+    }
+  };
+
+  const saveCurrentPOA = useCallback(() => {
+    setPoa(currentPoa => {
+      if (!currentPoa) return null;
+      
+      const poaToSave = {
+        ...currentPoa,
+        updatedAt: new Date().toISOString()
+      };
+
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaToSave.id}`, JSON.stringify(poaToSave));
+          updatePoaListInStorage(poaToSave); // Update summary list as well
+          toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
+        } catch (error) {
+          console.error("Error saving POA to localStorage:", error);
+          toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
+        }
+      }
+      return poaToSave; // Return the updated POA with new timestamp
+    });
+  }, [toast]);
 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
@@ -31,7 +89,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { 
         ...currentPoa, 
         name, 
-        header: { ...currentPoa.header, title: name }, // Sync header.title with poa.name
+        header: { ...currentPoa.header, title: name },
         updatedAt: new Date().toISOString() 
       };
     });
@@ -40,12 +98,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeader = useCallback((updates: Partial<POAHeader>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      // If title is being updated directly through updateHeader, ensure poa.name is also synced.
-      // However, primary title updates should go through updatePoaName.
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
       if (updates.title && updates.title !== currentPoa.name) {
-        newName = updates.title; // If header.title is changed, reflect it in poa.name too.
+        newName = updates.title; 
       }
       
       return {
@@ -69,7 +125,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!currentPoa) return null;
       const newActivity: POAActivity = {
         id: crypto.randomUUID(),
-        number: (currentPoa.activities.length + 1).toString(), // Basic numbering, needs improvement for hierarchy
+        number: (currentPoa.activities.length + 1).toString(),
         description: '',
         type: 'individual',
         ...activity,
@@ -98,7 +154,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteActivity = useCallback((activityId: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      // Re-number activities after deletion if necessary (complex, simplify for now)
       return {
         ...currentPoa,
         activities: currentPoa.activities.filter(act => act.id !== activityId),
@@ -114,24 +169,26 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-
   const loadPoa = useCallback((poaData: POA) => {
-    // Ensure consistency when loading
     const name = poaData.name || poaData.header.title || 'Procedimiento POA Cargado';
-    setPoa({
+    const loadedPoaInstance = {
         ...poaData,
         name: name,
         header: {
             ...poaData.header,
             title: name 
         }
-    });
+    };
+    setPoa(loadedPoaInstance);
+    // No immediate save here, saveCurrentPOA will be called explicitly or by builder
   }, []);
   
-  const createNew = useCallback((id: string = 'new', name: string = 'Nuevo Procedimiento POA Sin Título') => {
-    setPoa(createNewPOA(id, name));
+  const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
+    const newPoaInstance = createNewPOASchema(id, name);
+    setPoa(newPoaInstance);
+    // The new POA is set in state. The Dashboard or BuilderLayout will handle saving it to localStorage.
+    return newPoaInstance;
   }, []);
-
 
   return (
     <POAContext.Provider value={{ 
@@ -146,6 +203,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadPoa,
       createNew,
       updatePoaName,
+      saveCurrentPOA,
     }}>
       {children}
     </POAContext.Provider>

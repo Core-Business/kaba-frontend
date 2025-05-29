@@ -4,17 +4,19 @@
 import { usePOA } from "@/hooks/use-poa";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Save } from "lucide-react";
 
 export function ObjectiveForm() {
-  const { poa, updateField } = usePOA();
+  const { poa, updateField, saveCurrentPOA } = usePOA();
   const [isLoadingAi, setIsLoadingAi] = useState(false);
-  const [maxWords, setMaxWords] = useState(250); // Default max words
+  const [maxWords, setMaxWords] = useState(250); 
   const { toast } = useToast();
 
   const handleAiEnhance = async () => {
@@ -29,6 +31,12 @@ export function ObjectiveForm() {
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
     }
     setIsLoadingAi(false);
+  };
+
+  const handleSave = () => {
+    if (poa) {
+      saveCurrentPOA();
+    }
   };
 
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
@@ -74,6 +82,12 @@ export function ObjectiveForm() {
           />
         </div>
       </CardContent>
+      <CardFooter className="flex justify-end border-t pt-6">
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Guardar Objetivo
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

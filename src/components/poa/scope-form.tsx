@@ -4,14 +4,16 @@
 import { usePOA } from "@/hooks/use-poa";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
+import { Button } from "@/components/ui/button";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Save } from "lucide-react";
 
 export function ScopeForm() {
-  const { poa, updateField } = usePOA();
+  const { poa, updateField, saveCurrentPOA } = usePOA();
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const { toast } = useToast();
 
@@ -29,12 +31,18 @@ export function ScopeForm() {
     setIsLoadingAi(false);
   };
   
+  const handleSave = () => {
+    if (poa) {
+      saveCurrentPOA();
+    }
+  };
+
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
-        <SectionTitle title="Alcance" description="Define los límites de este Procedimiento POA. Esto puede ser generado por IA desde la Descripción del Procedimiento o ingresado/editado manualmente." />
+        <SectionTitle title="Alcance" description="Define los límites de este Procedimiento POA. Esto puede ser generado por IA desde la Introducción o ingresado/editado manualmente." />
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
@@ -55,18 +63,13 @@ export function ScopeForm() {
             textExists={!!poa.scope && poa.scope.length > 10}
           />
         </div>
-        {/* Displaying Introduction here might be confusing if it was generated.
-            Perhaps only show it if it was recently generated or provide context.
-            For now, removing it from scope form to avoid confusion.
-        */}
-        {/* {poa.introduction && (
-          <div className="mt-6 p-4 border rounded-md bg-secondary/50">
-            <h4 className="font-semibold text-lg mb-2 text-primary">Introducción Generada:</h4>
-            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{poa.introduction}</p>
-            <p className="text-xs text-muted-foreground mt-2">Esta introducción fue generada automáticamente. Puedes copiarla y refinarla según sea necesario.</p>
-          </div>
-        )} */}
       </CardContent>
+      <CardFooter className="flex justify-end border-t pt-6">
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Guardar Alcance
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

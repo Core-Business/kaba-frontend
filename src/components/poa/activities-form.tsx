@@ -3,15 +3,15 @@
 
 import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { ActivityItem } from "./activity-item";
-import { PlusCircle, ListChecks } from "lucide-react";
+import { PlusCircle, ListChecks, Save } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 
 export function ActivitiesForm() {
-  const { poa, addActivity, updateActivity, deleteActivity, setActivities } = usePOA();
+  const { poa, addActivity, updateActivity, deleteActivity, setActivities, saveCurrentPOA } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
 
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
@@ -51,15 +51,11 @@ export function ActivitiesForm() {
     const draggedItem = newActivities.splice(draggedItemIndex, 1)[0];
     newActivities.splice(dropIndex, 0, draggedItem);
     
-    // A simpler renumbering for now for only top level:
-    // This basic renumbering assumes top-level items are dragged.
-    // Proper hierarchical renumbering is complex and out of scope for this quick fix.
     let topLevelCounter = 1;
     const renumberedActivities = newActivities.map((act) => {
-      if(!act.number.includes('.')) { // Only renumber top level items
+      if(!act.number.includes('.')) { 
         return {...act, number: (topLevelCounter++).toString()};
       }
-      // Sub-items would need more complex logic to renumber relative to their (potentially new) parent.
       return act; 
     });
 
@@ -67,6 +63,11 @@ export function ActivitiesForm() {
     setDraggedItemIndex(null);
   };
 
+  const handleSave = () => {
+    if (poa) {
+      saveCurrentPOA();
+    }
+  };
 
   return (
     <Card className="shadow-lg w-full">
@@ -109,6 +110,12 @@ export function ActivitiesForm() {
           </div>
         )}
       </CardContent>
+      <CardFooter className="flex justify-end border-t pt-6">
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Guardar Actividades
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

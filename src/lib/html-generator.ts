@@ -9,7 +9,7 @@ const translateActivityType = (type: POAActivity['type']): string => {
       return 'Alternativas';
     case 'individual':
     default:
-      return ''; // Individual tasks don't show type in parentheses
+      return ''; 
   }
 }
 
@@ -26,6 +26,19 @@ export function generatePOAHTML(poa: POA): string {
       <p style="margin-bottom: 5px;">${activity.description.replace(/\n/g, '<br>')}</p>
     </div>
   `}).join('');
+
+  // Displaying user-written introduction (poa.procedureDescription)
+  // And AI-suggested introduction (poa.introduction) if it exists
+  const introductionSectionHtml = poa.procedureDescription ? `
+    <div class="section">
+      <h2>Introducción</h2>
+      <p>${poa.procedureDescription.replace(/\n/g, '<br>')}</p>
+      ${poa.introduction ? `
+        <h3 style="margin-top: 15px; font-size: 1.1em; color: #444;">Sugerencia de Introducción (IA):</h3>
+        <p style="font-style: italic; color: #555;">${poa.introduction.replace(/\n/g, '<br>')}</p>
+      ` : ''}
+    </div>` : '';
+
 
   return `
     <!DOCTYPE html>
@@ -57,14 +70,10 @@ export function generatePOAHTML(poa: POA): string {
           <h1>${poa.header.title || 'Procedimiento POA'}</h1>
           <p><strong>Autor:</strong> ${poa.header.author || 'N/A'}</p>
           <p><strong>Versión:</strong> ${poa.header.version || 'N/A'}</p>
-          <p><strong>Fecha:</strong> ${poa.header.date ? new Date(poa.header.date).toLocaleDateString('es-ES') : 'N/A'}</p>
+          <p><strong>Fecha:</strong> ${poa.header.date ? new Date(poa.header.date + 'T00:00:00').toLocaleDateString('es-ES', {timeZone: 'UTC'}) : 'N/A'}</p>
         </header>
 
-        ${poa.introduction ? `
-        <div class="section">
-          <h2>Introducción</h2>
-          <p>${poa.introduction.replace(/\n/g, '<br>')}</p>
-        </div>` : ''}
+        ${introductionSectionHtml}
 
         ${poa.objective ? `
         <div class="section">
@@ -76,12 +85,6 @@ export function generatePOAHTML(poa: POA): string {
         <div class="section">
           <h2>Alcance</h2>
           <p>${poa.scope.replace(/\n/g, '<br>')}</p>
-        </div>` : ''}
-
-        ${poa.procedureDescription ? `
-        <div class="section">
-          <h2>Descripción del Procedimiento</h2>
-          <p>${poa.procedureDescription.replace(/\n/g, '<br>')}</p>
         </div>` : ''}
 
         ${poa.activities.length > 0 ? `

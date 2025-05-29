@@ -15,16 +15,16 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { FormattedDateClient } from "@/components/shared/formatted-date";
 
-const LOCAL_STORAGE_KEY = "poaApp_poas";
+const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
+const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
 
-// Mock data for POAs - only used if localStorage is empty
-const initialMockPoas = [
+
+const initialMockPoas: DisplayedPOA[] = [
   { id: "1", name: "Plan de Despliegue de Software", updatedAt: "2024-07-20T10:00:00Z", logo: "https://placehold.co/40x40.png" },
   { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: "2024-07-18T11:00:00Z", logo: "https://placehold.co/40x40.png" },
   { id: "3", name: "Campaña de Marketing Q3", updatedAt: "2024-07-15T12:00:00Z", logo: "https://placehold.co/40x40.png" },
 ];
 
-// Define the type for the items stored in displayedPoas and localStorage
 type DisplayedPOA = {
   id: string;
   name: string;
@@ -34,7 +34,7 @@ type DisplayedPOA = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { createNew } = usePOA();
+  const { createNew, saveCurrentPOA: savePOAFull } = usePOA(); // saveCurrentPOA is from context
   const [displayedPoas, setDisplayedPoas] = useState<DisplayedPOA[]>([]);
   const { toast } = useToast();
   const [isCreateDialogVisible, setIsCreateDialogVisible] = useState(false);
@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+      const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
       if (storedPoasRaw) {
         try {
           const parsedPoas: DisplayedPOA[] = JSON.parse(storedPoasRaw);
@@ -50,11 +50,11 @@ export default function DashboardPage() {
         } catch (error) {
           console.error("Error parsing POAs from localStorage", error);
           setDisplayedPoas(initialMockPoas);
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialMockPoas));
+          localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(initialMockPoas));
         }
       } else {
         setDisplayedPoas(initialMockPoas);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialMockPoas));
+        localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(initialMockPoas));
       }
     }
   }, []);
@@ -72,8 +72,10 @@ export default function DashboardPage() {
     const newPoaId = crypto.randomUUID(); 
     const newPoaName = newPoaNameInput.trim();
     
-    createNew(newPoaId, newPoaName); 
+    // Create the POA in context - this will also set it as the current poa
+    const newPoaInstance = createNew(newPoaId, newPoaName);
     
+    // Add to the displayedPoas list for the dashboard
     const newPoaEntry: DisplayedPOA = {
       id: newPoaId,
       name: newPoaName,
@@ -81,17 +83,28 @@ export default function DashboardPage() {
       logo: "https://placehold.co/40x40.png" 
     };
 
-    setDisplayedPoas(prevPoas => {
-      const updatedPoas = [...prevPoas, newPoaEntry];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPoas));
-      }
-      return updatedPoas;
-    });
+    const updatedPoasList = [...displayedPoas, newPoaEntry];
+    setDisplayedPoas(updatedPoasList);
+
+    if (typeof window !== 'undefined') {
+      // Save the updated summary list
+      localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(updatedPoasList));
+      // Save the full new POA detail (since createNew sets it in context, saveCurrentPOA will save that)
+      // savePOAFull(); // No, saveCurrentPOA uses the poa from context. createNew already set it.
+      
+      // The builder layout's useEffect will load 'new' if not already loaded
+      // or if the context's poa.id isn't 'new'.
+      // To ensure the full newPoaInstance is saved, we can explicitly save it.
+      // However, the context's saveCurrentPOA saves the *current* poa in context.
+      // createNew(id, name) sets the poa in context. So savePOAFull() after createNew should work.
+      
+      // This direct save is more robust for the new instance
+      localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaId}`, JSON.stringify(newPoaInstance));
+    }
     
     router.push(`/builder/${newPoaId}/header`);
-    setIsCreateDialogVisible(false); // Close dialog
-    setNewPoaNameInput(""); // Reset input
+    setIsCreateDialogVisible(false); 
+    setNewPoaNameInput(""); 
   };
 
   const handleDeletePOA = (idToDelete: string) => {
@@ -99,7 +112,9 @@ export default function DashboardPage() {
       setDisplayedPoas(prevPoas => {
         const updatedPoas = prevPoas.filter(p => p.id !== idToDelete);
         if (typeof window !== 'undefined') {
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedPoas));
+          localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(updatedPoas));
+          // Also delete the full detail from localStorage
+          localStorage.removeItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${idToDelete}`);
         }
         return updatedPoas;
       });
@@ -166,12 +181,11 @@ export default function DashboardPage() {
           <CardFooter className="justify-center">
              <Dialog open={isCreateDialogVisible} onOpenChange={setIsCreateDialogVisible}>
               <DialogTrigger asChild>
-                <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
+                <Button size="lg" onClick={() => { setIsCreateDialogVisible(true); setNewPoaNameInput("");}}>
                   <PlusCircle className="mr-2 h-5 w-5" />
                   Crea Tu Primer Procedimiento POA
                 </Button>
               </DialogTrigger>
-              {/* DialogContent is the same as above, consider extracting if used multiple times identically */}
                <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                   <DialogTitle>Nuevo Procedimiento POA</DialogTitle>
@@ -181,11 +195,11 @@ export default function DashboardPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="poaNameModal" className="text-right col-span-1">
+                    <Label htmlFor="poaNameModalEmpty" className="text-right col-span-1">
                       Nombre del Procedimiento (POA)
                     </Label>
                     <Input
-                      id="poaNameModal"
+                      id="poaNameModalEmpty"
                       value={newPoaNameInput}
                       onChange={(e) => setNewPoaNameInput(e.target.value)}
                       className="col-span-3"
@@ -224,7 +238,6 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
-                {/* Optionally, add a brief description or stats here */}
               </CardContent>
               <CardFooter className="flex flex-col items-stretch">
                 <Link href={`/builder/${poa.id}/header`} passHref legacyBehavior>

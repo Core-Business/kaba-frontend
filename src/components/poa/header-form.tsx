@@ -5,20 +5,20 @@ import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import Image from "next/image";
-import { UploadCloud, XCircle } from "lucide-react";
+import { UploadCloud, XCircle, Save } from "lucide-react";
 import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const MAX_FILE_SIZE_MB = 2;
-const MAX_DIMENSION = 200; // 200x200 pixels
+const MAX_DIMENSION = 200; 
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
 
 export function HeaderForm() {
-  const { poa, updateHeader, updatePoaName } = usePOA();
+  const { poa, updateHeader, updatePoaName, saveCurrentPOA } = usePOA();
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -30,10 +30,9 @@ export function HeaderForm() {
     }
   }, [poa?.header.logoUrl]);
 
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "poaName") { // This input is for poa.name which is the primary title
+    if (name === "poaName") { 
       updatePoaName(value); 
     } else {
       updateHeader({ [name]: value });
@@ -83,6 +82,12 @@ export function HeaderForm() {
      toast({ title: "Logo Eliminado", description: "El logo ha sido borrado." });
   };
   
+  const handleSave = () => {
+    if (poa) {
+      saveCurrentPOA();
+    }
+  };
+
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
@@ -91,7 +96,7 @@ export function HeaderForm() {
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="col-span-1 md:col-span-2"> {/* Make this span full width */}
+        <div className="col-span-1 md:col-span-2"> 
           <Label htmlFor="poaName">Nombre/Título del Procedimiento POA</Label>
           <Input
             id="poaName"
@@ -104,7 +109,6 @@ export function HeaderForm() {
           <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento.</p>
         </div>
         
-        {/* Grid for other fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6">
           <div>
             <Label htmlFor="author">Autor</Label>
@@ -126,9 +130,7 @@ export function HeaderForm() {
             <Label htmlFor="date">Fecha</Label>
             <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1 w-full" />
           </div>
-           {/* Add more fields here if needed to match screenshot, e.g., Estado, Ubicación del Archivo */}
         </div>
-
 
         <div>
           <Label htmlFor="logo-upload">Logo de la Empresa (máx {MAX_DIMENSION}x{MAX_DIMENSION}px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
@@ -173,6 +175,12 @@ export function HeaderForm() {
           <p className="text-xs text-muted-foreground mt-1">Formatos aceptados: JPEG, PNG, SVG, BMP, TIFF.</p>
         </div>
       </CardContent>
+      <CardFooter className="flex justify-end border-t pt-6">
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Guardar Encabezado
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
