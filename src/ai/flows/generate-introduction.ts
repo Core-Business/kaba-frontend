@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-introduction.ts
 'use server';
 /**
@@ -24,7 +25,7 @@ export type GenerateIntroductionInput = z.infer<typeof GenerateIntroductionInput
 const GenerateIntroductionOutputSchema = z.object({
   introduction: z
     .string()
-    .describe('A concise introduction (up to 200 words) summarizing the procedure description.'),
+    .describe('Una introducción concisa (hasta 200 palabras) que resume la descripción del procedimiento. La respuesta DEBE ser en español.'),
 });
 
 export type GenerateIntroductionOutput = z.infer<typeof GenerateIntroductionOutputSchema>;
@@ -33,11 +34,14 @@ const generateIntroductionPrompt = ai.definePrompt({
   name: 'generateIntroductionPrompt',
   input: {schema: GenerateIntroductionInputSchema},
   output: {schema: GenerateIntroductionOutputSchema},
-  prompt: `You are an expert in creating concise and informative introductions for Plans of Action (POAs).
-  Given the following procedure description, generate an introduction that is no more than 200 words.
-  The introduction should provide a clear overview of the procedure for the reader.
+  prompt: `Eres un experto en crear introducciones concisas e informativas para Procedimientos POA.
+  Dada la siguiente descripción del procedimiento, genera una introducción que no tenga más de 200 palabras.
+  La introducción debe proporcionar una visión general clara del procedimiento para el lector.
+  La respuesta DEBE estar en español.
 
-  Procedure Description: {{{procedureDescription}}}`,
+  Descripción del Procedimiento: {{{procedureDescription}}}
+
+  Introducción en español:`,
 });
 
 const generateIntroductionFlow = ai.defineFlow(

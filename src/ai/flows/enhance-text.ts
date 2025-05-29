@@ -1,3 +1,4 @@
+
 // Enhance the text to conform to norms and writing style.
 
 'use server';
@@ -20,7 +21,7 @@ const EnhanceTextInputSchema = z.object({
 export type EnhanceTextInput = z.infer<typeof EnhanceTextInputSchema>;
 
 const EnhanceTextOutputSchema = z.object({
-  enhancedText: z.string().describe('The enhanced text.'),
+  enhancedText: z.string().describe('The enhanced text, in Spanish.'),
 });
 
 export type EnhanceTextOutput = z.infer<typeof EnhanceTextOutputSchema>;
@@ -33,9 +34,12 @@ const enhanceTextPrompt = ai.definePrompt({
   name: 'enhanceTextPrompt',
   input: {schema: EnhanceTextInputSchema},
   output: {schema: EnhanceTextOutputSchema},
-  prompt: `You are an expert writing assistant. Please improve the following text to adhere to established norms and maintain a consistent tone:
+  prompt: `Eres un asistente de escritura experto. Por favor, mejora el siguiente texto para que se adhiera a las normas establecidas y mantenga un tono consistente. La respuesta DEBE estar en español.
 
-{{{text}}}`,
+Texto original:
+{{{text}}}
+
+Texto mejorado en español:`,
 });
 
 const enhanceTextFlow = ai.defineFlow(
