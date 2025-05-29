@@ -10,6 +10,7 @@ import { usePOA } from "@/hooks/use-poa";
 import Image from "next/image";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { FormattedDateClient } from "@/components/shared/formatted-date"; // Import the new component
 
 // Mock data for POAs - replace with actual data fetching
 const initialMockPoas = [
@@ -86,7 +87,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg">{poa.name}</CardTitle>
-                  <CardDescription>Última actualización: {new Date(poa.updatedAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</CardDescription>
+                  <CardDescription>Última actualización: <FormattedDateClient dateString={poa.updatedAt} /></CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
