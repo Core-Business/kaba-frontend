@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateObjectiveInputSchema = z.object({
+const GenerateObjectiveInputSchema = z.object({
   generalDescription: z.string().describe('Descripción general de la acción (¿Qué se hace?).'),
   needOrProblem: z.string().describe('Necesidad o problema que atiende (¿Por qué se hace?).'),
   purposeOrExpectedResult: z.string().describe('Finalidad o resultado esperado (¿Para qué se hace?).'),
@@ -22,7 +22,7 @@ export const GenerateObjectiveInputSchema = z.object({
 });
 export type GenerateObjectiveInput = z.infer<typeof GenerateObjectiveInputSchema>;
 
-export const GenerateObjectiveOutputSchema = z.object({
+const GenerateObjectiveOutputSchema = z.object({
   generatedObjective: z.string().describe('El objetivo del POA generado, redactado en español, claro, conciso, iniciando con un verbo en infinitivo y sin frases introductorias.'),
 });
 export type GenerateObjectiveOutput = z.infer<typeof GenerateObjectiveOutputSchema>;
@@ -75,5 +75,4 @@ const generateObjectiveFlow = ai.defineFlow(
 export async function generateObjective(input: GenerateObjectiveInput): Promise<GenerateObjectiveOutput> {
   return generateObjectiveFlow(input);
 }
-
     
