@@ -11,9 +11,9 @@ interface SectionTitleProps {
 
 export function SectionTitle({ title, description }: SectionTitleProps) {
   return (
-    <div className="mb-3"> {/* Reduced mb-6 to mb-3 */}
+    <div className="mb-2"> {/* Reduced mb-3 to mb-2 */}
       <h2 className="text-2xl font-semibold tracking-tight text-primary">{title}</h2>
-      {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>} {/* Added mt-1 for slight separation if description exists */}
+      {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>} 
     </div>
   );
 }
@@ -25,7 +25,7 @@ interface AiEnhanceButtonProps {
   className?: string;
   buttonText?: string;
   disabled?: boolean;
-  children?: React.ReactNode; // Allow children to override icon and text
+  children?: React.ReactNode; 
 }
 
 export function AiEnhanceButton({ onClick, isLoading, textExists, className, buttonText = "Edición con IA", disabled = false, children }: AiEnhanceButtonProps) {

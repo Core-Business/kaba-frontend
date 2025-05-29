@@ -14,14 +14,13 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Target as ScopeIcon, Save, Wand2 } from "lucide-react"; 
 
-export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
+export function IntroductionForm() { 
   const { poa, updateField, saveCurrentPOA } = usePOA();
   const [isEnhancingText, setIsEnhancingText] = useState(false);
-  const [isGeneratingAiIntro, setIsGeneratingAiIntro] = useState(false); // For AI generated intro from user's text
+  const [isGeneratingAiIntro, setIsGeneratingAiIntro] = useState(false); 
   const [isDefiningScope, setIsDefiningScope] = useState(false);
   const { toast } = useToast();
 
-  // This enhances the main user-written introduction (poa.procedureDescription)
   const handleAiEnhanceUserIntro = async () => {
     if (!poa?.procedureDescription) return;
     setIsEnhancingText(true);
@@ -36,7 +35,6 @@ export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
     setIsEnhancingText(false);
   };
 
-  // This generates a new introduction (poa.introduction) from the user's text (poa.procedureDescription)
   const handleGenerateAiIntroduction = async () => {
     if (!poa?.procedureDescription) {
       toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });
@@ -45,7 +43,7 @@ export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
     setIsGeneratingAiIntro(true);
     try {
       const result = await generateIntroduction({ procedureDescription: poa.procedureDescription });
-      updateField("introduction", result.introduction); // This updates the AI-generated intro field
+      updateField("introduction", result.introduction); 
       toast({ title: "Sugerencia de Introducción Generada", description: "Se ha generado una sugerencia de introducción por IA." });
     } catch (error) {
       console.error("Error generando sugerencia de introducción:", error);
@@ -90,7 +88,7 @@ export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
         <div className="space-y-2">
           <Label htmlFor="procedureDescription">Contenido de la Introducción</Label>
           <Textarea
-            id="procedureDescription" // Stays as procedureDescription for data model consistency for now
+            id="procedureDescription" 
             value={poa.procedureDescription || ""}
             onChange={(e) => updateField("procedureDescription", e.target.value)}
             placeholder="Escribe aquí la introducción del procedimiento..."
@@ -98,7 +96,7 @@ export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
             className="min-h-[250px] w-full"
           />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2 justify-end">
+        <div className="mt-3 flex flex-wrap gap-2 justify-end">
           <AiEnhanceButton
             onClick={handleAiEnhanceUserIntro}
             isLoading={isEnhancingText}
@@ -131,14 +129,14 @@ export function IntroductionForm() { // Renamed from ProcedureDescriptionForm
             {isDefiningScope ? "Definiendo..." : "Definir Alcance con IA"}
           </AiEnhanceButton>
         </div>
-         {poa.introduction && ( // This is the AI-generated one
-          <div className="mt-6 p-4 border rounded-md bg-secondary/50">
+         {poa.introduction && ( 
+          <div className="mt-4 p-4 border rounded-md bg-secondary/50">
             <h4 className="font-semibold text-lg mb-2 text-primary">Sugerencia de Introducción por IA:</h4>
             <p className="text-sm text-foreground/90 whitespace-pre-wrap">{poa.introduction}</p>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-6">
+      <CardFooter className="flex justify-end border-t pt-4">
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Introducción

@@ -59,7 +59,7 @@ export function ObjectiveForm() {
           />
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-3 space-y-3">
           <div className="flex justify-between items-center">
             <Label htmlFor="maxWordsSlider">Máximo de Palabras para IA: {maxWords}</Label>
           </div>
@@ -74,7 +74,7 @@ export function ObjectiveForm() {
           />
         </div>
         
-        <div className="mt-4 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAi}
@@ -82,7 +82,7 @@ export function ObjectiveForm() {
           />
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-6">
+      <CardFooter className="flex justify-end border-t pt-4">
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Objetivo

@@ -35,7 +35,7 @@ export function HeaderForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "poaName") { // "poaName" refers to the main name/title of the POA
+    if (name === "name") { 
       updatePoaName(value);
     } else {
       updateHeader({ [name]: value });
@@ -94,13 +94,12 @@ export function HeaderForm() {
       <CardHeader>
         <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
       </CardHeader>
-      <CardContent className="space-y-4"> {/* Reduced space-y-6 to space-y-4 */}
-        {/* Nombre del Procedimiento - Full Width */}
+      <CardContent className="space-y-3"> 
         <div className="md:col-span-2">
-          <Label htmlFor="poaName">Nombre del Procedimiento</Label>
+          <Label htmlFor="name">Nombre del Procedimiento</Label>
           <Input
-            id="poaName"
-            name="poaName" // This input updates poa.name, which also updates poa.header.title
+            id="name"
+            name="name" 
             value={poa.name || ""}
             onChange={handleInputChange}
             placeholder="Ej., Estrategia de Marketing Q3, Manual de Operaciones X"
@@ -110,8 +109,7 @@ export function HeaderForm() {
           <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento (máx. ~10 palabras).</p>
         </div>
 
-        {/* Two-column grid for some of the fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> {/* Reduced gap-y-6 to gap-y-4 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3"> 
           <div>
             <Label htmlFor="companyName">Nombre de la Empresa</Label>
             <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
@@ -138,7 +136,6 @@ export function HeaderForm() {
           </div>
         </div>
 
-        {/* Estado - RadioGroup */}
         <div className="space-y-2">
             <Label>Estado</Label>
             <RadioGroup
@@ -157,14 +154,12 @@ export function HeaderForm() {
             </RadioGroup>
         </div>
 
-        {/* Ubicación del Archivo - Full Width */}
-        <div className="mt-4"> {/* Reduced margin from mt-6 */}
+        <div className="mt-3"> 
           <Label htmlFor="fileLocation">Ubicación del Archivo</Label>
           <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
         </div>
 
-        {/* Logo de la Compañía */}
-        <div className="mt-4"> {/* Reduced margin from mt-6 */}
+        <div className="mt-3"> 
           <Label htmlFor="logo-upload">Logo de la Compañía (máx {MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
@@ -207,7 +202,7 @@ export function HeaderForm() {
           <p className="text-xs text-muted-foreground mt-1">Formatos aceptados: JPEG, PNG, SVG, BMP, TIFF.</p>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-start border-t pt-6"> 
+      <CardFooter className="flex justify-start border-t pt-4"> 
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Encabezado

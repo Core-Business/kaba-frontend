@@ -56,7 +56,7 @@ export function ScopeForm() {
             className="min-h-[200px] w-full"
           />
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAi}
@@ -64,7 +64,7 @@ export function ScopeForm() {
           />
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-6">
+      <CardFooter className="flex justify-end border-t pt-4">
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Alcance

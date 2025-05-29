@@ -103,14 +103,14 @@ export function ActivitiesForm() {
           </div>
         )}
         {poa.activities.length > 0 && (
-           <div className="mt-6 pt-6 border-t">
+           <div className="mt-4 pt-4 border-t">
             <Button onClick={handleAddActivity} variant="outline">
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otra Actividad
             </Button>
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-6">
+      <CardFooter className="flex justify-end border-t pt-4">
         <Button onClick={handleSave}>
           <Save className="mr-2 h-4 w-4" />
           Guardar Actividades

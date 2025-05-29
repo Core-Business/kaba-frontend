@@ -47,7 +47,7 @@ export function DocumentPreview() {
         <SectionTitle title="Vista Previa y Exportación del Documento" description="Revisa tu Procedimiento POA y descárgalo como archivo HTML." />
       </CardHeader>
       <CardContent>
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-end mb-4">
           <Button onClick={handleDownloadHTML}>
             <Download className="mr-2 h-4 w-4" />
             Descargar HTML
