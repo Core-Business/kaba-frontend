@@ -9,7 +9,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  // SidebarInset is being replaced by a standard <main> tag for clarity
   SidebarTrigger,
   SidebarFooter,
 } from "@/components/ui/sidebar";
@@ -78,7 +77,8 @@ export default function BuilderLayout({
       if (poaId === "new") {
         if (!poa || poa.id !== "new") { 
           const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
-          localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
+          // BuilderLayout no debe guardar automáticamente, eso lo hace el dashboard o un botón de guardar explícito
+          // localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
         }
       } else if (!poa || poa.id !== poaId) {
         const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -210,7 +210,7 @@ export default function BuilderLayout({
         router.push(nextPath);
       } else {
         saveCurrentPOA(); 
-        setTimeout(() => router.push(nextPath), 0);
+        setTimeout(() => router.push(nextPath), 0); // Allow save to complete
       }
     }
     setNextPath(null);
@@ -237,9 +237,8 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Main container for Sidebar and Content Area */}
       <div className="flex min-h-screen bg-background"> {/* Outer container */}
-        <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0"> {/* Sidebar takes its own width */}
+        <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
                 <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
@@ -294,9 +293,10 @@ export default function BuilderLayout({
         </Sidebar>
 
         {/* Content Area: Header + Scrollable Main Content */}
-        <div className="flex flex-col flex-1"> {/* Takes remaining width, stacks header and main */}
-          <AppHeader /> {/* Sticky header, should be w-full of this container */}
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/40 rounded-tl-lg"> {/* Scrollable content with padding */}
+        {/* Added min-w-0 here to help flex-1 calculate width correctly */}
+        <div className="flex flex-col flex-1 min-w-0"> 
+          <AppHeader />
+          <main className="flex-1 w-full overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/40 rounded-tl-lg">
             {children} {/* The Card components will be rendered here */}
           </main>
         </div>
