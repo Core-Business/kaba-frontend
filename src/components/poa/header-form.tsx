@@ -1,0 +1,186 @@
+"use client";
+
+import { usePOA } from "@/hooks/use-poa";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SectionTitle } from "./common-form-elements";
+import Image from "next/image";
+import { UploadCloud, XCircle } from "lucide-react";
+import type React from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+
+const MAX_FILE_SIZE_MB = 2;
+const MAX_DIMENSION = 200; // 200x200 pixels
+const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
+
+export function HeaderForm() {
+  const { poa, updateHeader, updatePoaName } = usePOA();
+  const { toast } = useToast();
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (poa?.header.logoUrl) {
+      setLogoPreview(poa.header.logoUrl);
+    } else {
+      setLogoPreview(null);
+    }
+  }, [poa?.header.logoUrl]);
+
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === "poaName") {
+      updatePoaName(value); // Update overall POA name/title
+    } else {
+      updateHeader({ [name]: value });
+    }
+  };
+
+  const handleLogoChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate format
+    if (!ALLOWED_FORMATS.includes(file.type)) {
+      toast({ title: "Invalid File Format", description: "Please upload JPEG, PNG, SVG, BMP, or TIFF.", variant: "destructive" });
+      return;
+    }
+    
+    // Validate file size (client-side rough check)
+    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        toast({ title: "File Too Large", description: `Logo must be smaller than ${MAX_FILE_SIZE_MB}MB.`, variant: "destructive" });
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        // Validate dimensions
+        if (img.width > MAX_DIMENSION || img.height > MAX_DIMENSION) {
+          toast({ title: "Image Dimensions Too Large", description: `Logo must be within ${MAX_DIMENSION}x${MAX_DIMENSION} pixels.`, variant: "destructive" });
+          return;
+        }
+        setLogoPreview(e.target?.result as string);
+        setLogoFile(file);
+        updateHeader({ logoUrl: e.target?.result as string, logoFileName: file.name });
+        toast({ title: "Logo Uploaded", description: "Logo preview updated." });
+      };
+      img.onerror = () => {
+        toast({ title: "Invalid Image", description: "Could not load image file.", variant: "destructive" });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, [updateHeader, toast]);
+
+  const removeLogo = () => {
+    setLogoPreview(null);
+    setLogoFile(null);
+    updateHeader({ logoUrl: "", logoFileName: "" });
+    // Also clear the file input if possible, or just rely on state
+    const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
+     toast({ title: "Logo Removed", description: "Logo has been cleared." });
+  };
+  
+  if (!poa) return <div>Loading POA data...</div>;
+
+  return (
+    <Card className="shadow-lg">
+      <CardHeader>
+        <SectionTitle title="POA Header" description="Define the main details of your Plan of Action." />
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="poaName">POA Name/Title (for listing)</Label>
+            <Input
+              id="poaName"
+              name="poaName"
+              value={poa.name || ""}
+              onChange={handleInputChange}
+              placeholder="E.g., Q3 Marketing Strategy"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">This name is used to identify the POA in your dashboard.</p>
+          </div>
+          <div>
+            <Label htmlFor="title">Document Title (appears in header)</Label>
+            <Input
+              id="title"
+              name="title"
+              value={poa.header.title}
+              onChange={handleInputChange}
+              placeholder="E.g., Plan of Action: Q3 Marketing"
+              className="mt-1"
+            />
+             <p className="text-xs text-muted-foreground mt-1">This title will appear in the generated document's header.</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <Label htmlFor="author">Author</Label>
+            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Your Name/Department" className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="version">Version</Label>
+            <Input id="version" name="version" value={poa.header.version || ""} onChange={handleInputChange} placeholder="e.g., 1.0" className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="date">Date</Label>
+            <Input type="date" id="date" name="date" value={poa.header.date || ""} onChange={handleInputChange} className="mt-1" />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="logo-upload">Company Logo (max 200x200px, &lt;{MAX_FILE_SIZE_MB}MB)</Label>
+          <div className="mt-2 flex items-center gap-4">
+            {logoPreview ? (
+              <div className="relative group">
+                <Image 
+                  src={logoPreview} 
+                  alt="Logo preview" 
+                  width={80} 
+                  height={80} 
+                  className="rounded border object-contain bg-muted"
+                  data-ai-hint="company logo"
+                />
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={removeLogo}
+                  aria-label="Remove logo"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="w-20 h-20 rounded border border-dashed flex items-center justify-center bg-muted">
+                <UploadCloud className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
+            <Input 
+              id="logo-upload" 
+              type="file" 
+              accept={ALLOWED_FORMATS.join(",")} 
+              onChange={handleLogoChange} 
+              className="hidden" 
+            />
+            <Button type="button" variant="outline" onClick={() => document.getElementById('logo-upload')?.click()}>
+              {logoPreview ? "Change Logo" : "Upload Logo"}
+            </Button>
+             {poa.header.logoFileName && <span className="text-sm text-muted-foreground truncate max-w-xs">Current: {poa.header.logoFileName}</span>}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Accepted formats: JPEG, PNG, SVG, BMP, TIFF.</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
