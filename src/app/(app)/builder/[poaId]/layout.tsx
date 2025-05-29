@@ -196,7 +196,8 @@ export default function BuilderLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset className="flex-1 overflow-y-auto bg-background">
-          <div className="w-full p-4 md:p-6 lg:p-8">
+          {/* Make this div a flex container to allow children (Cards with w-full) to expand */}
+          <div className="flex flex-col w-full p-4 md:p-6 lg:p-8">
             {children}
           </div>
         </SidebarInset>
