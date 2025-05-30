@@ -75,6 +75,7 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
   const topLevelActivities = sortSiblings(allActivities.filter(act => !act.parentId));
   topLevelActivities.forEach(activity => processActivityRecursive(activitiesMap.get(activity.id)));
   
+  // Add any remaining activities that might not have been part of the main tree (orphans, etc.)
   allActivities.forEach(act => {
     if (!processedIds.has(act.id)) {
       orderedActivities.push(act); 
@@ -144,13 +145,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaToSave.id}`, JSON.stringify(poaToSave));
           updatePoaListInStorage(poaToSave);
-           setTimeout(() => { // Defer toast to avoid update during render
+           setTimeout(() => { 
             toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
           }, 0);
           setIsDirty(false);
         } catch (error) {
           console.error("Error saving POA to localStorage:", error);
-          setTimeout(() => { // Defer toast
+          setTimeout(() => { 
             toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
           }, 0);
         }
@@ -245,7 +246,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: '',
         nextActivityType: 'individual',
         nextIndividualActivityRef: '', 
-        decisionBranches: { yesLabel: '', noLabel: '' }, // Initialize with empty strings
+        decisionBranches: { yesLabel: '', noLabel: '' },
         alternativeBranches: [],
         parentId: parentId || null,
         parentBranchCondition: parentBranchCondition || null,
@@ -283,7 +284,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let updatedActivities = currentPoa.activities.map(act =>
         act.id === activityId ? { ...act, ...updates } : act
       );
-      if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates ) {
+      // Always renumber user numbers if any significant structural or identifying field changes
+      if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates || 'activityName' in updates) {
         updatedActivities = renumberUserNumbers(updatedActivities);
       }
       return {
@@ -331,7 +333,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadPoa = useCallback((poaData: POA) => {
     const name = poaData.name || poaData.header.title || 'Procedimiento POA Cargado';
     const loadedActivities = (poaData.activities || []).map(act => ({
-        decisionBranches: { yesLabel: '', noLabel: '', ...(act.decisionBranches || {}) }, // Default to empty strings
+        decisionBranches: { yesLabel: '', noLabel: '', ...(act.decisionBranches || {}) }, 
         alternativeBranches: act.alternativeBranches || [],
         responsible: act.responsible || '',
         userNumber: act.userNumber || '', 
@@ -360,12 +362,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
     const newPoaInstance = createNewPOASchema(id, name);
     const initialActivities = (newPoaInstance.activities || []).map(act => ({
-        decisionBranches: { yesLabel: '', noLabel: '' }, // Default to empty strings
-        alternativeBranches: [],
-        responsible: '',
+        responsible: '', // Ensure new fields are initialized
         userNumber: '', 
         activityName: '',
         nextIndividualActivityRef: '', 
+        decisionBranches: { yesLabel: '', noLabel: '' }, 
+        alternativeBranches: [],
         parentId: null,
         parentBranchCondition: null,
         ...act
@@ -383,26 +385,27 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
-      return {
-        ...currentPoa,
-        activities: currentPoa.activities.map(act => {
-          if (act.id === activityId) {
-            const updatedAct = { ...act };
-            if (branchType === 'decision' && (indexOrKey === 'yes' || indexOrKey === 'no')) {
-              const currentDecisionBranches = updatedAct.decisionBranches || { yesLabel: '', noLabel: '' }; // Default to empty
-              updatedAct.decisionBranches = { ...currentDecisionBranches, [indexOrKey]: label };
-            } else if (branchType === 'alternative' && typeof indexOrKey === 'number') {
-              updatedAct.alternativeBranches = (act.alternativeBranches || []).map((branch, i) =>
-                i === indexOrKey ? { ...branch, label } : branch
-              );
-            }
-            return updatedAct;
+      const newActivities = currentPoa.activities.map(act => {
+        if (act.id === activityId) {
+          if (branchType === 'decision' && (indexOrKey === 'yes' || indexOrKey === 'no')) {
+            // Ensure decisionBranches is treated as a new object for React's change detection
+            const newDecisionBranches = {
+              ...(act.decisionBranches || { yesLabel: '', noLabel: '' }), // Default if undefined
+              [indexOrKey]: label,
+            };
+            return { ...act, decisionBranches: newDecisionBranches };
+          } else if (branchType === 'alternative' && typeof indexOrKey === 'number' && act.alternativeBranches) {
+            const newAlternativeBranches = act.alternativeBranches.map((branch, i) =>
+              i === indexOrKey ? { ...branch, label } : branch
+            );
+            return { ...act, alternativeBranches: newAlternativeBranches };
           }
-          return act;
-        }),
-      };
+        }
+        return act;
+      });
+      return { ...currentPoa, activities: newActivities };
     });
-  }, []);
+  }, [setIsDirty]);
 
   const addAlternativeBranch = useCallback((activityId: string) => {
     setPoa(currentPoa => {
@@ -466,6 +469,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return poa.activities
       .filter(act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition)
       .sort((a, b) => {
+        // Basic sort, can be enhanced if systemNumber has complex sub-numbering
         if (!a.systemNumber || !b.systemNumber) return 0;
         return a.systemNumber.localeCompare(b.systemNumber, undefined, { numeric: true, sensitivity: 'base' });
       });
@@ -498,3 +502,4 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
+
