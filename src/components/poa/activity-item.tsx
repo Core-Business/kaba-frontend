@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2 } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2, Sparkles } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
+import { generateActivityName } from "@/ai/flows/generate-activity-name";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,7 @@ interface ActivityItemProps {
   activity: POAActivity;
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
-  index?: number; // Index among siblings, if applicable
+  index?: number; 
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
@@ -39,40 +40,73 @@ export function ActivityItem({
   isDragging,
   isSubActivity = false,
 }: ActivityItemProps) {
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [isLoadingAiEnhanceDesc, setIsLoadingAiEnhanceDesc] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+  const [nameBeforeAi, setNameBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
   const { addActivity, updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA();
   const [isExpanded, setIsExpanded] = useState(true);
 
   const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
   const noChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'no') : [];
-  const alternativeChildren = (branchId: string) => activity.nextActivityType === 'alternatives' ? getChildActivities(activity.id, branchId) : [];
+  const alternativeChildren = (branchId: string) => activity.nextActivityType === 'alternatives' && activity.alternativeBranches ? getChildActivities(activity.id, branchId) : [];
 
 
-  const handleAiEnhance = async () => {
+  const handleAiEnhanceDescription = async () => {
     if (!activity.description) return;
     setDescriptionBeforeAi(activity.description);
-    setIsLoadingAi(true);
+    setIsLoadingAiEnhanceDesc(true);
     try {
       const result = await enhanceText({ text: activity.description, context: "activity_description" });
       onUpdate(activity.id, { description: result.enhancedText });
-      toast({ title: "Actividad Editada con IA", description: "La descripción de la actividad ha sido editada por IA." });
+      toast({ title: "Descripción Editada con IA", description: "La descripción de la actividad ha sido editada por IA." });
     } catch (error) {
-      console.error("Error editando actividad con IA:", error);
-      toast({ title: "Fallo en Edición con IA", description: "No se pudo editar la actividad.", variant: "destructive" });
+      console.error("Error editando descripción con IA:", error);
+      toast({ title: "Fallo en Edición de Descripción", description: "No se pudo editar la descripción.", variant: "destructive" });
       setDescriptionBeforeAi(null);
     }
-    setIsLoadingAi(false);
+    setIsLoadingAiEnhanceDesc(false);
   };
 
-  const handleUndoAi = () => {
+  const handleUndoDescriptionAi = () => {
     if (descriptionBeforeAi !== null) {
       onUpdate(activity.id, { description: descriptionBeforeAi });
-      toast({ title: "Acción Deshecha", description: "Se restauró la descripción anterior de la actividad." });
+      toast({ title: "Acción Deshecha", description: "Se restauró la descripción anterior." });
       setDescriptionBeforeAi(null);
     }
   };
+  
+  const handleGenerateName = async () => {
+    if (!activity.description) {
+        toast({
+            title: "Descripción Requerida",
+            description: "Por favor, ingresa una descripción para la actividad antes de generar un nombre.",
+            variant: "destructive",
+        });
+        return;
+    }
+    setNameBeforeAi(activity.activityName || "");
+    setIsGeneratingName(true);
+    try {
+        const result = await generateActivityName({ description: activity.description });
+        onUpdate(activity.id, { activityName: result.activityName });
+        toast({ title: "Nombre de Actividad Generado", description: "Se ha generado un nombre para la actividad." });
+    } catch (error) {
+        console.error("Error generando nombre de actividad:", error);
+        toast({ title: "Fallo al Generar Nombre", description: "No se pudo generar el nombre de la actividad.", variant: "destructive" });
+    }
+    setIsGeneratingName(false);
+  };
+
+  const handleUndoNameAi = () => {
+    if (nameBeforeAi !== null) {
+        onUpdate(activity.id, { activityName: nameBeforeAi });
+        toast({ title: "Acción Deshecha", description: "Se restauró el nombre anterior de la actividad." });
+        setNameBeforeAi(null);
+    }
+  };
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -80,11 +114,13 @@ export function ActivityItem({
     if (name === "description") {
       setDescriptionBeforeAi(null);
     }
+    if (name === "activityName") {
+      setNameBeforeAi(null);
+    }
   };
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Allow empty string or numbers only
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -103,7 +139,7 @@ export function ActivityItem({
     if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
         updates.nextIndividualActivityRef = ''; 
     } else if (newType !== 'individual') {
-        updates.nextIndividualActivityRef = undefined; // Clear if not individual
+        updates.nextIndividualActivityRef = undefined; 
     }
     onUpdate(activity.id, updates);
   };
@@ -129,35 +165,58 @@ export function ActivityItem({
       onDragOver={onDragOver}
       onDrop={(e) => !isSubActivity && index !== undefined && onDrop?.(e, index)}
     >
-      <CardContent className="p-2 space-y-2">
+      <CardContent className="p-2 space-y-1.5">
         <div className="flex items-start gap-1.5">
           {!isSubActivity && onDragStart && (
              <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
-                <GripVertical className="h-4 w-4 mt-0.5" />
+                <GripVertical className="h-4 w-4 mt-1" /> {/* Adjusted mt for alignment */}
              </button>
           )}
-           <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-1 text-muted-foreground hover:text-foreground" title={isExpanded ? "Colapsar" : "Expandir"}>
+           <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5" title={isExpanded ? "Colapsar" : "Expandir"}>
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
+            {/* Combined User Number and Activity Name */}
+            <div className="flex items-center gap-1 mb-1">
+                <div className="flex items-baseline">
+                    <span className="text-base font-semibold text-primary mr-1">No.</span>
+                    <Input
+                        id={`activity-userNumber-${activity.id}`}
+                        name="userNumber"
+                        value={activity.userNumber || ""}
+                        readOnly
+                        placeholder="Auto"
+                        className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
+                    />
+                </div>
+                <span className="text-base font-semibold text-primary">-</span>
+                <div className="flex-grow">
+                    <Input
+                        id={`activity-name-${activity.id}`}
+                        name="activityName"
+                        value={activity.activityName || ""}
+                        onChange={handleInputChange}
+                        placeholder="Nombre corto de actividad (Opcional)"
+                        className="w-full text-sm h-8 font-medium"
+                    />
+                </div>
+                <AiEnhanceButton
+                    onClick={handleGenerateName}
+                    isLoading={isGeneratingName}
+                    textExists={!!activity.description && activity.description.length > 0}
+                    className="text-xs px-1 py-0.5 h-7"
+                    onUndo={nameBeforeAi !== null ? handleUndoNameAi : undefined}
+                    canUndo={nameBeforeAi !== null}
+                >
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    <span className="hidden sm:inline">{isGeneratingName ? "Generando..." : "Generar"}</span>
+                    <span className="sm:hidden">{isGeneratingName ? "..." : "AI"}</span>
+                </AiEnhanceButton>
+            </div>
+
+
              {isExpanded && (
               <>
-                {/* Combined User Number and System Number Display */}
-                <div className="flex items-baseline mb-1">
-                  <span className="text-base font-semibold text-primary mr-1">No.</span>
-                  <Input
-                      id={`activity-userNumber-${activity.id}`}
-                      name="userNumber"
-                      value={activity.userNumber || ""}
-                      readOnly
-                      placeholder="Auto"
-                      className="w-auto text-base font-semibold text-primary bg-transparent border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default mr-1"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                      (Sistema: {activity.systemNumber})
-                  </span>
-                </div>
-
                 <div>
                     <Label htmlFor={`activity-responsible-${activity.id}`}>Responsable <span className="text-destructive">*</span></Label>
                     <Input
@@ -175,7 +234,7 @@ export function ActivityItem({
                   <Textarea
                     id={`activity-description-${activity.id}`}
                     name="description"
-                    value={activity.description}
+                    value={activity.description || ""}
                     onChange={handleInputChange}
                     placeholder="Describe la actividad o tarea"
                     rows={2}
@@ -187,7 +246,7 @@ export function ActivityItem({
                   <Label htmlFor={`activity-nextActivityType-${activity.id}`}>Siguiente Actividad Tipo</Label>
                   <RadioGroup
                     id={`activity-nextActivityType-${activity.id}`}
-                    value={activity.nextActivityType}
+                    value={activity.nextActivityType || 'individual'}
                     onValueChange={handleNextActivityTypeChange}
                     className="flex flex-col sm:flex-row gap-1.5 sm:gap-3 mt-0.5"
                   >
@@ -207,13 +266,13 @@ export function ActivityItem({
                 </div>
 
                 {activity.nextActivityType === 'individual' && (
-                    <div className="mt-2">
+                    <div className="mt-1">
                         <Input
                             id={`activity-nextIndividualActivityRef-${activity.id}`}
                             name="nextIndividualActivityRef"
                             value={activity.nextIndividualActivityRef || ""}
                             onChange={handleInputChange}
-                            placeholder="Siguiente Actividad No. (Número, Fin o No Aplica)"
+                            placeholder="Siguiente Actividad No. (No. Usuario, FIN o No Aplica)"
                             className="mt-0.5 w-full text-xs"
                         />
                     </div>
@@ -221,9 +280,9 @@ export function ActivityItem({
               </>
             )}
             {!isExpanded && (
-                 <div className="flex items-center justify-between">
+                 <div className="flex items-center justify-between mt-1">
                     <p className="text-sm font-medium truncate">
-                        No. {activity.userNumber} (Sistema: {activity.systemNumber}) - {activity.description || "Actividad sin descripción"}
+                       {activity.activityName || activity.description || "Actividad sin nombre/descripción"}
                     </p>
                 </div>
             )}
@@ -334,19 +393,28 @@ export function ActivityItem({
             )}
           </>
         )}
+        
+        {/* System Number display before the final action buttons */}
+        {isExpanded && (
+            <div className="flex justify-end mt-1 mb-0.5">
+                <span className="text-xs text-muted-foreground">
+                    (Sistema: {activity.systemNumber})
+                </span>
+            </div>
+        )}
 
-        <div className="flex justify-between items-center pt-1.5 border-t mt-1.5">
+        <div className="flex justify-between items-center pt-1.5 border-t mt-0.5"> {/* Reduced mt for closer line */}
           <AiEnhanceButton
-            onClick={handleAiEnhance}
-            isLoading={isLoadingAi}
+            onClick={handleAiEnhanceDescription}
+            isLoading={isLoadingAiEnhanceDesc}
             textExists={!!activity.description && activity.description.length > 5}
             className="text-xs px-1.5 py-0.5 h-7"
-            onUndo={descriptionBeforeAi !== null ? handleUndoAi : undefined}
+            onUndo={descriptionBeforeAi !== null ? handleUndoDescriptionAi : undefined}
             canUndo={descriptionBeforeAi !== null}
           >
              <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{isLoadingAi ? "Editando..." : "Edición IA"}</span>
-            <span className="sm:hidden">{isLoadingAi ? "..." : "IA"}</span>
+            <span className="hidden sm:inline">{isLoadingAiEnhanceDesc ? "Editando..." : "Edición IA (Desc.)"}</span>
+            <span className="sm:hidden">{isLoadingAiEnhanceDesc ? "..." : "IA (Desc.)"}</span>
           </AiEnhanceButton>
           <Button
             type="button"
@@ -362,7 +430,3 @@ export function ActivityItem({
     </Card>
   );
 }
-
-    
-
-    

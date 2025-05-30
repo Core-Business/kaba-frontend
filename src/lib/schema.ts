@@ -16,11 +16,12 @@ export type POAActivityAlternativeBranch = z.infer<typeof poaActivityAlternative
 export const poaActivitySchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
   systemNumber: z.string().min(1, "El número de sistema es requerido."),
-  userNumber: z.string().optional(), // Se manejará como number en el input, pero se guarda como string
-  responsible: z.string().min(1, "El responsable es requerido."), // Ahora es obligatorio
+  userNumber: z.string().optional(),
+  activityName: z.string().optional(), // Nuevo campo para el nombre de la actividad
+  responsible: z.string().min(1, "El responsable es requerido."),
   description: z.string().min(1, "La descripción es requerida."),
   nextActivityType: z.enum(['individual', 'decision', 'alternatives']),
-  nextIndividualActivityRef: z.string().optional(), // Nuevo campo para referencia de siguiente actividad individual
+  nextIndividualActivityRef: z.string().optional(),
   decisionBranches: poaActivityDecisionBranchesSchema.optional(),
   alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(),
   parentId: z.string().uuid().nullable().default(null),
@@ -107,7 +108,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     procedureDescription: '',
     introduction: '',
     scope: '',
-    activities: [],
+    activities: [], // Las actividades se inicializan vacías, pero se les aplicará renumberUserNumbers
     createdAt: now,
     updatedAt: now,
   };
