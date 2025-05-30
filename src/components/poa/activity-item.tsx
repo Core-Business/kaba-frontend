@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { POAActivity } from "@/lib/schema";
@@ -147,6 +146,7 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Allow empty string or numbers only
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -158,9 +158,16 @@ export function ActivityItem({
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
     if (newType === 'individual') {
-        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || '';
-        if (activity.nextIndividualActivityRef === '' && activity.userNumber && /^\d+$/.test(activity.userNumber)) {
-            updates.nextIndividualActivityRef = (parseInt(activity.userNumber, 10) + 1).toString();
+        // updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || ''; // Keep existing or clear
+        if (activity.nextIndividualActivityRef === '' && activity.userNumber && /^\d+$/.test(activity.userNumber) ) {
+           const currentUserNumber = parseInt(activity.userNumber, 10);
+           if(!isNaN(currentUserNumber) && currentUserNumber > 0) {
+             updates.nextIndividualActivityRef = (currentUserNumber + 1).toString();
+           } else {
+             updates.nextIndividualActivityRef = '';
+           }
+        } else if (!activity.nextIndividualActivityRef) {
+             updates.nextIndividualActivityRef = ''; // Default to empty if not set
         }
     } else if (newType === 'decision') {
         updates.nextIndividualActivityRef = ''; 
@@ -218,7 +225,6 @@ export function ActivityItem({
                     placeholder="Auto"
                     className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
                 />
-                <span className="text-base font-semibold text-primary">-</span>
                 <div className="flex-grow">
                     <Input
                         id={`activity-name-${activity.id}`}
@@ -229,7 +235,7 @@ export function ActivityItem({
                         className="w-full text-sm h-8 font-medium"
                     />
                 </div>
-                <AiEnhanceButton
+                 <AiEnhanceButton
                     onClick={handleGenerateName}
                     isLoading={isGeneratingName}
                     textExists={!!activity.description && activity.description.length > 0}
@@ -468,6 +474,3 @@ export function ActivityItem({
     </Card>
   );
 }
-
-
-    
