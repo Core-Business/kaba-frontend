@@ -293,8 +293,7 @@ export default function BuilderLayout({
         </Sidebar>
 
         {/* Content Area: Header + Scrollable Main Content */}
-        {/* The w-0 here is the key change to force flex-basis: 0% from flex-1 */}
-        <div className="flex flex-col w-0 flex-1 min-w-0"> 
+        <div className="flex flex-col flex-1 min-w-0"> 
           <AppHeader />
           <main className="flex-1 w-full overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/40 rounded-tl-lg">
             {children} {/* The Card components will be rendered here */}
