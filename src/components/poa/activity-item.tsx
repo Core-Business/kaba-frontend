@@ -22,7 +22,7 @@ interface ActivityItemProps {
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
   index?: number; 
-  totalActivities?: number; // Added for context if needed
+  totalActivities?: number;
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
@@ -35,6 +35,7 @@ export function ActivityItem({
   onUpdate,
   onDelete,
   index,
+  totalActivities,
   onDragStart,
   onDragOver,
   onDrop,
@@ -47,7 +48,7 @@ export function ActivityItem({
   const [isGeneratingName, setIsGeneratingName] = useState(false);
   const [nameBeforeAi, setNameBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
-  const { addActivity, updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA();
+  const { addActivity, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA(); // Removed updateActivityBranchLabel
   const [isExpanded, setIsExpanded] = useState(true);
 
   const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
@@ -159,16 +160,18 @@ export function ActivityItem({
 
     if (newType === 'individual') {
         updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || '';
-        if (activity.userNumber && (activity.nextIndividualActivityRef === null || activity.nextIndividualActivityRef === undefined || activity.nextIndividualActivityRef === '')) {
+        if ((!activity.nextIndividualActivityRef || activity.nextIndividualActivityRef.trim() === '') && activity.userNumber && /^\d+$/.test(activity.userNumber)) {
            const currentUserNumber = parseInt(activity.userNumber, 10);
            if(!isNaN(currentUserNumber) && currentUserNumber > 0) {
              updates.nextIndividualActivityRef = (currentUserNumber + 1).toString();
            }
+        } else if (!activity.nextIndividualActivityRef || activity.nextIndividualActivityRef.trim() === ''){
+             updates.nextIndividualActivityRef = '';
         }
     } else if (newType === 'decision') {
         updates.nextIndividualActivityRef = ''; 
         if (!activity.decisionBranches) { 
-          updates.decisionBranches = { yesLabel: '', noLabel: '' }; // Default to empty strings
+          updates.decisionBranches = { yesLabel: '', noLabel: '' };
         }
     } else if (newType === 'alternatives') {
         updates.nextIndividualActivityRef = ''; 
@@ -179,12 +182,13 @@ export function ActivityItem({
     onUpdate(activity.id, updates);
   };
 
-  const handleDecisionBranchLabelChange = (branch: 'yes' | 'no', value: string) => {
-    updateActivityBranchLabel(activity.id, 'decision', branch, value);
-  };
-
   const handleAlternativeBranchLabelChange = (branchIndex: number, value: string) => {
-     updateActivityBranchLabel(activity.id, 'alternative', branchIndex, value);
+     if (activity.alternativeBranches) {
+        const newAlternativeBranches = activity.alternativeBranches.map((branch, i) =>
+            i === branchIndex ? { ...branch, label: value } : branch
+        );
+        onUpdate(activity.id, { alternativeBranches: newAlternativeBranches });
+     }
   };
 
 
@@ -356,7 +360,13 @@ export function ActivityItem({
                   <Input
                     id={`decision-yesLabel-${activity.id}`}
                     value={activity.decisionBranches?.yesLabel ?? ''}
-                    onChange={(e) => handleDecisionBranchLabelChange('yes', e.target.value)}
+                    onChange={(e) => {
+                        const newDecisionBranches = {
+                          ...(activity.decisionBranches || { yesLabel: '', noLabel: '' }),
+                          yesLabel: e.target.value,
+                        };
+                        onUpdate(activity.id, { decisionBranches: newDecisionBranches });
+                    }}
                     placeholder="Ej: Sí o Opción positiva"
                     className="w-full text-xs h-8"
                   />
@@ -377,7 +387,13 @@ export function ActivityItem({
                   <Input
                     id={`decision-noLabel-${activity.id}`}
                     value={activity.decisionBranches?.noLabel ?? ''}
-                    onChange={(e) => handleDecisionBranchLabelChange('no', e.target.value)}
+                    onChange={(e) => {
+                        const newDecisionBranches = {
+                          ...(activity.decisionBranches || { yesLabel: '', noLabel: '' }),
+                          noLabel: e.target.value,
+                        };
+                        onUpdate(activity.id, { decisionBranches: newDecisionBranches });
+                    }}
                     placeholder="Ej: No o Opción negativa"
                     className="w-full text-xs h-8"
                   />
