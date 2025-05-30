@@ -53,8 +53,9 @@ const enhanceTextPrompt = ai.definePrompt({
   prompt: `Eres un asistente de escritura experto.
 {{#if expandByPercent}}
 Tu tarea principal es expandir el siguiente texto para que sea aproximadamente un {{{expandByPercent}}}% más largo.
-Añade detalles relevantes, elabora los puntos existentes o proporciona ejemplos concretos directamente relacionados con la acción o tema descrito.
-No incluyas frases introductorias innecesarias. Mantén la claridad, un tono directo y profesional. No añadas opiniones personales, recomendaciones no solicitadas o información que no esté directamente relacionada con la expansión del texto provisto.
+La expansión debe ser CONSERVADORA y ESTRICTAMENTE RELACIONADA con el texto original.
+Añade detalles directamente relevantes, elabora los puntos existentes o proporciona ejemplos concretos ÚNICAMENTE si están implícitos o son una continuación directa del texto provisto.
+NO incluyas frases introductorias innecesarias. NO añadas información general, ejemplos no solicitados, o temas que no estén directamente derivados del texto original. Mantén la claridad, un tono directo y profesional.
 {{else}}
 Tu tarea es reformular y mejorar el siguiente texto para asegurar claridad, concisión y un tono profesional y directo.
 Evita frases introductorias innecesarias como "El presente texto...", "El texto proporcionado..." o "El objetivo de este texto es...".
@@ -106,7 +107,11 @@ Para este ALCANCE, define los límites del procedimiento, incluyendo departament
 {{/if}}
 
 {{#if isActivityDescriptionContext}}
-Para esta DESCRIPCIÓN DE ACTIVIDAD, sé claro, directo y enfocado en la acción a realizar. {{!-- This line might be slightly adjusted if expandByPercent is active, but the core nature remains. --}}
+Para esta DESCRIPCIÓN DE ACTIVIDAD, sé extremadamente claro, directo y enfocado en la acción a realizar.
+{{#if expandByPercent}}
+La expansión debe ser CONSERVADORA y ESTRICTAMENTE RELACIONADA con el texto original. Añade detalles directamente relevantes, elabora los puntos existentes o proporciona ejemplos concretos ÚNICAMENTE si están implícitos o son una continuación directa del texto provisto. NO incluyas información general, ejemplos no solicitados, o temas que no estén directamente derivados del texto original.
+{{/if}}
+NO incluyas sujetos (ej. "El usuario...", "El sistema...", "Esta actividad..."), ni frases introductorias (ej. "El propósito de esta actividad es...", "Esta tarea consiste en..."), ni explicaciones de "para qué" se hace la actividad. Céntrate únicamente en describir la acción en sí misma.
 {{/if}}
 
 Texto original:
