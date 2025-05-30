@@ -14,7 +14,7 @@ interface POAContextType {
   poa: POA | null;
   setPoa: React.Dispatch<React.SetStateAction<POA | null>>;
   updateHeader: (updates: Partial<POAHeader>) => void;
-  updateField: (fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name'>, value: string) => void;
+  updateField: (fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData'>, value: string) => void;
   addActivity: (activity?: Partial<POAActivity>) => void;
   updateActivity: (activityId: string, updates: Partial<POAActivity>) => void;
   deleteActivity: (activityId: string) => void;
@@ -25,6 +25,7 @@ interface POAContextType {
   saveCurrentPOA: () => void;
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
+  updateObjectiveHelperData: (data: POA['objectiveHelperData']) => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
@@ -76,16 +77,22 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaToSave.id}`, JSON.stringify(poaToSave));
           updatePoaListInStorage(poaToSave); 
-          toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
+          // Defer toast notification to prevent update during render issues
+          setTimeout(() => {
+            toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
+          }, 0);
           setIsDirty(false); // Reset dirty state after save
         } catch (error) {
           console.error("Error saving POA to localStorage:", error);
-          toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
+           // Defer toast notification
+          setTimeout(() => {
+            toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
+          }, 0);
         }
       }
       return poaToSave; 
     });
-  }, [toast]);
+  }, [toast, setIsDirty]);
 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
@@ -119,11 +126,19 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-  const updateField = useCallback((fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name'>, value: string) => {
+  const updateField = useCallback((fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData'>, value: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
       return { ...currentPoa, [fieldName]: value, updatedAt: new Date().toISOString() };
+    });
+  }, []);
+
+  const updateObjectiveHelperData = useCallback((data: POA['objectiveHelperData']) => {
+    setPoa(currentPoa => {
+      if (!currentPoa) return null;
+      setIsDirty(true);
+      return { ...currentPoa, objectiveHelperData: data, updatedAt: new Date().toISOString() };
     });
   }, []);
 
@@ -197,7 +212,11 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
     const newPoaInstance = createNewPOASchema(id, name);
     setPoa(newPoaInstance);
-    setIsDirty(false); // A new POA starts clean, though it will be saved by Dashboard or BuilderLayout immediately
+    // For a new POA, we consider it "dirty" immediately because it hasn't been explicitly saved by the user yet.
+    // However, the dashboard page *does* save it to localStorage upon creation.
+    // For consistency with explicit save actions, let's start it as not dirty from the *context's* perspective.
+    // The dashboard/builder layout might immediately save it, which is fine.
+    setIsDirty(false); 
     return newPoaInstance;
   }, []);
 
@@ -217,6 +236,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       saveCurrentPOA,
       isDirty,
       setIsDirty,
+      updateObjectiveHelperData,
     }}>
       {children}
     </POAContext.Provider>
