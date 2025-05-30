@@ -41,7 +41,7 @@ Reglas estrictas para la redacción del objetivo:
 4.  **Evitar**: No utilices gerundios (terminaciones -ando, -iendo) ni adjetivos calificativos innecesarios.
 5.  **Sin Frases Introductorias**: NO incluyas frases como "El objetivo es...", "Este documento tiene como objetivo...", "El propósito de este procedimiento es...". Ve directamente al objetivo redactado.
 6.  **Idioma**: La respuesta DEBE estar en español.
-{{#if maxWords}}7.  **Extensión**: El objetivo no debe exceder las {{{maxWords}}} palabras.{{/if}}
+{{#if maxWords}}7.  **Extensión**: El objetivo debe tener una longitud aproximada de {{{maxWords}}} palabras, puede exceder este límite un 10%. Intenta acercarte lo más posible a este número de palabras para un desarrollo completo, manteniendo la concisión.{{/if}}
 
 Información proporcionada:
 - Descripción general de la acción (¿Qué se hace?): {{{generalDescription}}}

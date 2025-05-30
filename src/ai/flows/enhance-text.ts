@@ -44,7 +44,7 @@ const enhanceTextPrompt = ai.definePrompt({
   output: {schema: EnhanceTextOutputSchema},
   prompt: `Eres un asistente de escritura experto. Por favor, reformula y mejora el siguiente texto para asegurar claridad, concisión y un tono profesional y directo.
 Evita frases introductorias innecesarias como "El presente texto...", "El texto proporcionado..." o "El objetivo de este texto es...".
-{{#if maxWords}}El texto mejorado no debe exceder las {{{maxWords}}} palabras.{{/if}}
+{{#if maxWords}}El texto mejorado debe tener una longitud aproximada de {{{maxWords}}} palabras, puede exceder este límite un 10%. Intenta acercarte lo más posible a este número de palabras para un desarrollo completo, manteniendo la concisión.{{/if}}
 La respuesta DEBE estar en español.
 
 {{#if isObjectiveContext}}
