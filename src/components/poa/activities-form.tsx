@@ -10,10 +10,12 @@ import { PlusCircle, ListChecks, Save } from "lucide-react";
 import type React from "react";
 import { useState, useEffect } from "react";
 import type { POAActivity } from "@/lib/schema";
+import { useToast } from "@/hooks/use-toast";
 
 export function ActivitiesForm() {
   const { poa, addActivity, updateActivity, deleteActivity, setActivities, saveCurrentPOA } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const { toast } = useToast();
 
   // Filter for top-level activities
   const topLevelActivities = poa?.activities.filter(act => !act.parentId) || [];
@@ -36,7 +38,8 @@ export function ActivitiesForm() {
                 alternativeBranches: [],
                 parentId: null,
                 parentBranchCondition: null,
-                ...act, 
+                nextIndividualActivityRef: '',
+                ...act,
                 ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: 'Sí', noLabel: 'No' } }),
                 ...(act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined && { alternativeBranches: [{id: crypto.randomUUID(), label: 'Alternativa 1'}] }),
             }));
@@ -49,8 +52,19 @@ export function ActivitiesForm() {
   if (!poa) return <div className="flex justify-center items-center h-64"><p>Cargando datos del Procedimiento POA...</p></div>;
 
   const handleAddTopLevelActivity = () => {
+    if (topLevelActivities.length > 0) {
+      const lastActivity = topLevelActivities[topLevelActivities.length - 1];
+      if (!lastActivity.responsible || !lastActivity.description) {
+        toast({
+          title: "Campos Incompletos",
+          description: "Por favor, completa los campos 'Responsable' y 'Descripción' de la última actividad antes de añadir una nueva.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     // No parentId or parentBranchCondition for top-level
-    addActivity({}); 
+    addActivity({});
   };
 
   // Drag and drop is simplified for top-level activities only for now
@@ -77,7 +91,7 @@ export function ActivitiesForm() {
     const reorderedAllActivities = [...poa.activities];
     const actualDraggedItemIndexInAll = reorderedAllActivities.findIndex(act => act.id === draggedItemId);
     const draggedItem = reorderedAllActivities.splice(actualDraggedItemIndexInAll, 1)[0];
-    
+
     // Find the ID of the item at the dropIndex in the top-level list
     const itemAtDropIndexId = currentTopLevelActivities[dropIndex].id;
     const actualDropIndexInAll = reorderedAllActivities.findIndex(act => act.id === itemAtDropIndexId);
@@ -88,7 +102,7 @@ export function ActivitiesForm() {
     } else {
         reorderedAllActivities.splice(actualDropIndexInAll, 0, draggedItem);
     }
-    
+
     let topLevelCounter = 1;
     const renumberedActivities = reorderedAllActivities.map((act) => {
       if (!act.parentId) { // Renumber only top-level activities
@@ -133,7 +147,7 @@ export function ActivitiesForm() {
                 onDelete={deleteActivity}
                 index={index}
                 totalActivities={topLevelActivities.length}
-                onDragStart={onDragStart} 
+                onDragStart={onDragStart}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
                 isDragging={draggedItemIndex === index}
