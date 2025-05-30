@@ -94,7 +94,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return poaToSave;
     });
-  }, [toast]); // Removed setIsDirty from dependencies as it's stable
+  }, [toast]); 
 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
@@ -142,7 +142,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-  const addActivity = useCallback((options?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' | 'responsible'>> & { parentId?: string | null, parentBranchCondition?: string | null }) => {
+  const addActivity = useCallback((options?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' | 'responsible' >> & { parentId?: string | null, parentBranchCondition?: string | null }) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
@@ -171,10 +171,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: crypto.randomUUID(),
         systemNumber: systemNumber,
         userNumber: options?.userNumber || '',
-        responsible: '', // Obligatorio, el usuario debe llenarlo
+        responsible: '', 
         description: '',
         nextActivityType: 'individual',
-        nextIndividualActivityRef: 'No Aplica', // Default para el nuevo campo
+        nextIndividualActivityRef: '', 
         decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
         alternativeBranches: [],
         parentId: parentId || null,
@@ -246,9 +246,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activities: poaData.activities.map(act => ({
             decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
             alternativeBranches: [],
-            responsible: act.responsible || '', // Asegurar que responsable exista
+            responsible: act.responsible || '', 
             userNumber: act.userNumber || '',
-            nextIndividualActivityRef: act.nextIndividualActivityRef || 'No Aplica', // Default para el nuevo campo
+            nextIndividualActivityRef: (act.nextIndividualActivityRef === 'No Aplica' || act.nextIndividualActivityRef === undefined || act.nextIndividualActivityRef === null) ? '' : act.nextIndividualActivityRef,
             parentId: act.parentId || null,
             parentBranchCondition: act.parentBranchCondition || null,
             ...act,
@@ -265,9 +265,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newPoaInstance.activities = newPoaInstance.activities.map(act => ({
         decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
         alternativeBranches: [],
-        responsible: '', // Asegurar que responsable exista
+        responsible: '', 
         userNumber: '',
-        nextIndividualActivityRef: 'No Aplica', // Default para el nuevo campo
+        nextIndividualActivityRef: '', 
         parentId: null,
         parentBranchCondition: null,
         ...act
@@ -351,13 +351,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return poa.activities
       .filter(act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition)
       .sort((a, b) => {
-        const numPartsA = a.systemNumber.split('.').map(part => part.replace(/[SA]/gi, '')).map(Number);
-        const numPartsB = b.systemNumber.split('.').map(part => part.replace(/[SA]/gi, '')).map(Number);
-        for (let i = 0; i < Math.max(numPartsA.length, numPartsB.length); i++) {
-            const valA = numPartsA[i] || 0;
-            const valB = numPartsB[i] || 0;
-            if (valA !== valB) return valA - valB;
-        }
+        // Basic sort by systemNumber, can be enhanced
+        if (a.systemNumber < b.systemNumber) return -1;
+        if (a.systemNumber > b.systemNumber) return 1;
         return 0;
       });
   }, [poa]);
@@ -389,3 +385,5 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
+
+    
