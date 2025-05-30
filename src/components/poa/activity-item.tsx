@@ -82,15 +82,6 @@ export function ActivityItem({
     }
   };
 
-  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    // Allow empty string for clearing the input, or a valid number
-    if (value === "" || /^\d*$/.test(value)) { // Allow empty string during input
-        onUpdate(activity.id, { [name]: value });
-    }
-  };
-
-
   const handleNextActivityTypeChange = (value: string) => {
     const newType = value as POAActivity['nextActivityType'];
     const updates: Partial<POAActivity> = { nextActivityType: newType };
@@ -100,34 +91,24 @@ export function ActivityItem({
     if (newType === 'alternatives' && (!activity.alternativeBranches || activity.alternativeBranches.length === 0)) {
       updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
     }
-    if (newType !== 'individual') {
-        updates.nextIndividualActivityRef = undefined; 
-    } else if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
+    if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
         updates.nextIndividualActivityRef = ''; 
+    } else if (newType !== 'individual') {
+        updates.nextIndividualActivityRef = undefined; // Clear if not individual
     }
     onUpdate(activity.id, updates);
   };
 
   const handleDecisionBranchLabelChange = (branch: 'yes' | 'no', value: string) => {
-    const newDecisionBranches = { ...(activity.decisionBranches || { yesLabel: 'Sí', noLabel: 'No' }) };
-    if (branch === 'yes') {
-      newDecisionBranches.yesLabel = value;
-    } else {
-      newDecisionBranches.noLabel = value;
-    }
-    onUpdate(activity.id, { decisionBranches: newDecisionBranches });
+    updateActivityBranchLabel(activity.id, 'decision', branch, value);
   };
 
   const handleAlternativeBranchLabelChange = (branchIndex: number, value: string) => {
-     const newAlternativeBranches = (activity.alternativeBranches || []).map((branch, i) =>
-        i === branchIndex ? { ...branch, label: value } : branch
-      );
-    onUpdate(activity.id, { alternativeBranches: newAlternativeBranches });
+     updateActivityBranchLabel(activity.id, 'alternative', branchIndex, value);
   };
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
-    // Pass only necessary options to avoid overwriting defaults like description, responsible
     addActivity({ parentId: activity.id, parentBranchCondition });
   };
 
@@ -152,29 +133,24 @@ export function ActivityItem({
           <div className="flex-grow space-y-1.5">
             {isExpanded && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center"> {/* Changed items-start to items-center */}
                     <div>
-                        <Label htmlFor={`activity-systemNumber-${activity.id}`}>No. Sistema</Label>
-                        <Input
-                            id={`activity-systemNumber-${activity.id}`}
-                            name="systemNumber"
-                            value={activity.systemNumber}
-                            readOnly // System number should be auto-generated and read-only
-                            className="mt-0.5 w-full text-xs bg-muted/50"
-                        />
+                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No.</Label>
+                        <div className="flex items-baseline mt-0.5">
+                            <Input
+                                id={`activity-userNumber-${activity.id}`}
+                                name="userNumber"
+                                value={activity.userNumber || ""}
+                                readOnly 
+                                placeholder="Auto"
+                                className="w-16 text-base font-semibold bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0" 
+                            />
+                            <span className="text-xs text-muted-foreground ml-1">
+                                (Sistema: {activity.systemNumber})
+                            </span>
+                        </div>
                     </div>
-                     <div>
-                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No. Usuario</Label>
-                        <Input
-                            id={`activity-userNumber-${activity.id}`}
-                            name="userNumber"
-                            type="text" 
-                            value={activity.userNumber || ""}
-                            readOnly 
-                            placeholder="Auto"
-                            className="mt-0.5 w-full text-xs bg-muted/50"
-                        />
-                    </div>
+                    {/* No. Sistema input removed from direct view, shown as part of userNumber label */}
                 </div>
 
                 <div>
@@ -232,7 +208,7 @@ export function ActivityItem({
                             name="nextIndividualActivityRef"
                             value={activity.nextIndividualActivityRef || ""}
                             onChange={handleInputChange}
-                            placeholder="Siguiente Actividad (No. Sistema, FIN, o No Aplica)"
+                            placeholder="Siguiente Actividad No. (Número, Fin o No Aplica)"
                             className="mt-0.5 w-full text-xs"
                         />
                     </div>
@@ -242,7 +218,7 @@ export function ActivityItem({
             {!isExpanded && (
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate">
-                        {activity.systemNumber} ({activity.userNumber}) - {activity.description || "Actividad sin descripción"}
+                        {activity.userNumber}. (Sistema: {activity.systemNumber}) - {activity.description || "Actividad sin descripción"}
                     </p>
                 </div>
             )}
