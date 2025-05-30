@@ -15,7 +15,7 @@ import { generateObjective } from "@/ai/flows/generate-objective";
 import type { GenerateObjectiveInput } from "@/ai/flows/generate-objective";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb } from "lucide-react"; // Changed HelpCircle to Lightbulb
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface ObjectiveHelperData {
@@ -34,7 +34,7 @@ export function ObjectiveForm() {
   const [maxWords, setMaxWords] = useState(30);
   const { toast } = useToast();
   const [objectiveBeforeAi, setObjectiveBeforeAi] = useState<string | null>(null);
-  const [showHelperSection, setShowHelperSection] = useState(false); // State for helper section visibility
+  const [showHelperSection, setShowHelperSection] = useState(false); 
 
   const [helperData, setHelperData] = useState<ObjectiveHelperData>({
     generalDescription: '',
@@ -47,8 +47,6 @@ export function ObjectiveForm() {
 
   useEffect(() => {
     if (poa?.objectiveHelperData) {
-      // Ensure helperData is fully initialized from poa.objectiveHelperData
-      // including checking for undefined fields and providing defaults.
       const currentHelperData = poa.objectiveHelperData;
       setHelperData({
         generalDescription: currentHelperData.generalDescription || '',
@@ -58,20 +56,19 @@ export function ObjectiveForm() {
         desiredImpact: currentHelperData.desiredImpact || '',
         kpis: currentHelperData.kpis && currentHelperData.kpis.length > 0 ? currentHelperData.kpis : [''],
       });
-      // If helper data exists and has meaningful content, assume user wants to see it
       const hasContent = Object.values(currentHelperData).some(val => 
         Array.isArray(val) ? val.some(s => s?.trim() !== '') : typeof val === 'string' && val.trim() !== ''
       );
-      if (hasContent) {
+      if (hasContent && !showHelperSection) { 
          setShowHelperSection(true);
       }
     }
-  }, [poa?.objectiveHelperData]);
+  }, [poa?.objectiveHelperData, showHelperSection]);
 
   const handleHelperInputChange = (field: keyof Omit<ObjectiveHelperData, 'kpis'>, value: string) => {
     setHelperData(prev => {
       const newData = { ...prev, [field]: value };
-      updatePoaObjectiveHelperData(newData); // Update context
+      updatePoaObjectiveHelperData(newData); 
       return newData;
     });
     setIsDirty(true);
@@ -82,7 +79,7 @@ export function ObjectiveForm() {
       const newKpis = [...prev.kpis];
       newKpis[index] = value;
       const newData = { ...prev, kpis: newKpis };
-      updatePoaObjectiveHelperData(newData); // Update context
+      updatePoaObjectiveHelperData(newData); 
       return newData;
     });
     setIsDirty(true);
@@ -91,7 +88,7 @@ export function ObjectiveForm() {
   const addKpiField = () => {
     setHelperData(prev => {
       const newData = { ...prev, kpis: [...prev.kpis, ''] };
-      updatePoaObjectiveHelperData(newData); // Update context
+      updatePoaObjectiveHelperData(newData); 
       return newData;
     });
     setIsDirty(true);
@@ -101,7 +98,7 @@ export function ObjectiveForm() {
     setHelperData(prev => {
       const newKpis = prev.kpis.filter((_, i) => i !== index);
       const newData = { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] };
-      updatePoaObjectiveHelperData(newData); // Update context
+      updatePoaObjectiveHelperData(newData); 
       return newData;
     });
     setIsDirty(true);
@@ -112,9 +109,20 @@ export function ObjectiveForm() {
     setObjectiveBeforeAi(poa.objective);
     setIsLoadingAiEnhance(true);
     try {
-      const result = await enhanceText({ text: poa.objective, maxWords: maxWords, context: "objective" });
+      // Pass helperData to enhanceText
+      const result = await enhanceText({ 
+        text: poa.objective, 
+        maxWords: maxWords, 
+        context: "objective",
+        generalDescription: helperData.generalDescription,
+        needOrProblem: helperData.needOrProblem,
+        purposeOrExpectedResult: helperData.purposeOrExpectedResult,
+        targetAudience: helperData.targetAudience,
+        desiredImpact: helperData.desiredImpact,
+        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''),
+      });
       updateField("objective", result.enhancedText);
-      toast({ title: "Objetivo Editado con IA", description: "El texto del objetivo ha sido editado por IA." });
+      toast({ title: "Objetivo Editado con IA", description: "El texto del objetivo ha sido editado por IA usando las preguntas de ayuda como contexto." });
     } catch (error) {
       console.error("Error editando objetivo con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
@@ -128,20 +136,18 @@ export function ObjectiveForm() {
     setObjectiveBeforeAi(poa.objective); 
     setIsLoadingAiGenerate(true);
     try {
-      // Ensure helperData from state is passed correctly
       const inputForAI: GenerateObjectiveInput = {
         generalDescription: helperData.generalDescription,
         needOrProblem: helperData.needOrProblem,
         purposeOrExpectedResult: helperData.purposeOrExpectedResult,
         targetAudience: helperData.targetAudience,
         desiredImpact: helperData.desiredImpact,
-        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''), // Filter out empty KPIs
+        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''), 
         maxWords: maxWords,
       };
 
       const result = await generateObjective(inputForAI);
       updateField("objective", result.generatedObjective);
-      // Ensure helper data is also saved to context if it's the source of truth for generation
       updatePoaObjectiveHelperData(helperData); 
       toast({ title: "Objetivo Generado con IA", description: "Se ha generado un nuevo objetivo utilizando las preguntas de ayuda." });
     } catch (error)
@@ -168,7 +174,7 @@ export function ObjectiveForm() {
 
   const handleSave = () => {
     if (poa) {
-      updatePoaObjectiveHelperData(helperData); // Ensure latest helper data is in context before save
+      updatePoaObjectiveHelperData(helperData); 
       saveCurrentPOA();
     }
   };
@@ -234,7 +240,7 @@ export function ObjectiveForm() {
             onCheckedChange={setShowHelperSection}
           />
           <Label htmlFor="toggle-helper-section" className="text-md font-semibold text-primary flex items-center">
-            <Lightbulb className="mr-2 h-5 w-5" /> {/* Changed icon here */}
+            <Lightbulb className="mr-2 h-5 w-5" /> 
             Ayuda para Redactar el Objetivo
           </Label>
         </div>

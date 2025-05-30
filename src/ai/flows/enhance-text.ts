@@ -24,6 +24,13 @@ const EnhanceTextInputSchema = z.object({
   isIntroductionContext: z.boolean().optional().describe('Set to true if context is "introduction".'),
   isScopeContext: z.boolean().optional().describe('Set to true if context is "scope".'),
   isActivityDescriptionContext: z.boolean().optional().describe('Set to true if context is "activity_description".'),
+  // Optional helper fields for objective context
+  generalDescription: z.string().optional().describe('Descripción general de la acción (¿Qué se hace?) para el contexto del objetivo.'),
+  needOrProblem: z.string().optional().describe('Necesidad o problema que atiende (¿Por qué se hace?) para el contexto del objetivo.'),
+  purposeOrExpectedResult: z.string().optional().describe('Finalidad o resultado esperado (¿Para qué se hace?) para el contexto del objetivo.'),
+  targetAudience: z.string().optional().describe('A quién va dirigido o quién se beneficia (Aplicación) para el contexto del objetivo.'),
+  desiredImpact: z.string().optional().describe('Impacto que se busca generar (mejora, control, cumplimiento, eficiencia, etc.) para el contexto del objetivo.'),
+  kpis: z.array(z.string()).optional().describe('Indicadores Clave de Desempeño (KPIs) asociados para el contexto del objetivo.'),
 });
 
 export type EnhanceTextInput = z.infer<typeof EnhanceTextInputSchema>;
@@ -55,6 +62,31 @@ Para este OBJETIVO, aplica las siguientes reglas adicionales:
 - Evita el uso de gerundios (terminaciones -ando, -iendo) y adjetivos calificativos innecesarios.
 - Debe ser breve, claro y preciso.
 No incluyas frases como "El objetivo es..." o "Este documento tiene como objetivo...". Ve directamente al objetivo redactado.
+
+{{#if generalDescription}}
+Si se proporciona información de ayuda adicional (descripción general, necesidad, etc.), utilízala como CONTEXTO para refinar y enriquecer el 'Texto original' que se te da para mejorar. Asegúrate de que el texto mejorado siga siendo una edición del 'Texto original' y no una reescritura completa basada solo en esta información de ayuda.
+Información de ayuda adicional para contextualizar la edición del objetivo:
+- Descripción general de la acción: {{{generalDescription}}}
+{{/if}}
+{{#if needOrProblem}}
+- Necesidad o problema que atiende: {{{needOrProblem}}}
+{{/if}}
+{{#if purposeOrExpectedResult}}
+- Finalidad o resultado esperado: {{{purposeOrExpectedResult}}}
+{{/if}}
+{{#if targetAudience}}
+- A quién va dirigido o quién se beneficia: {{{targetAudience}}}
+{{/if}}
+{{#if desiredImpact}}
+- Impacto que se busca generar: {{{desiredImpact}}}
+{{/if}}
+{{#if kpis.length}}
+- KPIs asociados:
+{{#each kpis}}
+  - {{{this}}}
+{{/each}}
+{{/if}}
+
 {{/if}}
 
 {{#if isIntroductionContext}}
@@ -83,7 +115,7 @@ const enhanceTextFlow = ai.defineFlow(
   },
   async (input: EnhanceTextInput) => {
     // Prepare input for the prompt by setting boolean context flags
-    const processedInput = {
+    const processedInput: EnhanceTextInput = {
       ...input,
       isObjectiveContext: input.context === 'objective',
       isIntroductionContext: input.context === 'introduction',
@@ -91,6 +123,16 @@ const enhanceTextFlow = ai.defineFlow(
       isActivityDescriptionContext: input.context === 'activity_description',
     };
     
+    // For objective context, ensure helper data is passed if it exists
+    if (processedInput.isObjectiveContext) {
+        processedInput.generalDescription = input.generalDescription || undefined;
+        processedInput.needOrProblem = input.needOrProblem || undefined;
+        processedInput.purposeOrExpectedResult = input.purposeOrExpectedResult || undefined;
+        processedInput.targetAudience = input.targetAudience || undefined;
+        processedInput.desiredImpact = input.desiredImpact || undefined;
+        processedInput.kpis = input.kpis && input.kpis.length > 0 ? input.kpis.filter(kpi => kpi.trim() !== '') : undefined;
+    }
+
     const {output} = await enhanceTextPrompt(processedInput);
     return output!;
   }
