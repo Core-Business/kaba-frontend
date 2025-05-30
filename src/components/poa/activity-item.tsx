@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePOA } from "@/hooks/use-poa";
@@ -20,8 +20,7 @@ interface ActivityItemProps {
   activity: POAActivity;
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
-  index?: number;
-  totalActivities?: number;
+  index?: number; // Index among siblings, if applicable
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
@@ -79,15 +78,15 @@ export function ActivityItem({
     const { name, value } = e.target;
     onUpdate(activity.id, { [name]: value });
     if (name === "description") {
-      setDescriptionBeforeAi(null); 
+      setDescriptionBeforeAi(null);
     }
   };
-  
+
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     // Allow empty string for clearing the input, or a valid number
-    if (value === "" || /^\d+$/.test(value)) {
-      onUpdate(activity.id, { [name]: value });
+    if (value === "" || /^\d*$/.test(value)) { // Allow empty string during input
+        onUpdate(activity.id, { [name]: value });
     }
   };
 
@@ -102,9 +101,9 @@ export function ActivityItem({
       updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
     }
     if (newType !== 'individual') {
-        updates.nextIndividualActivityRef = undefined; // Clear if not individual
+        updates.nextIndividualActivityRef = undefined; 
     } else if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
-        updates.nextIndividualActivityRef = ''; // Set to empty string to show placeholder
+        updates.nextIndividualActivityRef = ''; 
     }
     onUpdate(activity.id, updates);
   };
@@ -128,6 +127,7 @@ export function ActivityItem({
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
+    // Pass only necessary options to avoid overwriting defaults like description, responsible
     addActivity({ parentId: activity.id, parentBranchCondition });
   };
 
@@ -135,9 +135,9 @@ export function ActivityItem({
     <Card
       className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'} ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}`}
       draggable={!!onDragStart && !isSubActivity}
-      onDragStart={(e) => !isSubActivity && onDragStart?.(e, index!)}
+      onDragStart={(e) => !isSubActivity && index !== undefined && onDragStart?.(e, index)}
       onDragOver={onDragOver}
-      onDrop={(e) => !isSubActivity && onDrop?.(e, index!)}
+      onDrop={(e) => !isSubActivity && index !== undefined && onDrop?.(e, index)}
     >
       <CardContent className="p-2 space-y-2">
         <div className="flex items-start gap-1.5">
@@ -159,22 +159,20 @@ export function ActivityItem({
                             id={`activity-systemNumber-${activity.id}`}
                             name="systemNumber"
                             value={activity.systemNumber}
-                            onChange={handleInputChange}
-                            placeholder="Ej., 1.1, A.2"
-                            className="mt-0.5 w-full text-xs"
-                            readOnly // System number should be auto-generated
+                            readOnly // System number should be auto-generated and read-only
+                            className="mt-0.5 w-full text-xs bg-muted/50"
                         />
                     </div>
                      <div>
-                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No. Usuario (Opcional)</Label>
+                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No. Usuario</Label>
                         <Input
                             id={`activity-userNumber-${activity.id}`}
                             name="userNumber"
-                            type="number"
+                            type="text" 
                             value={activity.userNumber || ""}
-                            onChange={handleNumberInputChange}
-                            placeholder="Ej., 1, 25"
-                            className="mt-0.5 w-full text-xs"
+                            readOnly 
+                            placeholder="Auto"
+                            className="mt-0.5 w-full text-xs bg-muted/50"
                         />
                     </div>
                 </div>
@@ -232,7 +230,7 @@ export function ActivityItem({
                         <Input
                             id={`activity-nextIndividualActivityRef-${activity.id}`}
                             name="nextIndividualActivityRef"
-                            value={activity.nextIndividualActivityRef || ""} 
+                            value={activity.nextIndividualActivityRef || ""}
                             onChange={handleInputChange}
                             placeholder="Siguiente Actividad (No. Sistema, FIN, o No Aplica)"
                             className="mt-0.5 w-full text-xs"
@@ -244,13 +242,13 @@ export function ActivityItem({
             {!isExpanded && (
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate">
-                        {activity.systemNumber} - {activity.description || "Actividad sin descripción"}
+                        {activity.systemNumber} ({activity.userNumber}) - {activity.description || "Actividad sin descripción"}
                     </p>
                 </div>
             )}
           </div>
         </div>
-        
+
         {isExpanded && (
           <>
             {activity.nextActivityType === 'decision' && (
@@ -267,8 +265,8 @@ export function ActivityItem({
                     className="w-full text-xs h-8"
                   />
                   <div className="ml-2 space-y-1.5">
-                    {yesChildren.map((child) => (
-                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                    {yesChildren.map((child, childIndex) => (
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
                     ))}
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('yes')} className="text-xs h-7 px-2 py-1 border-green-600 text-green-700 hover:bg-green-100">
@@ -288,8 +286,8 @@ export function ActivityItem({
                     className="w-full text-xs h-8"
                   />
                   <div className="ml-2 space-y-1.5">
-                    {noChildren.map((child) => (
-                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                    {noChildren.map((child, childIndex) => (
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
                     ))}
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('no')} className="text-xs h-7 px-2 py-1 border-red-600 text-red-700 hover:bg-red-100">
@@ -333,8 +331,8 @@ export function ActivityItem({
                       )}
                     </div>
                     <div className="ml-2 space-y-1.5">
-                      {alternativeChildren(branch.id).map((child) => (
-                         <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                      {alternativeChildren(branch.id).map((child, childIndex) => (
+                         <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
                       ))}
                     </div>
                      <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity(branch.id)} className="text-xs h-7 px-2 py-1 border-blue-600 text-blue-700 hover:bg-blue-100">
