@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
@@ -82,6 +82,15 @@ export function ActivityItem({
     }
   };
 
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Allow empty string or numbers only
+    if (value === '' || /^[0-9]+$/.test(value)) {
+      onUpdate(activity.id, { [name]: value });
+    }
+  };
+
+
   const handleNextActivityTypeChange = (value: string) => {
     const newType = value as POAActivity['nextActivityType'];
     const updates: Partial<POAActivity> = { nextActivityType: newType };
@@ -131,26 +140,22 @@ export function ActivityItem({
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            {isExpanded && (
+             {isExpanded && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center"> {/* Changed items-start to items-center */}
-                    <div>
-                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No.</Label>
-                        <div className="flex items-baseline mt-0.5">
-                            <Input
-                                id={`activity-userNumber-${activity.id}`}
-                                name="userNumber"
-                                value={activity.userNumber || ""}
-                                readOnly 
-                                placeholder="Auto"
-                                className="w-16 text-base font-semibold bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0" 
-                            />
-                            <span className="text-xs text-muted-foreground ml-1">
-                                (Sistema: {activity.systemNumber})
-                            </span>
-                        </div>
-                    </div>
-                    {/* No. Sistema input removed from direct view, shown as part of userNumber label */}
+                {/* Combined User Number and System Number Display */}
+                <div className="flex items-baseline mb-1">
+                  <Label htmlFor={`activity-userNumber-${activity.id}`} className="text-base font-semibold mr-1.5">No.</Label>
+                  <Input
+                      id={`activity-userNumber-${activity.id}`}
+                      name="userNumber"
+                      value={activity.userNumber || ""}
+                      readOnly
+                      placeholder="Auto"
+                      className="w-12 text-base font-semibold bg-transparent border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default"
+                  />
+                  <span className="text-xs text-muted-foreground ml-1">
+                      (Sistema: {activity.systemNumber})
+                  </span>
                 </div>
 
                 <div>
@@ -218,7 +223,7 @@ export function ActivityItem({
             {!isExpanded && (
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-medium truncate">
-                        {activity.userNumber}. (Sistema: {activity.systemNumber}) - {activity.description || "Actividad sin descripción"}
+                        No. {activity.userNumber} (Sistema: {activity.systemNumber}) - {activity.description || "Actividad sin descripción"}
                     </p>
                 </div>
             )}
@@ -357,3 +362,5 @@ export function ActivityItem({
     </Card>
   );
 }
+
+    
