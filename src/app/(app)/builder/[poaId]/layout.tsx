@@ -78,7 +78,6 @@ export default function BuilderLayout({
         if (!poa || poa.id !== "new") { 
           const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
           // BuilderLayout no debe guardar automáticamente, eso lo hace el dashboard o un botón de guardar explícito
-          // localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaInstance.id}`, JSON.stringify(newPoaInstance));
         }
       } else if (!poa || poa.id !== poaId) {
         const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -143,8 +142,8 @@ export default function BuilderLayout({
             documentCode: 'POA-RES-001',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
-          procedureDescription: 'Introducción cargada (desde resumen). Edita y guarda para más detalles.',
-          introduction: '', 
+          introduction: poa?.introduction || '', 
+          procedureDescription: 'Descripción de procedimiento/introducción cargada (desde resumen). Edita y guarda para más detalles.',
           scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
           activities: [],
           createdAt: new Date().toISOString(),
@@ -172,8 +171,8 @@ export default function BuilderLayout({
               documentCode: 'POA-MOCK-001',
             },
             objective: 'Este es un objetivo de mock original. Edita y guarda.',
-            procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
             introduction: '', 
+            procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
             scope: 'Alcance de mock original. Edita y guarda.',
             activities: [],
             createdAt: new Date().toISOString(),
@@ -194,13 +193,24 @@ export default function BuilderLayout({
     }
   }
 
-  const handleNavigationAttempt = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+  const handleNavigationAttempt = (e: React.MouseEvent<HTMLAnchorElement> | React.MouseEvent<HTMLButtonElement>, href: string) => {
     if (isDirty) {
       e.preventDefault();
       setNextPath(href);
       setShowUnsavedDialog(true);
     }
   };
+  
+  const handleDashboardNavigation = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isDirty) {
+      e.preventDefault();
+      setNextPath('/dashboard');
+      setShowUnsavedDialog(true);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
 
   const confirmNavigation = (discardChanges: boolean) => {
     setShowUnsavedDialog(false);
@@ -210,7 +220,9 @@ export default function BuilderLayout({
         router.push(nextPath);
       } else {
         saveCurrentPOA(); 
-        setTimeout(() => router.push(nextPath), 0); // Allow save to complete
+        // Use a very short timeout to allow state to update before navigation
+        // This helps ensure isDirty is false before the next route's logic runs
+        setTimeout(() => router.push(nextPath), 50); 
       }
     }
     setNextPath(null);
@@ -237,11 +249,13 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex min-h-screen bg-background"> {/* Outer container */}
+      {/* This is the main flex container for the builder view. It will hold Sidebar and the content panel. */}
+      {/* It gets the overall padding and gap. */}
+      <div className="flex flex-1 min-h-screen bg-background p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')} className="text-sidebar-foreground hover:bg-sidebar-accent">
+                <Button variant="ghost" size="sm" onClick={handleDashboardNavigation} className="text-sidebar-foreground hover:bg-sidebar-accent">
                     <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
                 </Button>
                 <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
@@ -292,11 +306,13 @@ export default function BuilderLayout({
           </SidebarFooter>
         </Sidebar>
 
-        {/* Content Area: Header + Scrollable Main Content */}
-        <div className="flex flex-col flex-1 min-w-0"> 
+        {/* Content Panel: Contains AppHeader and the scrollable main content area */}
+        <div className="flex flex-col flex-1 min-w-0"> {/* This div takes remaining space */}
           <AppHeader />
-          <main className="flex-1 w-full overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/40 rounded-tl-lg">
-            {children} {/* The Card components will be rendered here */}
+          {/* Main scrollable content area. NO PADDING HERE. */}
+          {/* It gets rounded corners and shadow to look like the grey area in the screenshot. */}
+          <main className="flex-1 w-full overflow-y-auto bg-muted/40 rounded-lg shadow-md">
+            {children} {/* Card components will be rendered here, they have their own padding */}
           </main>
         </div>
       </div>
