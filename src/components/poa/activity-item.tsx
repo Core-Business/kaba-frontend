@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { POAActivity } from "@/lib/schema";
@@ -76,7 +77,7 @@ export function ActivityItem({
     setIsLoadingAiExpandDesc(true);
     try {
       const currentWords = activity.description.split(/\s+/).filter(Boolean).length;
-      const targetMaxWords = Math.max(20, Math.round(currentWords * 1.5)); // Ensure at least 20 words as target
+      const targetMaxWords = Math.max(20, Math.round(currentWords * 1.5)); 
 
       const result = await enhanceText({ 
         text: activity.description, 
@@ -146,7 +147,6 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Allow empty string for clearing, or only numbers
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -158,25 +158,18 @@ export function ActivityItem({
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
     if (newType === 'individual') {
-        // If switching to individual AND the ref field is currently empty or doesn't exist (it was cleared by switching from other types)
-        // The activity.nextIndividualActivityRef check here is on the *current* state of the activity prop *before* this update is applied
-        if (!activity.nextIndividualActivityRef) { 
-            if (activity.userNumber && !isNaN(parseInt(activity.userNumber, 10))) {
-                updates.nextIndividualActivityRef = (parseInt(activity.userNumber, 10) + 1).toString();
-            } else {
-                updates.nextIndividualActivityRef = ''; // Fallback if userNumber is not valid
-            }
+        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || '';
+        if (activity.nextIndividualActivityRef === '' && activity.userNumber && /^\d+$/.test(activity.userNumber)) {
+            updates.nextIndividualActivityRef = (parseInt(activity.userNumber, 10) + 1).toString();
         }
-        // Decision and alternative specific data is not cleared here, as per previous decision.
-        // It just won't be rendered. If user switches back, old data might reappear unless context handles clearing.
     } else if (newType === 'decision') {
-        updates.nextIndividualActivityRef = ''; // Clear individual ref if switching to decision
-        if (!activity.decisionBranches) { // Initialize if not present
+        updates.nextIndividualActivityRef = ''; 
+        if (!activity.decisionBranches) { 
           updates.decisionBranches = { yesLabel: 'Sí', noLabel: 'No' };
         }
     } else if (newType === 'alternatives') {
-        updates.nextIndividualActivityRef = ''; // Clear individual ref if switching to alternatives
-        if (!activity.alternativeBranches || activity.alternativeBranches.length === 0) { // Initialize if not present or empty
+        updates.nextIndividualActivityRef = ''; 
+        if (!activity.alternativeBranches || activity.alternativeBranches.length === 0) { 
             updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
         }
     }
@@ -360,7 +353,7 @@ export function ActivityItem({
                   </div>
                   <Input
                     id={`decision-yesLabel-${activity.id}`}
-                    value={activity.decisionBranches?.yesLabel || 'Sí'}
+                    value={activity.decisionBranches?.yesLabel ?? 'Sí'}
                     onChange={(e) => handleDecisionBranchLabelChange('yes', e.target.value)}
                     placeholder="Ej., Sí, continuar"
                     className="w-full text-xs h-8"
@@ -381,7 +374,7 @@ export function ActivityItem({
                    </div>
                   <Input
                     id={`decision-noLabel-${activity.id}`}
-                    value={activity.decisionBranches?.noLabel || 'No'}
+                    value={activity.decisionBranches?.noLabel ?? 'No'}
                     onChange={(e) => handleDecisionBranchLabelChange('no', e.target.value)}
                     placeholder="Ej., No, finalizar"
                     className="w-full text-xs h-8"
