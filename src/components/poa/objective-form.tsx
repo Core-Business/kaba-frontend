@@ -9,23 +9,16 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch"; // Import Switch
+import { Switch } from "@/components/ui/switch";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateObjective } from "@/ai/flows/generate-objective";
 import type { GenerateObjectiveInput } from "@/ai/flows/generate-objective";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb } from "lucide-react"; 
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type { POAObjectiveHelperData } from "@/lib/schema";
 
-interface ObjectiveHelperData {
-  generalDescription: string;
-  needOrProblem: string;
-  purposeOrExpectedResult: string;
-  targetAudience: string;
-  desiredImpact: string;
-  kpis: string[];
-}
 
 export function ObjectiveForm() {
   const { poa, updateField, saveCurrentPOA, setIsDirty, updateObjectiveHelperData: updatePoaObjectiveHelperData } = usePOA();
@@ -36,7 +29,7 @@ export function ObjectiveForm() {
   const [objectiveBeforeAi, setObjectiveBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false); 
 
-  const [helperData, setHelperData] = useState<ObjectiveHelperData>({
+  const [helperData, setHelperData] = useState<POAObjectiveHelperData>({
     generalDescription: '',
     needOrProblem: '',
     purposeOrExpectedResult: '',
@@ -54,18 +47,28 @@ export function ObjectiveForm() {
         purposeOrExpectedResult: currentHelperData.purposeOrExpectedResult || '',
         targetAudience: currentHelperData.targetAudience || '',
         desiredImpact: currentHelperData.desiredImpact || '',
-        kpis: currentHelperData.kpis && currentHelperData.kpis.length > 0 ? currentHelperData.kpis : [''],
+        kpis: currentHelperData.kpis && currentHelperData.kpis.length > 0 ? currentHelperData.kpis.filter(kpi => kpi.trim() !== '') : [''],
       });
       const hasContent = Object.values(currentHelperData).some(val => 
         Array.isArray(val) ? val.some(s => s?.trim() !== '') : typeof val === 'string' && val.trim() !== ''
       );
       if (hasContent && !showHelperSection) { 
-         setShowHelperSection(true);
+         // setShowHelperSection(true); // Commented out to prevent auto-opening on load if previously saved
       }
+    } else {
+      // Reset helperData if poa.objectiveHelperData is null/undefined
+      setHelperData({
+        generalDescription: '',
+        needOrProblem: '',
+        purposeOrExpectedResult: '',
+        targetAudience: '',
+        desiredImpact: '',
+        kpis: [''],
+      });
     }
-  }, [poa?.objectiveHelperData, showHelperSection]);
+  }, [poa?.objectiveHelperData]);
 
-  const handleHelperInputChange = (field: keyof Omit<ObjectiveHelperData, 'kpis'>, value: string) => {
+  const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
     setHelperData(prev => {
       const newData = { ...prev, [field]: value };
       updatePoaObjectiveHelperData(newData); 
@@ -105,28 +108,37 @@ export function ObjectiveForm() {
   };
 
   const handleAiEnhance = async () => {
-    if (!poa?.objective) return;
-    setObjectiveBeforeAi(poa.objective);
+    if (!poa) return;
+    if (!poa.objective && !showHelperSection) { // if no objective and helpers are off, nothing to enhance
+        toast({ title: "Texto Requerido", description: "Por favor, escribe un objetivo para editarlo con IA.", variant: "destructive" });
+        return;
+    }
+
+    setObjectiveBeforeAi(poa.objective || ""); 
     setIsLoadingAiEnhance(true);
     try {
-      // Pass helperData to enhanceText
-      const result = await enhanceText({ 
-        text: poa.objective, 
+      const enhanceInput: Parameters<typeof enhanceText>[0] = {
+        text: poa.objective || "", // Pass empty string if objective is null, AI might use context
         maxWords: maxWords, 
         context: "objective",
-        generalDescription: helperData.generalDescription,
-        needOrProblem: helperData.needOrProblem,
-        purposeOrExpectedResult: helperData.purposeOrExpectedResult,
-        targetAudience: helperData.targetAudience,
-        desiredImpact: helperData.desiredImpact,
-        kpis: helperData.kpis.filter(kpi => kpi.trim() !== ''),
-      });
+      };
+
+      if (showHelperSection) {
+        enhanceInput.generalDescription = helperData.generalDescription;
+        enhanceInput.needOrProblem = helperData.needOrProblem;
+        enhanceInput.purposeOrExpectedResult = helperData.purposeOrExpectedResult;
+        enhanceInput.targetAudience = helperData.targetAudience;
+        enhanceInput.desiredImpact = helperData.desiredImpact;
+        enhanceInput.kpis = helperData.kpis.filter(kpi => kpi.trim() !== '');
+      }
+
+      const result = await enhanceText(enhanceInput);
       updateField("objective", result.enhancedText);
-      toast({ title: "Objetivo Editado con IA", description: "El texto del objetivo ha sido editado por IA usando las preguntas de ayuda como contexto." });
+      toast({ title: "Objetivo Editado con IA", description: "El texto del objetivo ha sido editado por IA." });
     } catch (error) {
       console.error("Error editando objetivo con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
-      setObjectiveBeforeAi(null);
+      // Do not clear objectiveBeforeAi on error, allow user to undo to previous state
     }
     setIsLoadingAiEnhance(false);
   };
@@ -154,7 +166,7 @@ export function ObjectiveForm() {
     {
       console.error("Error generando objetivo con IA:", error);
       toast({ title: "Fallo al Generar Objetivo", description: "No se pudo generar el objetivo.", variant: "destructive" });
-      setObjectiveBeforeAi(null);
+      // Do not clear objectiveBeforeAi on error
     }
     setIsLoadingAiGenerate(false);
   };
@@ -169,7 +181,7 @@ export function ObjectiveForm() {
 
   const handleObjectiveChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("objective", e.target.value);
-    setObjectiveBeforeAi(null);
+    setObjectiveBeforeAi(null); // Clear AI undo state if user types manually
   };
 
   const handleSave = () => {
@@ -181,7 +193,7 @@ export function ObjectiveForm() {
 
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
-  const canEnhance = !!poa.objective && poa.objective.length > 10;
+  const canEnhance = (!!poa.objective && poa.objective.length > 5) || (showHelperSection && Object.values(helperData).some(val => Array.isArray(val) ? val.some(s => s?.trim() !== '') : typeof val === 'string' && val.trim() !== ''));
   const canGenerate = Object.values(helperData).some(val => Array.isArray(val) ? val.some(s => s?.trim() !== '') : typeof val === 'string' && val.trim() !== '');
 
   return (
@@ -189,7 +201,7 @@ export function ObjectiveForm() {
       <CardHeader>
         <SectionTitle title="Objetivo" description="Establece claramente la meta principal o propósito de este Procedimiento POA." />
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <div className="space-y-1 w-full">
           <Label htmlFor="objective">Declaración del Objetivo</Label>
           <Textarea
@@ -223,8 +235,8 @@ export function ObjectiveForm() {
             onClick={handleAiEnhance}
             isLoading={isLoadingAiEnhance}
             textExists={canEnhance}
-            onUndo={objectiveBeforeAi !== null ? handleUndoAi : undefined}
-            canUndo={objectiveBeforeAi !== null}
+            onUndo={objectiveBeforeAi !== null && !isLoadingAiGenerate ? handleUndoAi : undefined} // Only allow undo if not generating
+            canUndo={objectiveBeforeAi !== null && !isLoadingAiGenerate}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             {isLoadingAiEnhance ? "Editando..." : "Edición con IA"}
@@ -291,11 +303,23 @@ export function ObjectiveForm() {
               </Button>
             </div>
 
-            <div className="flex justify-end mt-3 w-full">
+            <div className="flex justify-end items-center gap-2 mt-3 w-full">
               <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
                 {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
                 {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
               </Button>
+               {objectiveBeforeAi !== null && !isLoadingAiEnhance && ( // Only show undo if not enhancing
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleUndoAi}
+                  disabled={isLoadingAiGenerate}
+                  title="Deshacer última operación de IA"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -309,5 +333,3 @@ export function ObjectiveForm() {
     </Card>
   );
 }
-
-    

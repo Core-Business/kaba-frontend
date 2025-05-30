@@ -27,12 +27,25 @@ export const poaHeaderSchema = z.object({
 });
 export type POAHeader = z.infer<typeof poaHeaderSchema>;
 
+// Schema for the objective helper data
+export const poaObjectiveHelperDataSchema = z.object({
+  generalDescription: z.string().optional(),
+  needOrProblem: z.string().optional(),
+  purposeOrExpectedResult: z.string().optional(),
+  targetAudience: z.string().optional(),
+  desiredImpact: z.string().optional(),
+  kpis: z.array(z.string()).optional(),
+});
+export type POAObjectiveHelperData = z.infer<typeof poaObjectiveHelperDataSchema>;
+
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."), 
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
+  objectiveHelperData: poaObjectiveHelperDataSchema.optional(), // Added field
   procedureDescription: z.string().optional(), 
   introduction: z.string().optional(), 
   scope: z.string().optional(),
@@ -56,13 +69,23 @@ export const defaultPOAHeader: POAHeader = {
   logoFileName: '',
 };
 
-export function createNewPOA(id: string = 'new', name: string = 'Procedimiento POA Sin Título'): POA {
+export const defaultPOAObjectiveHelperData: POAObjectiveHelperData = {
+  generalDescription: '',
+  needOrProblem: '',
+  purposeOrExpectedResult: '',
+  targetAudience: '',
+  desiredImpact: '',
+  kpis: [''],
+};
+
+export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimiento POA Sin Título'): POA {
   const now = new Date().toISOString();
   return {
     id,
     name, 
     header: { ...defaultPOAHeader, title: name }, 
     objective: '',
+    objectiveHelperData: { ...defaultPOAObjectiveHelperData }, // Initialize with defaults
     procedureDescription: '',
     introduction: '',
     scope: '',
