@@ -19,6 +19,11 @@ const EnhanceTextInputSchema = z.object({
   maxWords: z.number().optional().describe('El número máximo de palabras para el texto mejorado.'),
   context: z.enum(['default', 'objective', 'introduction', 'scope', 'activity_description']).default('default').optional()
     .describe('El contexto del texto para aplicar reglas de estilo específicas. Por ejemplo, "objective" para objetivos de POA.'),
+  // Boolean flags derived from context, to be used in Handlebars
+  isObjectiveContext: z.boolean().optional().describe('Set to true if context is "objective".'),
+  isIntroductionContext: z.boolean().optional().describe('Set to true if context is "introduction".'),
+  isScopeContext: z.boolean().optional().describe('Set to true if context is "scope".'),
+  isActivityDescriptionContext: z.boolean().optional().describe('Set to true if context is "activity_description".'),
 });
 
 export type EnhanceTextInput = z.infer<typeof EnhanceTextInputSchema>;
@@ -42,7 +47,7 @@ Evita frases introductorias innecesarias como "El presente texto...", "El texto 
 {{#if maxWords}}El texto mejorado no debe exceder las {{{maxWords}}} palabras.{{/if}}
 La respuesta DEBE estar en español.
 
-{{#ifCond context "===" "objective"}}
+{{#if isObjectiveContext}}
 Para este OBJETIVO, aplica las siguientes reglas adicionales:
 - El objetivo debe describir el propósito del procedimiento, explicando por qué existe y qué se espera lograr.
 - Debe redactarse de manera clara y concisa, indicando el alcance y los objetivos específicos.
@@ -50,15 +55,19 @@ Para este OBJETIVO, aplica las siguientes reglas adicionales:
 - Evita el uso de gerundios (terminaciones -ando, -iendo) y adjetivos calificativos innecesarios.
 - Debe ser breve, claro y preciso.
 No incluyas frases como "El objetivo es..." o "Este documento tiene como objetivo...". Ve directamente al objetivo redactado.
-{{/ifCond}}
+{{/if}}
 
-{{#ifCond context "===" "introduction"}}
+{{#if isIntroductionContext}}
 Para esta INTRODUCCIÓN, asegúrate de que sea una visión general clara y directa del procedimiento. No uses frases como "La presente introducción..." o "Este documento describe...". Resume el procedimiento directamente.
-{{/ifCond}}
+{{/if}}
 
-{{#ifCond context "===" "scope"}}
+{{#if isScopeContext}}
 Para este ALCANCE, define los límites del procedimiento, incluyendo departamentos, procesos y roles involucrados, y cualquier exclusión. Sé directo y conciso.
-{{/ifCond}}
+{{/if}}
+
+{{#if isActivityDescriptionContext}}
+Para esta DESCRIPCIÓN DE ACTIVIDAD, sé claro, directo y enfocado en la acción a realizar.
+{{/if}}
 
 Texto original:
 {{{text}}}
@@ -72,19 +81,17 @@ const enhanceTextFlow = ai.defineFlow(
     inputSchema: EnhanceTextInputSchema,
     outputSchema: EnhanceTextOutputSchema,
   },
-  async input => {
-    // Helper for Handlebars conditional block
-    ai.handlebars.registerHelper('ifCond', function (v1, operator, v2, options) {
-      switch (operator) {
-        case '===':
-          // @ts-ignore
-          return v1 === v2 ? options.fn(this) : options.inverse(this);
-        default:
-          // @ts-ignore
-          return options.inverse(this);
-      }
-    });
-    const {output} = await enhanceTextPrompt(input);
+  async (input: EnhanceTextInput) => {
+    // Prepare input for the prompt by setting boolean context flags
+    const processedInput = {
+      ...input,
+      isObjectiveContext: input.context === 'objective',
+      isIntroductionContext: input.context === 'introduction',
+      isScopeContext: input.context === 'scope',
+      isActivityDescriptionContext: input.context === 'activity_description',
+    };
+    
+    const {output} = await enhanceTextPrompt(processedInput);
     return output!;
   }
 );
