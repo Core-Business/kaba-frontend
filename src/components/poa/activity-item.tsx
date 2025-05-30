@@ -35,7 +35,6 @@ export function ActivityItem({
   onUpdate,
   onDelete,
   index,
-  totalActivities,
   onDragStart,
   onDragOver,
   onDrop,
@@ -48,8 +47,16 @@ export function ActivityItem({
   const [isGeneratingName, setIsGeneratingName] = useState(false);
   const [nameBeforeAi, setNameBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
-  const { addActivity, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA(); // Removed updateActivityBranchLabel
-  const [isExpanded, setIsExpanded] = useState(true);
+  const { 
+    addActivity, 
+    addAlternativeBranch, 
+    removeAlternativeBranch, 
+    getChildActivities,
+    expandedActivityIds,
+    toggleActivityExpansion
+  } = usePOA(); 
+  
+  const isExpanded = expandedActivityIds.has(activity.id);
 
   const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
   const noChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'no') : [];
@@ -159,7 +166,8 @@ export function ActivityItem({
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
     if (newType === 'individual') {
-        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || '';
+        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || ''; // Keep existing if any
+        // If it's empty AND userNumber is valid, pre-fill
         if ((!activity.nextIndividualActivityRef || activity.nextIndividualActivityRef.trim() === '') && activity.userNumber && /^\d+$/.test(activity.userNumber)) {
            const currentUserNumber = parseInt(activity.userNumber, 10);
            if(!isNaN(currentUserNumber) && currentUserNumber > 0) {
@@ -170,7 +178,7 @@ export function ActivityItem({
         }
     } else if (newType === 'decision') {
         updates.nextIndividualActivityRef = ''; 
-        if (!activity.decisionBranches) { 
+        if (!activity.decisionBranches || (!activity.decisionBranches.yesLabel && !activity.decisionBranches.noLabel)) {
           updates.decisionBranches = { yesLabel: '', noLabel: '' };
         }
     } else if (newType === 'alternatives') {
@@ -211,7 +219,7 @@ export function ActivityItem({
                 <GripVertical className="h-4 w-4 mt-1" /> 
              </button>
           )}
-           <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5" title={isExpanded ? "Colapsar" : "Expandir"}>
+           <button type="button" onClick={() => toggleActivityExpansion(activity.id)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5" title={isExpanded ? "Colapsar" : "Expandir"}>
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
@@ -387,7 +395,7 @@ export function ActivityItem({
                   <Input
                     id={`decision-noLabel-${activity.id}`}
                     value={activity.decisionBranches?.noLabel ?? ''}
-                    onChange={(e) => {
+                     onChange={(e) => {
                         const newDecisionBranches = {
                           ...(activity.decisionBranches || { yesLabel: '', noLabel: '' }),
                           noLabel: e.target.value,

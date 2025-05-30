@@ -26,10 +26,13 @@ interface POAContextType {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
   updateObjectiveHelperData: (data: POAObjectiveHelperData) => void;
-  updateActivityBranchLabel: (activityId: string, branchType: 'decision' | 'alternative', indexOrKey: number | 'yes' | 'no', label: string) => void;
   addAlternativeBranch: (activityId: string) => void;
   removeAlternativeBranch: (activityId: string, branchId: string) => void;
   getChildActivities: (parentId: string, parentBranchCondition: string) => POAActivity[];
+  expandedActivityIds: Set<string>;
+  toggleActivityExpansion: (activityId: string) => void;
+  expandAllActivitiesInContext: () => void;
+  collapseAllActivitiesInContext: () => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
@@ -75,11 +78,9 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
   const topLevelActivities = sortSiblings(allActivities.filter(act => !act.parentId));
   topLevelActivities.forEach(activity => processActivityRecursive(activitiesMap.get(activity.id)));
   
-  // Add any remaining activities that might not have been part of the main tree (orphans, etc.)
-  // This ensures all activities get a userNumber even if they are somehow detached.
   const remainingActivities = allActivities.filter(act => !processedIds.has(act.id));
   sortSiblings(remainingActivities).forEach(act => {
-    if (!processedIds.has(act.id)) { // Double check, as processActivityRecursive might add them
+    if (!processedIds.has(act.id)) { 
         orderedActivities.push(act);
         processedIds.add(act.id);
     }
@@ -105,6 +106,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [poa, setPoa] = useState<POA | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const { toast } = useToast();
+  const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set());
 
   const updatePoaListInStorage = (poaToUpdate: POA) => {
     if (typeof window !== 'undefined') {
@@ -181,8 +183,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
-      // If the header title (which comes from poa.name usually) is directly updated in header form,
-      // ensure poa.name is also updated.
       if (updates.title && updates.title !== currentPoa.header.title) {
         newName = updates.title;
       }
@@ -235,7 +235,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           systemNumber = `${parentActivity.systemNumber}.${branchIndicator}${childrenOfThisBranch.length + 1}`;
         } else {
-          // Fallback if parent system number is somehow missing (should not happen)
           systemNumber = `Sub-${crypto.randomUUID().substring(0,4)}`; 
         }
       } else {
@@ -262,11 +261,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let activitiesToProcess = [...currentPoa.activities, newActivity];
       let finalActivities = renumberUserNumbers(activitiesToProcess);
 
-      // Find the newly added activity in the final list to get its assigned userNumber
       const newlyAddedActivityIndex = finalActivities.findIndex(act => act.id === newActivity.id);
       if (newlyAddedActivityIndex !== -1) {
         const newlyAddedActivityInFinalList = finalActivities[newlyAddedActivityIndex];
-        // Pre-fill nextIndividualActivityRef for ANY NEW activity if it's of type 'individual'
         if (newlyAddedActivityInFinalList.nextActivityType === 'individual') {
             const currentUserNumber = parseInt(newlyAddedActivityInFinalList.userNumber || '0', 10);
             if (!isNaN(currentUserNumber) && currentUserNumber > 0) {
@@ -278,6 +275,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       
+      setExpandedActivityIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(newActivity.id); // Expand new activity
+        return newSet;
+      });
+
       return {
         ...currentPoa,
         activities: finalActivities,
@@ -292,8 +295,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let updatedActivities = currentPoa.activities.map(act =>
         act.id === activityId ? { ...act, ...updates } : act
       );
-      // Always renumber user numbers if any significant structural or identifying field changes
-      // or if nextActivityType itself changes (as it can affect procedural order for renumbering)
       if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates || 'activityName' in updates) {
         updatedActivities = renumberUserNumbers(updatedActivities);
       }
@@ -324,6 +325,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
       let finalActivities = renumberUserNumbers(remainingActivities);
       
+      setExpandedActivityIds(prev => {
+        const newSet = new Set(prev);
+        activitiesToDelete.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+
       return {
         ...currentPoa,
         activities: finalActivities,
@@ -335,7 +342,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
-      return { ...currentPoa, activities: renumberUserNumbers(activities) };
+      const renumbered = renumberUserNumbers(activities);
+      // Ensure expanded state reflects current activities
+      setExpandedActivityIds(new Set(renumbered.map(act => act.id)));
+      return { ...currentPoa, activities: renumbered };
     });
   }, []);
 
@@ -365,6 +375,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         objectiveHelperData: poaData.objectiveHelperData || {...defaultPOAObjectiveHelperData},
     };
     setPoa(poaInstance);
+    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id))); // Expand all on load
     setIsDirty(false); 
   }, []);
 
@@ -385,35 +396,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newPoaInstance.header.title = name; 
     newPoaInstance.objectiveHelperData = {...defaultPOAObjectiveHelperData};
     setPoa(newPoaInstance);
+    setExpandedActivityIds(new Set()); // No activities yet, so empty set
     setIsDirty(false); 
     return newPoaInstance;
   }, []);
-
-
-  const updateActivityBranchLabel = useCallback((activityId: string, branchType: 'decision' | 'alternative', indexOrKey: number | 'yes' | 'no', label: string) => {
-    setPoa(currentPoa => {
-      if (!currentPoa) return null;
-      setIsDirty(true);
-      const newActivities = currentPoa.activities.map(act => {
-        if (act.id === activityId) {
-          if (branchType === 'decision' && (indexOrKey === 'yes' || indexOrKey === 'no')) {
-            const newDecisionBranches = {
-              ...(act.decisionBranches || { yesLabel: '', noLabel: '' }), 
-              [indexOrKey]: label,
-            };
-            return { ...act, decisionBranches: newDecisionBranches };
-          } else if (branchType === 'alternative' && typeof indexOrKey === 'number' && act.alternativeBranches) {
-            const newAlternativeBranches = act.alternativeBranches.map((branch, i) =>
-              i === indexOrKey ? { ...branch, label } : branch
-            );
-            return { ...act, alternativeBranches: newAlternativeBranches };
-          }
-        }
-        return act;
-      });
-      return { ...currentPoa, activities: newActivities };
-    });
-  }, [setIsDirty]);
 
   const addAlternativeBranch = useCallback((activityId: string) => {
     setPoa(currentPoa => {
@@ -465,6 +451,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return act;
       }).filter(act => !branchChildrenIdsToDelete.has(act.id)); 
 
+      setExpandedActivityIds(prev => {
+        const newSet = new Set(prev);
+        branchChildrenIdsToDelete.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+
       return {
         ...currentPoa,
         activities: renumberUserNumbers(updatedActivities)
@@ -479,7 +471,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .sort((a, b) => {
         const sysNumA = a.systemNumber || "";
         const sysNumB = b.systemNumber || "";
-        // Split into parts for more robust sorting (e.g., 1.S1 vs 1.S10)
         const partsA = sysNumA.split('.');
         const partsB = sysNumB.split('.');
         for (let i = 0; i < Math.min(partsA.length, partsB.length); i++) {
@@ -494,6 +485,31 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return partsA.length - partsB.length;
       });
   }, [poa]);
+
+  const toggleActivityExpansion = useCallback((activityId: string) => {
+    setExpandedActivityIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(activityId)) {
+        newSet.delete(activityId);
+      } else {
+        newSet.add(activityId);
+      }
+      return newSet;
+    });
+    setIsDirty(true); // Expanding/collapsing an activity could be considered a change to persist UI state if needed
+  }, []);
+
+  const expandAllActivitiesInContext = useCallback(() => {
+    if (poa) {
+      setExpandedActivityIds(new Set(poa.activities.map(act => act.id)));
+      setIsDirty(true);
+    }
+  }, [poa]);
+
+  const collapseAllActivitiesInContext = useCallback(() => {
+    setExpandedActivityIds(new Set());
+    setIsDirty(true);
+  }, []);
 
 
   return (
@@ -513,10 +529,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDirty,
       setIsDirty,
       updateObjectiveHelperData,
-      updateActivityBranchLabel,
       addAlternativeBranch,
       removeAlternativeBranch,
       getChildActivities,
+      expandedActivityIds,
+      toggleActivityExpansion,
+      expandAllActivitiesInContext,
+      collapseAllActivitiesInContext,
     }}>
       {children}
     </POAContext.Provider>
