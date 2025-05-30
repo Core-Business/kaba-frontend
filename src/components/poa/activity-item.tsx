@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2 } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { useState } from "react";
@@ -144,16 +144,16 @@ export function ActivityItem({
               <>
                 {/* Combined User Number and System Number Display */}
                 <div className="flex items-baseline mb-1">
-                  <Label htmlFor={`activity-userNumber-${activity.id}`} className="text-base font-semibold mr-1.5">No.</Label>
+                  <span className="text-base font-semibold text-primary mr-1">No.</span>
                   <Input
                       id={`activity-userNumber-${activity.id}`}
                       name="userNumber"
                       value={activity.userNumber || ""}
                       readOnly
                       placeholder="Auto"
-                      className="w-12 text-base font-semibold bg-transparent border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default"
+                      className="w-auto text-base font-semibold text-primary bg-transparent border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default mr-1"
                   />
-                  <span className="text-xs text-muted-foreground ml-1">
+                  <span className="text-xs text-muted-foreground">
                       (Sistema: {activity.systemNumber})
                   </span>
                 </div>
@@ -362,5 +362,7 @@ export function ActivityItem({
     </Card>
   );
 }
+
+    
 
     
