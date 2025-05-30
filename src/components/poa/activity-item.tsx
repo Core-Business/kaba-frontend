@@ -104,13 +104,12 @@ export function ActivityItem({
     if (newType !== 'individual') {
         updates.nextIndividualActivityRef = undefined; // Clear if not individual
     } else if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
-        updates.nextIndividualActivityRef = 'No Aplica'; // Set default if switching to individual
+        updates.nextIndividualActivityRef = ''; // Set to empty string to show placeholder
     }
     onUpdate(activity.id, updates);
   };
 
   const handleDecisionBranchLabelChange = (branch: 'yes' | 'no', value: string) => {
-    // Directly update the activity via onUpdate for simplicity with nested structure
     const newDecisionBranches = { ...(activity.decisionBranches || { yesLabel: 'Sí', noLabel: 'No' }) };
     if (branch === 'yes') {
       newDecisionBranches.yesLabel = value;
@@ -230,13 +229,12 @@ export function ActivityItem({
 
                 {activity.nextActivityType === 'individual' && (
                     <div className="mt-2">
-                        <Label htmlFor={`activity-nextIndividualActivityRef-${activity.id}`}>Siguiente Actividad (No. Sistema, FIN, o No Aplica)</Label>
                         <Input
                             id={`activity-nextIndividualActivityRef-${activity.id}`}
                             name="nextIndividualActivityRef"
-                            value={activity.nextIndividualActivityRef || "No Aplica"}
+                            value={activity.nextIndividualActivityRef || ""} 
                             onChange={handleInputChange}
-                            placeholder="Ej: 2.1, FIN, No Aplica"
+                            placeholder="Siguiente Actividad (No. Sistema, FIN, o No Aplica)"
                             className="mt-0.5 w-full text-xs"
                         />
                     </div>
