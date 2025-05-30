@@ -76,13 +76,13 @@ export function ActivityItem({
     setIsLoadingAiExpandDesc(true);
     try {
       const currentWords = activity.description.split(/\s+/).filter(Boolean).length;
-      const targetMaxWords = Math.round(currentWords * 1.5);
+      const targetMaxWords = Math.max(20, Math.round(currentWords * 1.5)); // Ensure at least 20 words as target
 
       const result = await enhanceText({ 
         text: activity.description, 
         context: "activity_description", 
         expandByPercent: 50,
-        maxWords: targetMaxWords > 0 ? targetMaxWords : 20 
+        maxWords: targetMaxWords
       });
       onUpdate(activity.id, { description: result.enhancedText });
       toast({ title: "Descripción Ampliada con IA", description: "La descripción de la actividad ha sido ampliada por IA." });
@@ -146,6 +146,7 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Allow empty string for clearing, or only numbers
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -155,16 +156,29 @@ export function ActivityItem({
   const handleNextActivityTypeChange = (value: string) => {
     const newType = value as POAActivity['nextActivityType'];
     const updates: Partial<POAActivity> = { nextActivityType: newType };
-    if (newType === 'decision' && !activity.decisionBranches) {
-      updates.decisionBranches = { yesLabel: 'Sí', noLabel: 'No' };
-    }
-    if (newType === 'alternatives' && (!activity.alternativeBranches || activity.alternativeBranches.length === 0)) {
-      updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
-    }
-    if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
-        updates.nextIndividualActivityRef = ''; 
-    } else if (newType !== 'individual') {
-        updates.nextIndividualActivityRef = ''; 
+
+    if (newType === 'individual') {
+        // If switching to individual AND the ref field is currently empty or doesn't exist (it was cleared by switching from other types)
+        // The activity.nextIndividualActivityRef check here is on the *current* state of the activity prop *before* this update is applied
+        if (!activity.nextIndividualActivityRef) { 
+            if (activity.userNumber && !isNaN(parseInt(activity.userNumber, 10))) {
+                updates.nextIndividualActivityRef = (parseInt(activity.userNumber, 10) + 1).toString();
+            } else {
+                updates.nextIndividualActivityRef = ''; // Fallback if userNumber is not valid
+            }
+        }
+        // Decision and alternative specific data is not cleared here, as per previous decision.
+        // It just won't be rendered. If user switches back, old data might reappear unless context handles clearing.
+    } else if (newType === 'decision') {
+        updates.nextIndividualActivityRef = ''; // Clear individual ref if switching to decision
+        if (!activity.decisionBranches) { // Initialize if not present
+          updates.decisionBranches = { yesLabel: 'Sí', noLabel: 'No' };
+        }
+    } else if (newType === 'alternatives') {
+        updates.nextIndividualActivityRef = ''; // Clear individual ref if switching to alternatives
+        if (!activity.alternativeBranches || activity.alternativeBranches.length === 0) { // Initialize if not present or empty
+            updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
+        }
     }
     onUpdate(activity.id, updates);
   };
@@ -201,18 +215,16 @@ export function ActivityItem({
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            <div className="flex items-center gap-1 mb-1">
-                <div className="flex items-baseline">
-                    <span className="text-base font-semibold text-primary mr-1">No.</span>
-                    <Input
-                        id={`activity-userNumber-${activity.id}`}
-                        name="userNumber"
-                        value={activity.userNumber || ""}
-                        readOnly
-                        placeholder="Auto"
-                        className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
-                    />
-                </div>
+            <div className="flex items-baseline gap-1 mb-1">
+                <span className="text-base font-semibold text-primary mr-1">No.</span>
+                <Input
+                    id={`activity-userNumber-${activity.id}`}
+                    name="userNumber"
+                    value={activity.userNumber || ""}
+                    readOnly
+                    placeholder="Auto"
+                    className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
+                />
                 <span className="text-base font-semibold text-primary">-</span>
                 <div className="flex-grow">
                     <Input
@@ -464,3 +476,5 @@ export function ActivityItem({
   );
 }
 
+
+    
