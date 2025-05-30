@@ -9,11 +9,12 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch"; // Import Switch
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateObjective } from "@/ai/flows/generate-objective";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2 } from "lucide-react";
+import { Save, PlusCircle, Trash2, Brain, Wand2, HelpCircle } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface ObjectiveHelperData {
@@ -26,12 +27,13 @@ interface ObjectiveHelperData {
 }
 
 export function ObjectiveForm() {
-  const { poa, updateField, saveCurrentPOA, setIsDirty } = usePOA();
+  const { poa, updateField, saveCurrentPOA, setIsDirty, updateObjectiveHelperData: updatePoaObjectiveHelperData } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
-  const [maxWords, setMaxWords] = useState(30); 
+  const [maxWords, setMaxWords] = useState(30);
   const { toast } = useToast();
   const [objectiveBeforeAi, setObjectiveBeforeAi] = useState<string | null>(null);
+  const [showHelperSection, setShowHelperSection] = useState(false); // State for helper section visibility
 
   const [helperData, setHelperData] = useState<ObjectiveHelperData>({
     generalDescription: '',
@@ -42,35 +44,50 @@ export function ObjectiveForm() {
     kpis: [''],
   });
 
-  // Effect to load helper data from POA if it exists (example of persisting helper data)
   useEffect(() => {
     if (poa?.objectiveHelperData) {
       setHelperData(poa.objectiveHelperData);
+      // If helper data exists, assume user wants to see it
+      setShowHelperSection(true); 
     }
   }, [poa?.objectiveHelperData]);
 
   const handleHelperInputChange = (field: keyof Omit<ObjectiveHelperData, 'kpis'>, value: string) => {
-    setHelperData(prev => ({ ...prev, [field]: value }));
-    // Optionally, update POA context if helper data is part of POA schema
-    // updateField('objectiveHelperData', { ...helperData, [field]: value }); 
+    setHelperData(prev => {
+      const newData = { ...prev, [field]: value };
+      updatePoaObjectiveHelperData(newData);
+      return newData;
+    });
     setIsDirty(true);
   };
 
   const handleKpiChange = (index: number, value: string) => {
     const newKpis = [...helperData.kpis];
     newKpis[index] = value;
-    setHelperData(prev => ({ ...prev, kpis: newKpis }));
+    setHelperData(prev => {
+      const newData = { ...prev, kpis: newKpis };
+      updatePoaObjectiveHelperData(newData);
+      return newData;
+    });
     setIsDirty(true);
   };
 
   const addKpiField = () => {
-    setHelperData(prev => ({ ...prev, kpis: [...prev.kpis, ''] }));
+    setHelperData(prev => {
+      const newData = { ...prev, kpis: [...prev.kpis, ''] };
+      updatePoaObjectiveHelperData(newData);
+      return newData;
+    });
     setIsDirty(true);
   };
 
   const removeKpiField = (index: number) => {
     const newKpis = helperData.kpis.filter((_, i) => i !== index);
-    setHelperData(prev => ({ ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }));
+    setHelperData(prev => {
+      const newData = { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] };
+      updatePoaObjectiveHelperData(newData);
+      return newData;
+    });
     setIsDirty(true);
   };
 
@@ -85,14 +102,14 @@ export function ObjectiveForm() {
     } catch (error) {
       console.error("Error editando objetivo con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
-      setObjectiveBeforeAi(null); 
+      setObjectiveBeforeAi(null);
     }
     setIsLoadingAiEnhance(false);
   };
 
   const handleGenerateObjective = async () => {
     if (!poa) return;
-    setObjectiveBeforeAi(poa.objective); 
+    setObjectiveBeforeAi(poa.objective);
     setIsLoadingAiGenerate(true);
     try {
       const result = await generateObjective({
@@ -105,8 +122,7 @@ export function ObjectiveForm() {
         maxWords: maxWords,
       });
       updateField("objective", result.generatedObjective);
-      // Persist helperData if desired (e.g., update POA context with helperData)
-      // updateField('objectiveHelperData', helperData); 
+      updatePoaObjectiveHelperData(helperData); 
       toast({ title: "Objetivo Generado con IA", description: "Se ha generado un nuevo objetivo utilizando las preguntas de ayuda." });
     } catch (error)
     {
@@ -124,17 +140,15 @@ export function ObjectiveForm() {
       setObjectiveBeforeAi(null);
     }
   };
-  
+
   const handleObjectiveChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("objective", e.target.value);
-    setObjectiveBeforeAi(null); 
+    setObjectiveBeforeAi(null);
   };
 
   const handleSave = () => {
     if (poa) {
-      // If objectiveHelperData were part of the POA schema, it would be saved automatically.
-      // For now, it's component state. If you want to save it, you'd update the POA in context:
-      // updateField('objectiveHelperData', helperData); // Assuming objectiveHelperData is a field in POA
+      updatePoaObjectiveHelperData(helperData);
       saveCurrentPOA();
     }
   };
@@ -143,7 +157,6 @@ export function ObjectiveForm() {
 
   const canEnhance = !!poa.objective && poa.objective.length > 10;
   const canGenerate = Object.values(helperData).some(val => Array.isArray(val) ? val.some(s => s.trim() !== '') : typeof val === 'string' && val.trim() !== '');
-
 
   return (
     <Card className="shadow-lg w-full">
@@ -170,7 +183,7 @@ export function ObjectiveForm() {
           <Slider
             id="maxWordsSliderAi"
             min={10}
-            max={100}
+            max={100} 
             step={5}
             defaultValue={[30]}
             value={[maxWords]}
@@ -178,7 +191,7 @@ export function ObjectiveForm() {
             className="w-full"
           />
         </div>
-        
+
         <div className="mt-3 flex justify-end items-center w-full">
           <AiEnhanceButton
             onClick={handleAiEnhance}
@@ -194,60 +207,72 @@ export function ObjectiveForm() {
 
         <hr className="my-4 w-full" />
 
-        <div className="space-y-3 w-full"> {/* Reduced space-y from 4 to 3 for compactness */}
-          <h3 className="text-lg font-semibold text-primary mb-1">Ayuda para Redactar el Objetivo</h3> {/* Reduced mb from 2 to 1 */}
-          
-          <div className="space-y-1 w-full">
-            <Label htmlFor="generalDescription">Descripción general de la acción (¿Qué se hace?)</Label>
-            <Textarea id="generalDescription" value={helperData.generalDescription} onChange={(e) => handleHelperInputChange('generalDescription', e.target.value)} rows={2} placeholder="Ej., Implementar un nuevo sistema de gestión de inventario." className="w-full min-h-[60px]"/>
-          </div>
-          <div className="space-y-1 w-full">
-            <Label htmlFor="needOrProblem">Necesidad o problema que atiende (¿Por qué se hace?)</Label>
-            <Textarea id="needOrProblem" value={helperData.needOrProblem} onChange={(e) => handleHelperInputChange('needOrProblem', e.target.value)} rows={2} placeholder="Ej., Para reducir las pérdidas por obsolescencia y mejorar la precisión del stock." className="w-full min-h-[60px]"/>
-          </div>
-          <div className="space-y-1 w-full">
-            <Label htmlFor="purposeOrExpectedResult">Finalidad o resultado esperado (¿Para qué se hace?)</Label>
-            <Textarea id="purposeOrExpectedResult" value={helperData.purposeOrExpectedResult} onChange={(e) => handleHelperInputChange('purposeOrExpectedResult', e.target.value)} rows={2} placeholder="Ej., Lograr una reducción del 15% en pérdidas y una precisión del 99% en el inventario." className="w-full min-h-[60px]"/>
-          </div>
-          <div className="space-y-1 w-full">
-            <Label htmlFor="targetAudience">A quién va dirigido o quién se beneficia (Aplicación)</Label>
-            <Textarea id="targetAudience" value={helperData.targetAudience} onChange={(e) => handleHelperInputChange('targetAudience', e.target.value)} rows={2} placeholder="Ej., El departamento de logística y finanzas." className="w-full min-h-[60px]"/>
-          </div>
-          <div className="space-y-1 w-full">
-            <Label htmlFor="desiredImpact">Impacto que se busca generar (mejora, control, cumplimiento, eficiencia, etc.)</Label>
-            <Textarea id="desiredImpact" value={helperData.desiredImpact} onChange={(e) => handleHelperInputChange('desiredImpact', e.target.value)} rows={2} placeholder="Ej., Mejora de la eficiencia operativa, control de costos y cumplimiento normativo." className="w-full min-h-[60px]"/>
-          </div>
-
-          <div className="space-y-2 w-full">
-            <Label>Indicadores Clave de Desempeño (KPIs)</Label>
-            {helperData.kpis.map((kpi, index) => (
-              <div key={index} className="flex items-center gap-2 w-full">
-                <Input 
-                  value={kpi} 
-                  onChange={(e) => handleKpiChange(index, e.target.value)} 
-                  placeholder={`KPI ${index + 1}`}
-                  className="flex-grow w-full"
-                />
-                {helperData.kpis.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeKpiField(index)} className="text-destructive shrink-0">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={addKpiField} className="mt-1">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
-            </Button>
-          </div>
-          
-          <div className="flex justify-end mt-3 w-full">
-            <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
-              {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
-              {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
-            </Button>
-          </div>
+        <div className="flex items-center space-x-2 mb-3">
+          <Switch
+            id="toggle-helper-section"
+            checked={showHelperSection}
+            onCheckedChange={setShowHelperSection}
+          />
+          <Label htmlFor="toggle-helper-section" className="text-md font-semibold text-primary flex items-center">
+            <HelpCircle className="mr-2 h-5 w-5" />
+            Ayuda para Redactar el Objetivo
+          </Label>
         </div>
 
+        {showHelperSection && (
+          <div className="space-y-3 w-full pl-2 border-l-2 border-primary/30"> {/* Reduced space-y from 4 to 3 for compactness, added left padding and border */}
+            
+            <div className="space-y-1 w-full">
+              <Label htmlFor="generalDescription">Descripción general de la acción (¿Qué se hace?)</Label>
+              <Textarea id="generalDescription" value={helperData.generalDescription} onChange={(e) => handleHelperInputChange('generalDescription', e.target.value)} rows={2} placeholder="Ej., Implementar un nuevo sistema de gestión de inventario." className="w-full min-h-[60px]"/>
+            </div>
+            <div className="space-y-1 w-full">
+              <Label htmlFor="needOrProblem">Necesidad o problema que atiende (¿Por qué se hace?)</Label>
+              <Textarea id="needOrProblem" value={helperData.needOrProblem} onChange={(e) => handleHelperInputChange('needOrProblem', e.target.value)} rows={2} placeholder="Ej., Para reducir las pérdidas por obsolescencia y mejorar la precisión del stock." className="w-full min-h-[60px]"/>
+            </div>
+            <div className="space-y-1 w-full">
+              <Label htmlFor="purposeOrExpectedResult">Finalidad o resultado esperado (¿Para qué se hace?)</Label>
+              <Textarea id="purposeOrExpectedResult" value={helperData.purposeOrExpectedResult} onChange={(e) => handleHelperInputChange('purposeOrExpectedResult', e.target.value)} rows={2} placeholder="Ej., Lograr una reducción del 15% en pérdidas y una precisión del 99% en el inventario." className="w-full min-h-[60px]"/>
+            </div>
+            <div className="space-y-1 w-full">
+              <Label htmlFor="targetAudience">A quién va dirigido o quién se beneficia (Aplicación)</Label>
+              <Textarea id="targetAudience" value={helperData.targetAudience} onChange={(e) => handleHelperInputChange('targetAudience', e.target.value)} rows={2} placeholder="Ej., El departamento de logística y finanzas." className="w-full min-h-[60px]"/>
+            </div>
+            <div className="space-y-1 w-full">
+              <Label htmlFor="desiredImpact">Impacto que se busca generar (mejora, control, cumplimiento, eficiencia, etc.)</Label>
+              <Textarea id="desiredImpact" value={helperData.desiredImpact} onChange={(e) => handleHelperInputChange('desiredImpact', e.target.value)} rows={2} placeholder="Ej., Mejora de la eficiencia operativa, control de costos y cumplimiento normativo." className="w-full min-h-[60px]"/>
+            </div>
+
+            <div className="space-y-2 w-full">
+              <Label>Indicadores Clave de Desempeño (KPIs)</Label>
+              {helperData.kpis.map((kpi, index) => (
+                <div key={index} className="flex items-center gap-2 w-full">
+                  <Input
+                    value={kpi}
+                    onChange={(e) => handleKpiChange(index, e.target.value)}
+                    placeholder={`KPI ${index + 1}`}
+                    className="flex-grow w-full"
+                  />
+                  {helperData.kpis.length > 1 && (
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeKpiField(index)} className="text-destructive shrink-0">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={addKpiField} className="mt-1">
+                <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
+              </Button>
+            </div>
+
+            <div className="flex justify-end mt-3 w-full">
+              <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
+                {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
+                {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-start border-t pt-4">
         <Button onClick={handleSave}>
@@ -258,4 +283,3 @@ export function ObjectiveForm() {
     </Card>
   );
 }
-
