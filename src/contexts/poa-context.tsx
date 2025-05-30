@@ -76,9 +76,12 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
   topLevelActivities.forEach(activity => processActivityRecursive(activitiesMap.get(activity.id)));
   
   // Add any remaining activities that might not have been part of the main tree (orphans, etc.)
-  allActivities.forEach(act => {
-    if (!processedIds.has(act.id)) {
-      orderedActivities.push(act); 
+  // This ensures all activities get a userNumber even if they are somehow detached.
+  const remainingActivities = allActivities.filter(act => !processedIds.has(act.id));
+  sortSiblings(remainingActivities).forEach(act => {
+    if (!processedIds.has(act.id)) { // Double check, as processActivityRecursive might add them
+        orderedActivities.push(act);
+        processedIds.add(act.id);
     }
   });
   
@@ -178,6 +181,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
+      // If the header title (which comes from poa.name usually) is directly updated in header form,
+      // ensure poa.name is also updated.
       if (updates.title && updates.title !== currentPoa.header.title) {
         newName = updates.title;
       }
@@ -230,7 +235,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           systemNumber = `${parentActivity.systemNumber}.${branchIndicator}${childrenOfThisBranch.length + 1}`;
         } else {
-          systemNumber = `ErrorNum-${crypto.randomUUID().substring(0,4)}`; 
+          // Fallback if parent system number is somehow missing (should not happen)
+          systemNumber = `Sub-${crypto.randomUUID().substring(0,4)}`; 
         }
       } else {
         const topLevelActivities = currentPoa.activities.filter(act => !act.parentId);
@@ -256,10 +262,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let activitiesToProcess = [...currentPoa.activities, newActivity];
       let finalActivities = renumberUserNumbers(activitiesToProcess);
 
+      // Find the newly added activity in the final list to get its assigned userNumber
       const newlyAddedActivityIndex = finalActivities.findIndex(act => act.id === newActivity.id);
       if (newlyAddedActivityIndex !== -1) {
         const newlyAddedActivityInFinalList = finalActivities[newlyAddedActivityIndex];
-         if (!newlyAddedActivityInFinalList.parentId && newlyAddedActivityInFinalList.nextActivityType === 'individual') {
+        // Pre-fill nextIndividualActivityRef for ANY NEW activity if it's of type 'individual'
+        if (newlyAddedActivityInFinalList.nextActivityType === 'individual') {
             const currentUserNumber = parseInt(newlyAddedActivityInFinalList.userNumber || '0', 10);
             if (!isNaN(currentUserNumber) && currentUserNumber > 0) {
                 finalActivities[newlyAddedActivityIndex] = {
@@ -285,6 +293,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         act.id === activityId ? { ...act, ...updates } : act
       );
       // Always renumber user numbers if any significant structural or identifying field changes
+      // or if nextActivityType itself changes (as it can affect procedural order for renumbering)
       if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates || 'activityName' in updates) {
         updatedActivities = renumberUserNumbers(updatedActivities);
       }
@@ -362,7 +371,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
     const newPoaInstance = createNewPOASchema(id, name);
     const initialActivities = (newPoaInstance.activities || []).map(act => ({
-        responsible: '', // Ensure new fields are initialized
+        responsible: '', 
         userNumber: '', 
         activityName: '',
         nextIndividualActivityRef: '', 
@@ -388,9 +397,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const newActivities = currentPoa.activities.map(act => {
         if (act.id === activityId) {
           if (branchType === 'decision' && (indexOrKey === 'yes' || indexOrKey === 'no')) {
-            // Ensure decisionBranches is treated as a new object for React's change detection
             const newDecisionBranches = {
-              ...(act.decisionBranches || { yesLabel: '', noLabel: '' }), // Default if undefined
+              ...(act.decisionBranches || { yesLabel: '', noLabel: '' }), 
               [indexOrKey]: label,
             };
             return { ...act, decisionBranches: newDecisionBranches };
@@ -469,9 +477,21 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return poa.activities
       .filter(act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition)
       .sort((a, b) => {
-        // Basic sort, can be enhanced if systemNumber has complex sub-numbering
-        if (!a.systemNumber || !b.systemNumber) return 0;
-        return a.systemNumber.localeCompare(b.systemNumber, undefined, { numeric: true, sensitivity: 'base' });
+        const sysNumA = a.systemNumber || "";
+        const sysNumB = b.systemNumber || "";
+        // Split into parts for more robust sorting (e.g., 1.S1 vs 1.S10)
+        const partsA = sysNumA.split('.');
+        const partsB = sysNumB.split('.');
+        for (let i = 0; i < Math.min(partsA.length, partsB.length); i++) {
+            const numA = parseInt(partsA[i].replace(/\D/g, ''), 10);
+            const numB = parseInt(partsB[i].replace(/\D/g, ''), 10);
+            const strA = partsA[i].replace(/\d/g, '');
+            const strB = partsB[i].replace(/\d/g, '');
+
+            if (strA !== strB) return strA.localeCompare(strB);
+            if (numA !== numB) return numA - numB;
+        }
+        return partsA.length - partsB.length;
       });
   }, [poa]);
 
@@ -502,4 +522,3 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
-
