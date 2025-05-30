@@ -15,7 +15,7 @@ interface POAContextType {
   setPoa: React.Dispatch<React.SetStateAction<POA | null>>;
   updateHeader: (updates: Partial<POAHeader>) => void;
   updateField: (fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData'>, value: string) => void;
-  addActivity: (activity?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' >> & { parentId?: string | null, parentBranchCondition?: string | null }) => void;
+  addActivity: (activity?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' | 'responsible' >> & { parentId?: string | null, parentBranchCondition?: string | null }) => void;
   updateActivity: (activityId: string, updates: Partial<POAActivity>) => void;
   deleteActivity: (activityId: string) => void;
   setActivities: (activities: POAActivity[]) => void;
@@ -26,7 +26,7 @@ interface POAContextType {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
   updateObjectiveHelperData: (data: POAObjectiveHelperData) => void;
-  updateActivityBranchLabel: (activityId: string, branchType: 'decision' | 'alternative', index: number | 'yes' | 'no', label: string) => void;
+  updateActivityBranchLabel: (activityId: string, branchType: 'decision' | 'alternative', indexOrKey: number | 'yes' | 'no', label: string) => void;
   addAlternativeBranch: (activityId: string) => void;
   removeAlternativeBranch: (activityId: string, branchId: string) => void;
   getChildActivities: (parentId: string, parentBranchCondition: string) => POAActivity[];
@@ -94,7 +94,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return poaToSave;
     });
-  }, [toast, setIsDirty]);
+  }, [toast]); // Removed setIsDirty from dependencies as it's stable
 
   const updatePoaName = useCallback((name: string) => {
     setPoa(currentPoa => {
@@ -142,7 +142,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-  const addActivity = useCallback((options?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' >> & { parentId?: string | null, parentBranchCondition?: string | null }) => {
+  const addActivity = useCallback((options?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' | 'responsible'>> & { parentId?: string | null, parentBranchCondition?: string | null }) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
@@ -157,14 +157,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const childrenOfThisBranch = currentPoa.activities.filter(
             act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition
           );
-          const branchPrefix = parentBranchCondition === 'yes' ? 'S' : parentBranchCondition === 'no' ? 'N' : `Alt${(parentActivity.alternativeBranches || []).findIndex(b => b.id === parentBranchCondition) + 1}`;
-          systemNumber = `${parentActivity.systemNumber}.${branchPrefix}${childrenOfThisBranch.length + 1}`;
+          const branchIndicator = parentBranchCondition === 'yes' ? 'S' : parentBranchCondition === 'no' ? 'N' : `A${(parentActivity.alternativeBranches || []).findIndex(b => b.id === parentBranchCondition) + 1}`;
+          systemNumber = `${parentActivity.systemNumber}.${branchIndicator}${childrenOfThisBranch.length + 1}`;
         } else {
-          // Fallback if parent not found, though this shouldn't happen
           systemNumber = "ErrorNum";
         }
       } else {
-        // Top-level activity numbering
         const topLevelActivities = currentPoa.activities.filter(act => !act.parentId);
         systemNumber = (topLevelActivities.length + 1).toString();
       }
@@ -173,14 +171,15 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         id: crypto.randomUUID(),
         systemNumber: systemNumber,
         userNumber: options?.userNumber || '',
-        responsible: options?.responsible || '',
+        responsible: '', // Obligatorio, el usuario debe llenarlo
         description: '',
         nextActivityType: 'individual',
-        decisionBranches: options?.decisionBranches || { yesLabel: 'Sí', noLabel: 'No' },
-        alternativeBranches: options?.alternativeBranches || [],
+        nextIndividualActivityRef: 'No Aplica', // Default para el nuevo campo
+        decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
+        alternativeBranches: [],
         parentId: parentId || null,
         parentBranchCondition: parentBranchCondition || null,
-        ...options, // Spread other options like description, nextActivityType if provided
+        ...options,
       };
       return {
         ...currentPoa,
@@ -210,7 +209,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const activitiesToDelete = new Set<string>();
       activitiesToDelete.add(activityId);
 
-      // Find all children recursively to delete them as well
       let currentChildren = currentPoa.activities.filter(act => act.parentId === activityId);
       while (currentChildren.length > 0) {
           const nextGenerationChildren: POAActivity[] = [];
@@ -248,10 +246,11 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activities: poaData.activities.map(act => ({
             decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
             alternativeBranches: [],
-            responsible: '',
-            userNumber: '',
-            parentId: null,
-            parentBranchCondition: null,
+            responsible: act.responsible || '', // Asegurar que responsable exista
+            userNumber: act.userNumber || '',
+            nextIndividualActivityRef: act.nextIndividualActivityRef || 'No Aplica', // Default para el nuevo campo
+            parentId: act.parentId || null,
+            parentBranchCondition: act.parentBranchCondition || null,
             ...act,
             systemNumber: act.systemNumber || act.id, 
             nextActivityType: act.nextActivityType || 'individual', 
@@ -266,8 +265,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newPoaInstance.activities = newPoaInstance.activities.map(act => ({
         decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
         alternativeBranches: [],
-        responsible: '',
+        responsible: '', // Asegurar que responsable exista
         userNumber: '',
+        nextIndividualActivityRef: 'No Aplica', // Default para el nuevo campo
         parentId: null,
         parentBranchCondition: null,
         ...act
@@ -341,7 +341,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             };
           }
           return act;
-        }).filter(act => !childrenIdsToDelete.has(act.id)), // Also remove children of the deleted branch
+        }).filter(act => !childrenIdsToDelete.has(act.id)),
       };
     });
   }, []);
@@ -351,10 +351,14 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return poa.activities
       .filter(act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition)
       .sort((a, b) => {
-        // Basic sort by systemNumber, can be improved
-        const numA = parseFloat(a.systemNumber.split('.').pop() || '0');
-        const numB = parseFloat(b.systemNumber.split('.').pop() || '0');
-        return numA - numB;
+        const numPartsA = a.systemNumber.split('.').map(part => part.replace(/[SA]/gi, '')).map(Number);
+        const numPartsB = b.systemNumber.split('.').map(part => part.replace(/[SA]/gi, '')).map(Number);
+        for (let i = 0; i < Math.max(numPartsA.length, numPartsB.length); i++) {
+            const valA = numPartsA[i] || 0;
+            const valB = numPartsB[i] || 0;
+            if (valA !== valB) return valA - valB;
+        }
+        return 0;
       });
   }, [poa]);
 

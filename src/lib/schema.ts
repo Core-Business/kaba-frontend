@@ -16,14 +16,15 @@ export type POAActivityAlternativeBranch = z.infer<typeof poaActivityAlternative
 export const poaActivitySchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
   systemNumber: z.string().min(1, "El número de sistema es requerido."),
-  userNumber: z.string().optional(),
-  responsible: z.string().optional(),
+  userNumber: z.string().optional(), // Se manejará como number en el input, pero se guarda como string
+  responsible: z.string().min(1, "El responsable es requerido."), // Ahora es obligatorio
   description: z.string().min(1, "La descripción es requerida."),
   nextActivityType: z.enum(['individual', 'decision', 'alternatives']),
+  nextIndividualActivityRef: z.string().optional(), // Nuevo campo para referencia de siguiente actividad individual
   decisionBranches: poaActivityDecisionBranchesSchema.optional(),
   alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(),
-  parentId: z.string().uuid().nullable().default(null), // ID of the parent activity
-  parentBranchCondition: z.string().nullable().default(null), // 'yes', 'no', or alternative branch ID
+  parentId: z.string().uuid().nullable().default(null),
+  parentBranchCondition: z.string().nullable().default(null),
 });
 export type POAActivity = z.infer<typeof poaActivitySchema>;
 
@@ -63,8 +64,8 @@ export const poaSchema = z.object({
   header: poaHeaderSchema,
   objective: z.string().optional(),
   objectiveHelperData: poaObjectiveHelperDataSchema.optional(),
-  procedureDescription: z.string().optional(), // User-written introduction
-  introduction: z.string().optional(), // AI-suggested introduction based on procedureDescription
+  procedureDescription: z.string().optional(),
+  introduction: z.string().optional(),
   scope: z.string().optional(),
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),

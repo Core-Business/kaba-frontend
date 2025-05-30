@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { POAActivity, POAActivityAlternativeBranch } from "@/lib/schema";
+import type { POAActivity } from "@/lib/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +20,8 @@ interface ActivityItemProps {
   activity: POAActivity;
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
-  index?: number; // Make index optional as sub-activities might not have a simple top-level index
-  totalActivities?: number; // Same for totalActivities
+  index?: number;
+  totalActivities?: number;
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
@@ -43,8 +43,8 @@ export function ActivityItem({
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
-  const { poa, addActivity, updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA();
-  const [isExpanded, setIsExpanded] = useState(true); // For collapsing sub-activity display
+  const { addActivity, updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA();
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
   const noChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'no') : [];
@@ -76,11 +76,21 @@ export function ActivityItem({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    onUpdate(activity.id, { [e.target.name]: e.target.value });
-    if (e.target.name === "description") {
+    const { name, value } = e.target;
+    onUpdate(activity.id, { [name]: value });
+    if (name === "description") {
       setDescriptionBeforeAi(null); 
     }
   };
+  
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    // Allow empty string for clearing the input, or a valid number
+    if (value === "" || /^\d+$/.test(value)) {
+      onUpdate(activity.id, { [name]: value });
+    }
+  };
+
 
   const handleNextActivityTypeChange = (value: string) => {
     const newType = value as POAActivity['nextActivityType'];
@@ -91,16 +101,32 @@ export function ActivityItem({
     if (newType === 'alternatives' && (!activity.alternativeBranches || activity.alternativeBranches.length === 0)) {
       updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
     }
+    if (newType !== 'individual') {
+        updates.nextIndividualActivityRef = undefined; // Clear if not individual
+    } else if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
+        updates.nextIndividualActivityRef = 'No Aplica'; // Set default if switching to individual
+    }
     onUpdate(activity.id, updates);
   };
 
   const handleDecisionBranchLabelChange = (branch: 'yes' | 'no', value: string) => {
-    updateActivityBranchLabel(activity.id, 'decision', branch, value);
+    // Directly update the activity via onUpdate for simplicity with nested structure
+    const newDecisionBranches = { ...(activity.decisionBranches || { yesLabel: 'Sí', noLabel: 'No' }) };
+    if (branch === 'yes') {
+      newDecisionBranches.yesLabel = value;
+    } else {
+      newDecisionBranches.noLabel = value;
+    }
+    onUpdate(activity.id, { decisionBranches: newDecisionBranches });
   };
 
   const handleAlternativeBranchLabelChange = (branchIndex: number, value: string) => {
-    updateActivityBranchLabel(activity.id, 'alternative', branchIndex, value);
+     const newAlternativeBranches = (activity.alternativeBranches || []).map((branch, i) =>
+        i === branchIndex ? { ...branch, label: value } : branch
+      );
+    onUpdate(activity.id, { alternativeBranches: newAlternativeBranches });
   };
+
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
     addActivity({ parentId: activity.id, parentBranchCondition });
@@ -109,7 +135,7 @@ export function ActivityItem({
   return (
     <Card
       className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'} ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}`}
-      draggable={!!onDragStart && !isSubActivity} // Only top-level draggable for now
+      draggable={!!onDragStart && !isSubActivity}
       onDragStart={(e) => !isSubActivity && onDragStart?.(e, index!)}
       onDragOver={onDragOver}
       onDrop={(e) => !isSubActivity && onDrop?.(e, index!)}
@@ -137,7 +163,7 @@ export function ActivityItem({
                             onChange={handleInputChange}
                             placeholder="Ej., 1.1, A.2"
                             className="mt-0.5 w-full text-xs"
-                            readOnly={isSubActivity} // Sub-activity numbers are auto-generated for now
+                            readOnly // System number should be auto-generated
                         />
                     </div>
                      <div>
@@ -145,16 +171,17 @@ export function ActivityItem({
                         <Input
                             id={`activity-userNumber-${activity.id}`}
                             name="userNumber"
+                            type="number"
                             value={activity.userNumber || ""}
-                            onChange={handleInputChange}
-                            placeholder="Ej., REF-001"
+                            onChange={handleNumberInputChange}
+                            placeholder="Ej., 1, 25"
                             className="mt-0.5 w-full text-xs"
                         />
                     </div>
                 </div>
 
                 <div>
-                    <Label htmlFor={`activity-responsible-${activity.id}`}>Responsable (Opcional)</Label>
+                    <Label htmlFor={`activity-responsible-${activity.id}`}>Responsable <span className="text-destructive">*</span></Label>
                     <Input
                         id={`activity-responsible-${activity.id}`}
                         name="responsible"
@@ -166,7 +193,7 @@ export function ActivityItem({
                 </div>
 
                 <div>
-                  <Label htmlFor={`activity-description-${activity.id}`}>Descripción</Label>
+                  <Label htmlFor={`activity-description-${activity.id}`}>Descripción <span className="text-destructive">*</span></Label>
                   <Textarea
                     id={`activity-description-${activity.id}`}
                     name="description"
@@ -188,7 +215,7 @@ export function ActivityItem({
                   >
                     <div className="flex items-center space-x-1.5">
                       <RadioGroupItem value="individual" id={`type-individual-${activity.id}`} />
-                      <Label htmlFor={`type-individual-${activity.id}`} className="font-normal text-xs">Paso Individual</Label>
+                      <Label htmlFor={`type-individual-${activity.id}`} className="font-normal text-xs">Individual</Label>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <RadioGroupItem value="decision" id={`type-decision-${activity.id}`} />
@@ -196,10 +223,24 @@ export function ActivityItem({
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <RadioGroupItem value="alternatives" id={`type-alternatives-${activity.id}`} />
-                      <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal text-xs">Rutas Alternativas</Label>
+                      <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal text-xs">Alternativas</Label>
                     </div>
                   </RadioGroup>
                 </div>
+
+                {activity.nextActivityType === 'individual' && (
+                    <div className="mt-2">
+                        <Label htmlFor={`activity-nextIndividualActivityRef-${activity.id}`}>Siguiente Actividad (No. Sistema, FIN, o No Aplica)</Label>
+                        <Input
+                            id={`activity-nextIndividualActivityRef-${activity.id}`}
+                            name="nextIndividualActivityRef"
+                            value={activity.nextIndividualActivityRef || "No Aplica"}
+                            onChange={handleInputChange}
+                            placeholder="Ej: 2.1, FIN, No Aplica"
+                            className="mt-0.5 w-full text-xs"
+                        />
+                    </div>
+                )}
               </>
             )}
             {!isExpanded && (
@@ -216,7 +257,6 @@ export function ActivityItem({
           <>
             {activity.nextActivityType === 'decision' && (
               <div className="mt-2 space-y-2">
-                {/* YES Branch */}
                 <div className="p-2 border-l-2 border-green-500 bg-green-50/50 rounded-r-md space-y-1.5">
                   <div className="flex justify-between items-center">
                     <Label htmlFor={`decision-yesLabel-${activity.id}`} className="text-xs text-green-700 font-medium">Etiqueta Rama Sí</Label>
@@ -238,7 +278,6 @@ export function ActivityItem({
                   </Button>
                 </div>
 
-                {/* NO Branch */}
                 <div className="p-2 border-l-2 border-red-500 bg-red-50/50 rounded-r-md space-y-1.5">
                    <div className="flex justify-between items-center">
                     <Label htmlFor={`decision-noLabel-${activity.id}`} className="text-xs text-red-700 font-medium">Etiqueta Rama No</Label>
@@ -265,7 +304,7 @@ export function ActivityItem({
             {activity.nextActivityType === 'alternatives' && (
               <div className="p-2 border-l-2 border-blue-500 bg-blue-50/50 rounded-r-md space-y-1.5 mt-2">
                 <p className="text-xs text-blue-700 font-medium">
-                  Configuración de Rutas Alternativas:
+                  Configuración de Alternativas:
                 </p>
                 {(activity.alternativeBranches || []).map((branch, branchIndex) => (
                   <div key={branch.id || branchIndex} className="p-1.5 border rounded-md bg-background/50 space-y-1">
