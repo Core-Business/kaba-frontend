@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2, Sparkles } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2, Sparkles, Expand } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateActivityName } from "@/ai/flows/generate-activity-name";
@@ -41,6 +41,7 @@ export function ActivityItem({
   isSubActivity = false,
 }: ActivityItemProps) {
   const [isLoadingAiEnhanceDesc, setIsLoadingAiEnhanceDesc] = useState(false);
+  const [isLoadingAiExpandDesc, setIsLoadingAiExpandDesc] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
   const [isGeneratingName, setIsGeneratingName] = useState(false);
   const [nameBeforeAi, setNameBeforeAi] = useState<string | null>(null);
@@ -64,9 +65,25 @@ export function ActivityItem({
     } catch (error) {
       console.error("Error editando descripción con IA:", error);
       toast({ title: "Fallo en Edición de Descripción", description: "No se pudo editar la descripción.", variant: "destructive" });
-      setDescriptionBeforeAi(null);
+      setDescriptionBeforeAi(null); // Keep original on error to allow retry/undo
     }
     setIsLoadingAiEnhanceDesc(false);
+  };
+  
+  const handleAiExpandDescription = async () => {
+    if (!activity.description) return;
+    setDescriptionBeforeAi(activity.description);
+    setIsLoadingAiExpandDesc(true);
+    try {
+      const result = await enhanceText({ text: activity.description, context: "activity_description", expandByPercent: 50 });
+      onUpdate(activity.id, { description: result.enhancedText });
+      toast({ title: "Descripción Ampliada con IA", description: "La descripción de la actividad ha sido ampliada por IA." });
+    } catch (error) {
+      console.error("Error ampliando descripción con IA:", error);
+      toast({ title: "Fallo en Ampliación de Descripción", description: "No se pudo ampliar la descripción.", variant: "destructive" });
+      setDescriptionBeforeAi(null); // Keep original on error
+    }
+    setIsLoadingAiExpandDesc(false);
   };
 
   const handleUndoDescriptionAi = () => {
@@ -139,7 +156,7 @@ export function ActivityItem({
     if (newType === 'individual' && activity.nextIndividualActivityRef === undefined) {
         updates.nextIndividualActivityRef = ''; 
     } else if (newType !== 'individual') {
-        updates.nextIndividualActivityRef = undefined; 
+        updates.nextIndividualActivityRef = ''; 
     }
     onUpdate(activity.id, updates);
   };
@@ -169,14 +186,14 @@ export function ActivityItem({
         <div className="flex items-start gap-1.5">
           {!isSubActivity && onDragStart && (
              <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
-                <GripVertical className="h-4 w-4 mt-1" /> {/* Adjusted mt for alignment */}
+                <GripVertical className="h-4 w-4 mt-1" /> 
              </button>
           )}
            <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5" title={isExpanded ? "Colapsar" : "Expandir"}>
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            {/* Combined User Number and Activity Name */}
+            
             <div className="flex items-center gap-1 mb-1">
                 <div className="flex items-baseline">
                     <span className="text-base font-semibold text-primary mr-1">No.</span>
@@ -240,6 +257,32 @@ export function ActivityItem({
                     rows={2}
                     className="mt-0.5 w-full min-h-[50px] text-xs"
                   />
+                   <div className="mt-1.5 flex flex-wrap gap-2">
+                    <AiEnhanceButton
+                        onClick={handleAiEnhanceDescription}
+                        isLoading={isLoadingAiEnhanceDesc}
+                        textExists={!!activity.description && activity.description.length > 5}
+                        className="text-xs px-1.5 py-0.5 h-7"
+                        onUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc ? handleUndoDescriptionAi : undefined}
+                        canUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc}
+                    >
+                        <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
+                        <span className="hidden sm:inline">{isLoadingAiEnhanceDesc ? "Editando..." : "Edición IA"}</span>
+                        <span className="sm:hidden">{isLoadingAiEnhanceDesc ? "..." : "IA"}</span>
+                    </AiEnhanceButton>
+                     <AiEnhanceButton
+                        onClick={handleAiExpandDescription}
+                        isLoading={isLoadingAiExpandDesc}
+                        textExists={!!activity.description && activity.description.length > 5}
+                        className="text-xs px-1.5 py-0.5 h-7"
+                        onUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc ? handleUndoDescriptionAi : undefined}
+                        canUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc}
+                    >
+                        <Expand className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
+                        <span className="hidden sm:inline">{isLoadingAiExpandDesc ? "Ampliando..." : "Ampliar IA"}</span>
+                        <span className="sm:hidden">{isLoadingAiExpandDesc ? "..." : "Ampliar"}</span>
+                    </AiEnhanceButton>
+                  </div>
                 </div>
 
                 <div>
@@ -394,7 +437,6 @@ export function ActivityItem({
           </>
         )}
         
-        {/* System Number display before the final action buttons */}
         {isExpanded && (
             <div className="flex justify-end mt-1 mb-0.5">
                 <span className="text-xs text-muted-foreground">
@@ -403,19 +445,7 @@ export function ActivityItem({
             </div>
         )}
 
-        <div className="flex justify-between items-center pt-1.5 border-t mt-0.5"> {/* Reduced mt for closer line */}
-          <AiEnhanceButton
-            onClick={handleAiEnhanceDescription}
-            isLoading={isLoadingAiEnhanceDesc}
-            textExists={!!activity.description && activity.description.length > 5}
-            className="text-xs px-1.5 py-0.5 h-7"
-            onUndo={descriptionBeforeAi !== null ? handleUndoDescriptionAi : undefined}
-            canUndo={descriptionBeforeAi !== null}
-          >
-             <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
-            <span className="hidden sm:inline">{isLoadingAiEnhanceDesc ? "Editando..." : "Edición IA (Desc.)"}</span>
-            <span className="sm:hidden">{isLoadingAiEnhanceDesc ? "..." : "IA (Desc.)"}</span>
-          </AiEnhanceButton>
+        <div className="flex justify-end items-center pt-1.5 border-t mt-0.5"> 
           <Button
             type="button"
             variant="ghost"
@@ -430,3 +460,4 @@ export function ActivityItem({
     </Card>
   );
 }
+

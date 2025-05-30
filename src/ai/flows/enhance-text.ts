@@ -31,6 +31,7 @@ const EnhanceTextInputSchema = z.object({
   targetAudience: z.string().optional().describe('A quién va dirigido o quién se beneficia (Aplicación) para el contexto del objetivo.'),
   desiredImpact: z.string().optional().describe('Impacto que se busca generar (mejora, control, cumplimiento, eficiencia, etc.) para el contexto del objetivo.'),
   kpis: z.array(z.string()).optional().describe('Indicadores Clave de Desempeño (KPIs) asociados para el contexto del objetivo.'),
+  expandByPercent: z.number().int().min(1).optional().describe('Porcentaje para expandir el texto, ej. 50 para 50% más largo. Si se provee, la tarea principal será expandir el texto.'),
 });
 
 export type EnhanceTextInput = z.infer<typeof EnhanceTextInputSchema>;
@@ -49,9 +50,16 @@ const enhanceTextPrompt = ai.definePrompt({
   name: 'enhanceTextPrompt',
   input: {schema: EnhanceTextInputSchema},
   output: {schema: EnhanceTextOutputSchema},
-  prompt: `Eres un asistente de escritura experto. Por favor, reformula y mejora el siguiente texto para asegurar claridad, concisión y un tono profesional y directo.
+  prompt: `Eres un asistente de escritura experto.
+{{#if expandByPercent}}
+Tu tarea principal es expandir el siguiente texto para que sea aproximadamente un {{{expandByPercent}}}% más largo.
+Añade detalles relevantes, elabora los puntos existentes o proporciona ejemplos concretos directamente relacionados con la acción o tema descrito.
+No incluyas frases introductorias innecesarias. Mantén la claridad, un tono directo y profesional. No añadas opiniones personales, recomendaciones no solicitadas o información que no esté directamente relacionada con la expansión del texto provisto.
+{{else}}
+Tu tarea es reformular y mejorar el siguiente texto para asegurar claridad, concisión y un tono profesional y directo.
 Evita frases introductorias innecesarias como "El presente texto...", "El texto proporcionado..." o "El objetivo de este texto es...".
-{{#if maxWords}}El texto mejorado debe tener una longitud aproximada de {{{maxWords}}} palabras, puede exceder este límite un 10%. Intenta acercarte lo más posible a este número de palabras para un desarrollo completo, manteniendo la concisión.{{/if}}
+{{/if}}
+{{#if maxWords}}El texto resultante debe tener una longitud aproximada de {{{maxWords}}} palabras, puede exceder este límite un 10%. Intenta acercarte lo más posible a este número de palabras para un desarrollo completo, manteniendo la concisión.{{/if}}
 La respuesta DEBE estar en español.
 
 {{#if isObjectiveContext}}
@@ -98,7 +106,7 @@ Para este ALCANCE, define los límites del procedimiento, incluyendo departament
 {{/if}}
 
 {{#if isActivityDescriptionContext}}
-Para esta DESCRIPCIÓN DE ACTIVIDAD, sé claro, directo y enfocado en la acción a realizar.
+Para esta DESCRIPCIÓN DE ACTIVIDAD, sé claro, directo y enfocado en la acción a realizar. {{!-- This line might be slightly adjusted if expandByPercent is active, but the core nature remains. --}}
 {{/if}}
 
 Texto original:
