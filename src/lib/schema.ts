@@ -1,11 +1,31 @@
 
 import { z } from 'zod';
 
+export const poaActivityDecisionBranchesSchema = z.object({
+  yesLabel: z.string().optional(),
+  noLabel: z.string().optional(),
+  // We might add child activity IDs here later
+});
+export type POAActivityDecisionBranches = z.infer<typeof poaActivityDecisionBranchesSchema>;
+
+export const poaActivityAlternativeBranchSchema = z.object({
+  id: z.string().uuid().default(() => crypto.randomUUID()),
+  label: z.string().optional(),
+  // We might add child activity ID here later
+});
+export type POAActivityAlternativeBranch = z.infer<typeof poaActivityAlternativeBranchSchema>;
+
 export const poaActivitySchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
-  number: z.string().min(1, "El número de actividad es requerido."),
+  systemNumber: z.string().min(1, "El número de sistema es requerido."), // Renamed from 'number'
+  userNumber: z.string().optional(), // New field
+  responsible: z.string().optional(), // New field
   description: z.string().min(1, "La descripción es requerida."),
-  type: z.enum(['individual', 'decision', 'alternatives']),
+  nextActivityType: z.enum(['individual', 'decision', 'alternatives']), // Renamed from 'type'
+  decisionBranches: poaActivityDecisionBranchesSchema.optional(), // New field for decision type
+  alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(), // New field for alternatives type
+  // parentId: z.string().optional(), // For future nesting logic
+  // childActivityIds: z.array(z.string()).optional(), // For future nesting logic
 });
 export type POAActivity = z.infer<typeof poaActivitySchema>;
 
@@ -13,7 +33,7 @@ export const poaStatusType = z.enum(['Borrador', 'Vigente', 'Revisión', 'Obsole
 export type POAStatusType = z.infer<typeof poaStatusType>;
 
 export const poaHeaderSchema = z.object({
-  title: z.string().min(1, "El título es requerido."), 
+  title: z.string().min(1, "El título es requerido."),
   author: z.string().optional(),
   companyName: z.string().optional(),
   documentCode: z.string().optional(),
@@ -27,7 +47,6 @@ export const poaHeaderSchema = z.object({
 });
 export type POAHeader = z.infer<typeof poaHeaderSchema>;
 
-// Schema for the objective helper data
 export const poaObjectiveHelperDataSchema = z.object({
   generalDescription: z.string().optional(),
   needOrProblem: z.string().optional(),
@@ -41,13 +60,13 @@ export type POAObjectiveHelperData = z.infer<typeof poaObjectiveHelperDataSchema
 
 export const poaSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "El Nombre del Procedimiento es requerido."), 
+  name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
   userId: z.string().optional(),
   header: poaHeaderSchema,
   objective: z.string().optional(),
-  objectiveHelperData: poaObjectiveHelperDataSchema.optional(), // Added field
-  procedureDescription: z.string().optional(), 
-  introduction: z.string().optional(), 
+  objectiveHelperData: poaObjectiveHelperDataSchema.optional(),
+  procedureDescription: z.string().optional(),
+  introduction: z.string().optional(),
   scope: z.string().optional(),
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),
@@ -56,7 +75,7 @@ export const poaSchema = z.object({
 export type POA = z.infer<typeof poaSchema>;
 
 export const defaultPOAHeader: POAHeader = {
-  title: '', 
+  title: '',
   author: '',
   companyName: '',
   documentCode: '',
@@ -82,10 +101,10 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
   const now = new Date().toISOString();
   return {
     id,
-    name, 
-    header: { ...defaultPOAHeader, title: name }, 
+    name,
+    header: { ...defaultPOAHeader, title: name },
     objective: '',
-    objectiveHelperData: { ...defaultPOAObjectiveHelperData }, // Initialize with defaults
+    objectiveHelperData: { ...defaultPOAObjectiveHelperData },
     procedureDescription: '',
     introduction: '',
     scope: '',
