@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Lightbulb, Undo2, Sparkles, Expand } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Sparkles, Expand, Undo2 } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateActivityName } from "@/ai/flows/generate-activity-name";
@@ -65,7 +65,7 @@ export function ActivityItem({
     } catch (error) {
       console.error("Error editando descripción con IA:", error);
       toast({ title: "Fallo en Edición de Descripción", description: "No se pudo editar la descripción.", variant: "destructive" });
-      setDescriptionBeforeAi(null); // Keep original on error to allow retry/undo
+      setDescriptionBeforeAi(null); 
     }
     setIsLoadingAiEnhanceDesc(false);
   };
@@ -75,13 +75,21 @@ export function ActivityItem({
     setDescriptionBeforeAi(activity.description);
     setIsLoadingAiExpandDesc(true);
     try {
-      const result = await enhanceText({ text: activity.description, context: "activity_description", expandByPercent: 50 });
+      const currentWords = activity.description.split(/\s+/).filter(Boolean).length;
+      const targetMaxWords = Math.round(currentWords * 1.5);
+
+      const result = await enhanceText({ 
+        text: activity.description, 
+        context: "activity_description", 
+        expandByPercent: 50,
+        maxWords: targetMaxWords > 0 ? targetMaxWords : 20 // Ensure a minimum sensible maxWords
+      });
       onUpdate(activity.id, { description: result.enhancedText });
       toast({ title: "Descripción Ampliada con IA", description: "La descripción de la actividad ha sido ampliada por IA." });
     } catch (error) {
       console.error("Error ampliando descripción con IA:", error);
       toast({ title: "Fallo en Ampliación de Descripción", description: "No se pudo ampliar la descripción.", variant: "destructive" });
-      setDescriptionBeforeAi(null); // Keep original on error
+      setDescriptionBeforeAi(null); 
     }
     setIsLoadingAiExpandDesc(false);
   };
@@ -138,6 +146,7 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    // Allow empty string to clear the field, or only numbers
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -193,7 +202,6 @@ export function ActivityItem({
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            
             <div className="flex items-center gap-1 mb-1">
                 <div className="flex items-baseline">
                     <span className="text-base font-semibold text-primary mr-1">No.</span>
@@ -231,7 +239,6 @@ export function ActivityItem({
                 </AiEnhanceButton>
             </div>
 
-
              {isExpanded && (
               <>
                 <div>
@@ -258,31 +265,31 @@ export function ActivityItem({
                     className="mt-0.5 w-full min-h-[50px] text-xs"
                   />
                    <div className="mt-1.5 flex flex-wrap gap-2">
-                    <AiEnhanceButton
-                        onClick={handleAiEnhanceDescription}
-                        isLoading={isLoadingAiEnhanceDesc}
-                        textExists={!!activity.description && activity.description.length > 5}
-                        className="text-xs px-1.5 py-0.5 h-7"
-                        onUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc ? handleUndoDescriptionAi : undefined}
-                        canUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc}
-                    >
-                        <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
-                        <span className="hidden sm:inline">{isLoadingAiEnhanceDesc ? "Editando..." : "Edición IA"}</span>
-                        <span className="sm:hidden">{isLoadingAiEnhanceDesc ? "..." : "IA"}</span>
-                    </AiEnhanceButton>
-                     <AiEnhanceButton
-                        onClick={handleAiExpandDescription}
-                        isLoading={isLoadingAiExpandDesc}
-                        textExists={!!activity.description && activity.description.length > 5}
-                        className="text-xs px-1.5 py-0.5 h-7"
-                        onUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc ? handleUndoDescriptionAi : undefined}
-                        canUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc}
-                    >
-                        <Expand className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
-                        <span className="hidden sm:inline">{isLoadingAiExpandDesc ? "Ampliando..." : "Ampliar IA"}</span>
-                        <span className="sm:hidden">{isLoadingAiExpandDesc ? "..." : "Ampliar"}</span>
-                    </AiEnhanceButton>
-                  </div>
+                        <AiEnhanceButton
+                            onClick={handleAiEnhanceDescription}
+                            isLoading={isLoadingAiEnhanceDesc}
+                            textExists={!!activity.description && activity.description.length > 5}
+                            className="text-xs px-1.5 py-0.5 h-7"
+                            onUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc ? handleUndoDescriptionAi : undefined}
+                            canUndo={descriptionBeforeAi !== null && !isLoadingAiExpandDesc}
+                        >
+                            <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
+                            <span className="hidden sm:inline">{isLoadingAiEnhanceDesc ? "Editando..." : "Edición IA"}</span>
+                            <span className="sm:hidden">{isLoadingAiEnhanceDesc ? "..." : "IA"}</span>
+                        </AiEnhanceButton>
+                        <AiEnhanceButton
+                            onClick={handleAiExpandDescription}
+                            isLoading={isLoadingAiExpandDesc}
+                            textExists={!!activity.description && activity.description.length > 5}
+                            className="text-xs px-1.5 py-0.5 h-7"
+                            onUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc ? handleUndoDescriptionAi : undefined}
+                            canUndo={descriptionBeforeAi !== null && !isLoadingAiEnhanceDesc}
+                        >
+                            <Expand className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
+                            <span className="hidden sm:inline">{isLoadingAiExpandDesc ? "Ampliando..." : "Ampliar IA"}</span>
+                            <span className="sm:hidden">{isLoadingAiExpandDesc ? "..." : "Ampliar"}</span>
+                        </AiEnhanceButton>
+                    </div>
                 </div>
 
                 <div>
