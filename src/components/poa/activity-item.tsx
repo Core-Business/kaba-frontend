@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePOA } from "@/hooks/use-poa";
@@ -20,12 +20,13 @@ interface ActivityItemProps {
   activity: POAActivity;
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
-  index: number;
-  totalActivities: number;
+  index?: number; // Make index optional as sub-activities might not have a simple top-level index
+  totalActivities?: number; // Same for totalActivities
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
   isDragging?: boolean;
+  isSubActivity?: boolean;
 }
 
 export function ActivityItem({
@@ -36,12 +37,18 @@ export function ActivityItem({
   onDragStart,
   onDragOver,
   onDrop,
-  isDragging
+  isDragging,
+  isSubActivity = false,
 }: ActivityItemProps) {
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
   const { toast } = useToast();
-  const { updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch } = usePOA();
+  const { poa, addActivity, updateActivityBranchLabel, addAlternativeBranch, removeAlternativeBranch, getChildActivities } = usePOA();
+  const [isExpanded, setIsExpanded] = useState(true); // For collapsing sub-activity display
+
+  const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
+  const noChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'no') : [];
+  const alternativeChildren = (branchId: string) => activity.nextActivityType === 'alternatives' ? getChildActivities(activity.id, branchId) : [];
 
 
   const handleAiEnhance = async () => {
@@ -71,7 +78,7 @@ export function ActivityItem({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     onUpdate(activity.id, { [e.target.name]: e.target.value });
     if (e.target.name === "description") {
-      setDescriptionBeforeAi(null); // Clear undo if user types manually
+      setDescriptionBeforeAi(null); 
     }
   };
 
@@ -95,161 +102,207 @@ export function ActivityItem({
     updateActivityBranchLabel(activity.id, 'alternative', branchIndex, value);
   };
 
+  const handleAddSubActivity = (parentBranchCondition: string) => {
+    addActivity({ parentId: activity.id, parentBranchCondition });
+  };
 
   return (
     <Card
-      className={`w-full mb-3 p-1 bg-card shadow-md border rounded-lg transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
-      draggable={!!onDragStart}
-      onDragStart={(e) => onDragStart?.(e, index)}
+      className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'} ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}`}
+      draggable={!!onDragStart && !isSubActivity} // Only top-level draggable for now
+      onDragStart={(e) => !isSubActivity && onDragStart?.(e, index!)}
       onDragOver={onDragOver}
-      onDrop={(e) => onDrop?.(e, index)}
+      onDrop={(e) => !isSubActivity && onDrop?.(e, index!)}
     >
-      <CardContent className="p-3 space-y-3">
-        <div className="flex items-start gap-2">
-          {onDragStart && (
+      <CardContent className="p-2 space-y-2">
+        <div className="flex items-start gap-1.5">
+          {!isSubActivity && onDragStart && (
              <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
-                <GripVertical className="h-5 w-5 mt-1" />
+                <GripVertical className="h-4 w-4 mt-0.5" />
              </button>
           )}
-          <div className="flex-grow space-y-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                <div>
-                    <Label htmlFor={`activity-systemNumber-${activity.id}`}>No. Sistema</Label>
-                    <Input
-                        id={`activity-systemNumber-${activity.id}`}
-                        name="systemNumber"
-                        value={activity.systemNumber}
-                        onChange={handleInputChange}
-                        placeholder="Ej., 1.1, A.2"
-                        className="mt-1 w-full"
-                    />
+           <button type="button" onClick={() => setIsExpanded(!isExpanded)} className="p-1 text-muted-foreground hover:text-foreground" title={isExpanded ? "Colapsar" : "Expandir"}>
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+          <div className="flex-grow space-y-1.5">
+            {isExpanded && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-start">
+                    <div>
+                        <Label htmlFor={`activity-systemNumber-${activity.id}`}>No. Sistema</Label>
+                        <Input
+                            id={`activity-systemNumber-${activity.id}`}
+                            name="systemNumber"
+                            value={activity.systemNumber}
+                            onChange={handleInputChange}
+                            placeholder="Ej., 1.1, A.2"
+                            className="mt-0.5 w-full text-xs"
+                            readOnly={isSubActivity} // Sub-activity numbers are auto-generated for now
+                        />
+                    </div>
+                     <div>
+                        <Label htmlFor={`activity-userNumber-${activity.id}`}>No. Usuario (Opcional)</Label>
+                        <Input
+                            id={`activity-userNumber-${activity.id}`}
+                            name="userNumber"
+                            value={activity.userNumber || ""}
+                            onChange={handleInputChange}
+                            placeholder="Ej., REF-001"
+                            className="mt-0.5 w-full text-xs"
+                        />
+                    </div>
                 </div>
-                 <div>
-                    <Label htmlFor={`activity-userNumber-${activity.id}`}>No. Usuario (Opcional)</Label>
-                    <Input
-                        id={`activity-userNumber-${activity.id}`}
-                        name="userNumber"
-                        value={activity.userNumber || ""}
-                        onChange={handleInputChange}
-                        placeholder="Ej., REF-001"
-                        className="mt-1 w-full"
-                    />
-                </div>
-            </div>
 
-            <div>
-                <Label htmlFor={`activity-responsible-${activity.id}`}>Responsable (Opcional)</Label>
-                <Input
-                    id={`activity-responsible-${activity.id}`}
-                    name="responsible"
-                    value={activity.responsible || ""}
+                <div>
+                    <Label htmlFor={`activity-responsible-${activity.id}`}>Responsable (Opcional)</Label>
+                    <Input
+                        id={`activity-responsible-${activity.id}`}
+                        name="responsible"
+                        value={activity.responsible || ""}
+                        onChange={handleInputChange}
+                        placeholder="Ej., Gerente de TI, Líder de Equipo"
+                        className="mt-0.5 w-full text-xs"
+                    />
+                </div>
+
+                <div>
+                  <Label htmlFor={`activity-description-${activity.id}`}>Descripción</Label>
+                  <Textarea
+                    id={`activity-description-${activity.id}`}
+                    name="description"
+                    value={activity.description}
                     onChange={handleInputChange}
-                    placeholder="Ej., Gerente de TI, Líder de Equipo"
-                    className="mt-1 w-full"
-                />
-            </div>
-
-            <div>
-              <Label htmlFor={`activity-description-${activity.id}`}>Descripción</Label>
-              <Textarea
-                id={`activity-description-${activity.id}`}
-                name="description"
-                value={activity.description}
-                onChange={handleInputChange}
-                placeholder="Describe la actividad o tarea"
-                rows={2}
-                className="mt-1 w-full min-h-[60px]"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor={`activity-nextActivityType-${activity.id}`}>Siguiente Actividad Tipo</Label>
-              <RadioGroup
-                id={`activity-nextActivityType-${activity.id}`}
-                value={activity.nextActivityType}
-                onValueChange={handleNextActivityTypeChange}
-                className="flex flex-col sm:flex-row gap-2 sm:gap-4 mt-1"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="individual" id={`type-individual-${activity.id}`} />
-                  <Label htmlFor={`type-individual-${activity.id}`} className="font-normal">Paso Individual</Label>
+                    placeholder="Describe la actividad o tarea"
+                    rows={2}
+                    className="mt-0.5 w-full min-h-[50px] text-xs"
+                  />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="decision" id={`type-decision-${activity.id}`} />
-                  <Label htmlFor={`type-decision-${activity.id}`} className="font-normal">Decisión (Sí/No)</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="alternatives" id={`type-alternatives-${activity.id}`} />
-                  <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal">Rutas Alternativas</Label>
-                </div>
-              </RadioGroup>
-            </div>
 
-            {activity.nextActivityType === 'decision' && (
-              <div className="p-3 border-l-4 border-blue-500 bg-blue-50 rounded-md space-y-2 mt-2">
-                <p className="text-sm text-blue-700 font-medium">
-                  Configuración de Ramas de Decisión:
-                </p>
                 <div>
-                  <Label htmlFor={`decision-yesLabel-${activity.id}`} className="text-sm text-blue-600">Etiqueta Rama Sí</Label>
+                  <Label htmlFor={`activity-nextActivityType-${activity.id}`}>Siguiente Actividad Tipo</Label>
+                  <RadioGroup
+                    id={`activity-nextActivityType-${activity.id}`}
+                    value={activity.nextActivityType}
+                    onValueChange={handleNextActivityTypeChange}
+                    className="flex flex-col sm:flex-row gap-1.5 sm:gap-3 mt-0.5"
+                  >
+                    <div className="flex items-center space-x-1.5">
+                      <RadioGroupItem value="individual" id={`type-individual-${activity.id}`} />
+                      <Label htmlFor={`type-individual-${activity.id}`} className="font-normal text-xs">Paso Individual</Label>
+                    </div>
+                    <div className="flex items-center space-x-1.5">
+                      <RadioGroupItem value="decision" id={`type-decision-${activity.id}`} />
+                      <Label htmlFor={`type-decision-${activity.id}`} className="font-normal text-xs">Decisión (Sí/No)</Label>
+                    </div>
+                    <div className="flex items-center space-x-1.5">
+                      <RadioGroupItem value="alternatives" id={`type-alternatives-${activity.id}`} />
+                      <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal text-xs">Rutas Alternativas</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </>
+            )}
+            {!isExpanded && (
+                 <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium truncate">
+                        {activity.systemNumber} - {activity.description || "Actividad sin descripción"}
+                    </p>
+                </div>
+            )}
+          </div>
+        </div>
+        
+        {isExpanded && (
+          <>
+            {activity.nextActivityType === 'decision' && (
+              <div className="mt-2 space-y-2">
+                {/* YES Branch */}
+                <div className="p-2 border-l-2 border-green-500 bg-green-50/50 rounded-r-md space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor={`decision-yesLabel-${activity.id}`} className="text-xs text-green-700 font-medium">Etiqueta Rama Sí</Label>
+                  </div>
                   <Input
                     id={`decision-yesLabel-${activity.id}`}
                     value={activity.decisionBranches?.yesLabel || 'Sí'}
                     onChange={(e) => handleDecisionBranchLabelChange('yes', e.target.value)}
                     placeholder="Ej., Sí, continuar"
-                    className="mt-1 w-full text-sm"
+                    className="w-full text-xs h-8"
                   />
+                  <div className="ml-2 space-y-1.5">
+                    {yesChildren.map((child) => (
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('yes')} className="text-xs h-7 px-2 py-1 border-green-600 text-green-700 hover:bg-green-100">
+                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Rama Sí
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor={`decision-noLabel-${activity.id}`} className="text-sm text-blue-600">Etiqueta Rama No</Label>
+
+                {/* NO Branch */}
+                <div className="p-2 border-l-2 border-red-500 bg-red-50/50 rounded-r-md space-y-1.5">
+                   <div className="flex justify-between items-center">
+                    <Label htmlFor={`decision-noLabel-${activity.id}`} className="text-xs text-red-700 font-medium">Etiqueta Rama No</Label>
+                   </div>
                   <Input
                     id={`decision-noLabel-${activity.id}`}
                     value={activity.decisionBranches?.noLabel || 'No'}
                     onChange={(e) => handleDecisionBranchLabelChange('no', e.target.value)}
                     placeholder="Ej., No, finalizar"
-                    className="mt-1 w-full text-sm"
+                    className="w-full text-xs h-8"
                   />
+                  <div className="ml-2 space-y-1.5">
+                    {noChildren.map((child) => (
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('no')} className="text-xs h-7 px-2 py-1 border-red-600 text-red-700 hover:bg-red-100">
+                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Rama No
+                  </Button>
                 </div>
-                 {/* Placeholder for rendering child activities for YES branch */}
-                 {/* <div className="mt-2 pl-4 border-l-2 border-green-300"> ... Child activities for YES ... </div> */}
-                 {/* Placeholder for rendering child activities for NO branch */}
-                 {/* <div className="mt-2 pl-4 border-l-2 border-red-300"> ... Child activities for NO ... </div> */}
               </div>
             )}
 
             {activity.nextActivityType === 'alternatives' && (
-              <div className="p-3 border-l-4 border-green-500 bg-green-50 rounded-md space-y-2 mt-2">
-                <p className="text-sm text-green-700 font-medium">
+              <div className="p-2 border-l-2 border-blue-500 bg-blue-50/50 rounded-r-md space-y-1.5 mt-2">
+                <p className="text-xs text-blue-700 font-medium">
                   Configuración de Rutas Alternativas:
                 </p>
                 {(activity.alternativeBranches || []).map((branch, branchIndex) => (
-                  <div key={branch.id || branchIndex} className="flex items-center gap-2">
-                    <div className="flex-grow">
-                      <Label htmlFor={`alternative-label-${activity.id}-${branch.id}`} className="text-sm text-green-600">
-                        Etiqueta Alternativa {branchIndex + 1}
-                      </Label>
-                      <Input
-                        id={`alternative-label-${activity.id}-${branch.id}`}
-                        value={branch.label || ''}
-                        onChange={(e) => handleAlternativeBranchLabelChange(branchIndex, e.target.value)}
-                        placeholder={`Ej., Opción ${branchIndex + 1}`}
-                        className="mt-1 w-full text-sm"
-                      />
+                  <div key={branch.id || branchIndex} className="p-1.5 border rounded-md bg-background/50 space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex-grow">
+                        <Label htmlFor={`alternative-label-${activity.id}-${branch.id}`} className="text-xs text-blue-600">
+                          Etiqueta Alternativa {branchIndex + 1}
+                        </Label>
+                        <Input
+                          id={`alternative-label-${activity.id}-${branch.id}`}
+                          value={branch.label || ''}
+                          onChange={(e) => handleAlternativeBranchLabelChange(branchIndex, e.target.value)}
+                          placeholder={`Ej., Opción ${branchIndex + 1}`}
+                          className="mt-0.5 w-full text-xs h-8"
+                        />
+                      </div>
+                      {(activity.alternativeBranches || []).length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeAlternativeBranch(activity.id, branch.id)}
+                          className="text-destructive hover:bg-destructive/10 self-end h-7 w-7"
+                          title="Eliminar alternativa"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
-                    {(activity.alternativeBranches || []).length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeAlternativeBranch(activity.id, branch.id)}
-                        className="text-destructive hover:bg-destructive/10 self-end h-9 w-9"
-                        title="Eliminar alternativa"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {/* Placeholder for rendering child activities for this alternative */}
-                    {/* <div className="mt-2 pl-4 border-l-2 border-gray-300"> ... Child activities for this alt ... </div> */}
+                    <div className="ml-2 space-y-1.5">
+                      {alternativeChildren(branch.id).map((child) => (
+                         <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} isSubActivity />
+                      ))}
+                    </div>
+                     <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity(branch.id)} className="text-xs h-7 px-2 py-1 border-blue-600 text-blue-700 hover:bg-blue-100">
+                        <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Alternativa
+                     </Button>
                   </div>
                 ))}
                 <Button
@@ -257,27 +310,26 @@ export function ActivityItem({
                     variant="outline"
                     size="sm"
                     onClick={() => addAlternativeBranch(activity.id)}
-                    className="mt-2"
+                    className="mt-1 text-xs h-7 px-2 py-1"
                   >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir Alternativa
+                  <PlusCircle className="mr-1 h-3 w-3" /> Añadir Otra Alternativa
                 </Button>
               </div>
             )}
+          </>
+        )}
 
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-2 border-t">
+        <div className="flex justify-between items-center pt-1.5 border-t mt-1.5">
           <AiEnhanceButton
             onClick={handleAiEnhance}
             isLoading={isLoadingAi}
             textExists={!!activity.description && activity.description.length > 5}
-            className="text-xs px-2 py-1"
+            className="text-xs px-1.5 py-0.5 h-7"
             onUndo={descriptionBeforeAi !== null ? handleUndoAi : undefined}
             canUndo={descriptionBeforeAi !== null}
           >
-             <Wand2 className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">{isLoadingAi ? "Editando..." : "Edición con IA"}</span>
+             <Wand2 className="mr-1 h-3 w-3 sm:mr-1.5 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{isLoadingAi ? "Editando..." : "Edición IA"}</span>
             <span className="sm:hidden">{isLoadingAi ? "..." : "IA"}</span>
           </AiEnhanceButton>
           <Button
@@ -285,9 +337,9 @@ export function ActivityItem({
             variant="ghost"
             size="sm"
             onClick={() => onDelete(activity.id)}
-            className="text-destructive hover:bg-destructive/10"
+            className="text-destructive hover:bg-destructive/10 text-xs h-7 px-1.5 py-0.5"
           >
-            <Trash2 className="mr-1 h-4 w-4" /> Eliminar
+            <Trash2 className="mr-1 h-3.5 w-3.5" /> Eliminar
           </Button>
         </div>
       </CardContent>

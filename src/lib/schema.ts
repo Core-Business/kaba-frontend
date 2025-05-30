@@ -4,28 +4,26 @@ import { z } from 'zod';
 export const poaActivityDecisionBranchesSchema = z.object({
   yesLabel: z.string().optional(),
   noLabel: z.string().optional(),
-  // We might add child activity IDs here later
 });
 export type POAActivityDecisionBranches = z.infer<typeof poaActivityDecisionBranchesSchema>;
 
 export const poaActivityAlternativeBranchSchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
   label: z.string().optional(),
-  // We might add child activity ID here later
 });
 export type POAActivityAlternativeBranch = z.infer<typeof poaActivityAlternativeBranchSchema>;
 
 export const poaActivitySchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
-  systemNumber: z.string().min(1, "El número de sistema es requerido."), // Renamed from 'number'
-  userNumber: z.string().optional(), // New field
-  responsible: z.string().optional(), // New field
+  systemNumber: z.string().min(1, "El número de sistema es requerido."),
+  userNumber: z.string().optional(),
+  responsible: z.string().optional(),
   description: z.string().min(1, "La descripción es requerida."),
-  nextActivityType: z.enum(['individual', 'decision', 'alternatives']), // Renamed from 'type'
-  decisionBranches: poaActivityDecisionBranchesSchema.optional(), // New field for decision type
-  alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(), // New field for alternatives type
-  // parentId: z.string().optional(), // For future nesting logic
-  // childActivityIds: z.array(z.string()).optional(), // For future nesting logic
+  nextActivityType: z.enum(['individual', 'decision', 'alternatives']),
+  decisionBranches: poaActivityDecisionBranchesSchema.optional(),
+  alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(),
+  parentId: z.string().uuid().nullable().default(null), // ID of the parent activity
+  parentBranchCondition: z.string().nullable().default(null), // 'yes', 'no', or alternative branch ID
 });
 export type POAActivity = z.infer<typeof poaActivitySchema>;
 
@@ -65,8 +63,8 @@ export const poaSchema = z.object({
   header: poaHeaderSchema,
   objective: z.string().optional(),
   objectiveHelperData: poaObjectiveHelperDataSchema.optional(),
-  procedureDescription: z.string().optional(),
-  introduction: z.string().optional(),
+  procedureDescription: z.string().optional(), // User-written introduction
+  introduction: z.string().optional(), // AI-suggested introduction based on procedureDescription
   scope: z.string().optional(),
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),
