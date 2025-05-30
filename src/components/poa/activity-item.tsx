@@ -22,6 +22,7 @@ interface ActivityItemProps {
   onUpdate: (id: string, updates: Partial<POAActivity>) => void;
   onDelete: (id: string) => void;
   index?: number; 
+  totalActivities?: number; // Added for context if needed
   onDragStart?: (e: React.DragEvent<HTMLDivElement>, index: number) => void;
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
@@ -146,7 +147,6 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Allow empty string or numbers only
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -158,21 +158,17 @@ export function ActivityItem({
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
     if (newType === 'individual') {
-        // updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || ''; // Keep existing or clear
-        if (activity.nextIndividualActivityRef === '' && activity.userNumber && /^\d+$/.test(activity.userNumber) ) {
+        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || '';
+        if (activity.userNumber && (activity.nextIndividualActivityRef === null || activity.nextIndividualActivityRef === undefined || activity.nextIndividualActivityRef === '')) {
            const currentUserNumber = parseInt(activity.userNumber, 10);
            if(!isNaN(currentUserNumber) && currentUserNumber > 0) {
              updates.nextIndividualActivityRef = (currentUserNumber + 1).toString();
-           } else {
-             updates.nextIndividualActivityRef = '';
            }
-        } else if (!activity.nextIndividualActivityRef) {
-             updates.nextIndividualActivityRef = ''; // Default to empty if not set
         }
     } else if (newType === 'decision') {
         updates.nextIndividualActivityRef = ''; 
         if (!activity.decisionBranches) { 
-          updates.decisionBranches = { yesLabel: 'Sí', noLabel: 'No' };
+          updates.decisionBranches = { yesLabel: '', noLabel: '' }; // Default to empty strings
         }
     } else if (newType === 'alternatives') {
         updates.nextIndividualActivityRef = ''; 
@@ -225,7 +221,7 @@ export function ActivityItem({
                     placeholder="Auto"
                     className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
                 />
-                <div className="flex-grow">
+                 <div className="flex-grow">
                     <Input
                         id={`activity-name-${activity.id}`}
                         name="activityName"
@@ -359,9 +355,9 @@ export function ActivityItem({
                   </div>
                   <Input
                     id={`decision-yesLabel-${activity.id}`}
-                    value={activity.decisionBranches?.yesLabel ?? 'Sí'}
+                    value={activity.decisionBranches?.yesLabel ?? ''}
                     onChange={(e) => handleDecisionBranchLabelChange('yes', e.target.value)}
-                    placeholder="Ej., Sí, continuar"
+                    placeholder="Ej: Sí o Opción positiva"
                     className="w-full text-xs h-8"
                   />
                   <div className="ml-2 space-y-1.5">
@@ -380,9 +376,9 @@ export function ActivityItem({
                    </div>
                   <Input
                     id={`decision-noLabel-${activity.id}`}
-                    value={activity.decisionBranches?.noLabel ?? 'No'}
+                    value={activity.decisionBranches?.noLabel ?? ''}
                     onChange={(e) => handleDecisionBranchLabelChange('no', e.target.value)}
-                    placeholder="Ej., No, finalizar"
+                    placeholder="Ej: No o Opción negativa"
                     className="w-full text-xs h-8"
                   />
                   <div className="ml-2 space-y-1.5">

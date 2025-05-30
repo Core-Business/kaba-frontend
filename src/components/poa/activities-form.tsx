@@ -34,13 +34,13 @@ export function ActivitiesForm() {
             const migratedActivities = poa.activities.map(act => ({
                 userNumber: '',
                 responsible: '',
-                decisionBranches: { yesLabel: 'Sí', noLabel: 'No' },
+                decisionBranches: { yesLabel: '', noLabel: '' }, // Default to empty strings
                 alternativeBranches: [],
                 parentId: null,
                 parentBranchCondition: null,
                 nextIndividualActivityRef: '',
                 ...act,
-                ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: 'Sí', noLabel: 'No' } }),
+                ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: '', noLabel: '' } }), // Default to empty
                 ...(act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined && { alternativeBranches: [{id: crypto.randomUUID(), label: 'Alternativa 1'}] }),
             }));
             setActivities(migratedActivities);
