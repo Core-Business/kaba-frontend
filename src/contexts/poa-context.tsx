@@ -47,7 +47,7 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
     );
   }
 
-  function processActivityRecursive(activity: POAActivity | undefined) { // Added undefined check
+  function processActivityRecursive(activity: POAActivity | undefined) {
     if (!activity || processedIds.has(activity.id)) return;
 
     orderedActivities.push(activity);
@@ -71,12 +71,6 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
         branchChildren.forEach(child => processActivityRecursive(activitiesMap.get(child.id)));
       });
     }
-    // For 'individual' type, if it has a nextIndividualActivityRef that is a number (userNumber),
-    // try to find and process that next activity if it's a top-level one.
-    // This part is tricky and might lead to infinite loops if not handled carefully.
-    // For now, we primarily rely on the hierarchical processing.
-    // If we need strict linear processing based on nextIndividualActivityRef for top-level,
-    // the getActivitiesInProceduralOrder would need significant redesign.
   }
 
   const topLevelActivities = sortSiblings(allActivities.filter(act => !act.parentId));
@@ -85,7 +79,7 @@ function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivi
   // Ensure all activities are included, even if orphaned (should not happen with good data)
   allActivities.forEach(act => {
     if (!processedIds.has(act.id)) {
-      orderedActivities.push(act); // Add orphaned activities at the end
+      orderedActivities.push(act); 
     }
   });
   
@@ -186,14 +180,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
-      // If the title in the header is being updated, also update the main POA name
-      if (updates.title && updates.title !== currentPoa.header.title) { // Check if title actually changed
+      if (updates.title && updates.title !== currentPoa.header.title) {
         newName = updates.title;
       }
 
       return {
         ...currentPoa,
-        name: newName, // Ensure main name is updated if header.title changes
+        name: newName, 
         header: newHeader,
       };
     });
@@ -265,23 +258,17 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let activitiesToProcess = [...currentPoa.activities, newActivity];
       let finalActivities = renumberUserNumbers(activitiesToProcess);
 
-      // Auto-populate nextIndividualActivityRef for the previous top-level activity
-      if (!parentId) { // Only for new top-level activities
-        const topLevelActivitiesOrdered = finalActivities.filter(act => !act.parentId)
-          .sort((a, b) => (a.systemNumber || "").localeCompare(b.systemNumber || "", undefined, { numeric: true, sensitivity: 'base' }));
-
-        if (topLevelActivitiesOrdered.length > 1) {
-          const newActivityIndex = topLevelActivitiesOrdered.findIndex(act => act.id === newActivity.id);
-          if (newActivityIndex > 0) {
-            const previousTopLevelActivityId = topLevelActivitiesOrdered[newActivityIndex - 1].id;
-            const newActivityUserNumber = topLevelActivitiesOrdered[newActivityIndex].userNumber;
-
-            finalActivities = finalActivities.map(act => {
-              if (act.id === previousTopLevelActivityId && act.nextActivityType === 'individual') {
-                return { ...act, nextIndividualActivityRef: newActivityUserNumber };
-              }
-              return act;
-            });
+      // Pre-fill nextIndividualActivityRef for the new top-level activity
+      const newlyAddedActivityInFinalList = finalActivities.find(act => act.id === newActivity.id);
+      if (newlyAddedActivityInFinalList && !newlyAddedActivityInFinalList.parentId && newlyAddedActivityInFinalList.nextActivityType === 'individual') {
+        const currentUserNumber = parseInt(newlyAddedActivityInFinalList.userNumber || '0', 10);
+        if (!isNaN(currentUserNumber) && currentUserNumber > 0) {
+          const finalActivityIndex = finalActivities.findIndex(act => act.id === newActivity.id);
+          if (finalActivityIndex !== -1) {
+              finalActivities[finalActivityIndex] = {
+                  ...finalActivities[finalActivityIndex],
+                  nextIndividualActivityRef: (currentUserNumber + 1).toString()
+              };
           }
         }
       }
@@ -300,8 +287,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       let updatedActivities = currentPoa.activities.map(act =>
         act.id === activityId ? { ...act, ...updates } : act
       );
-      // Re-number if structure or essential numbering fields change
-      if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates /* for activity name gen */) {
+      if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates ) {
         updatedActivities = renumberUserNumbers(updatedActivities);
       }
       return {
@@ -330,40 +316,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       let remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
       let finalActivities = renumberUserNumbers(remainingActivities);
-
-      // After deleting and renumbering, re-link consecutive top-level activities
-      const topLevelActivitiesOrdered = finalActivities.filter(act => !act.parentId)
-        .sort((a, b) => (a.systemNumber || "").localeCompare(b.systemNumber || "", undefined, { numeric: true, sensitivity: 'base' }));
-
-      if (topLevelActivitiesOrdered.length > 0) {
-        const linkingUpdates = new Map<string, string>(); // activityId -> nextUserNumber
-        for (let i = 0; i < topLevelActivitiesOrdered.length - 1; i++) {
-            const currentTop = topLevelActivitiesOrdered[i];
-            const nextTop = topLevelActivitiesOrdered[i+1];
-            if (currentTop.nextActivityType === 'individual') {
-                linkingUpdates.set(currentTop.id, nextTop.userNumber);
-            }
-        }
-        // Clear link for the last top-level if it's not "FIN" or manually set
-        const lastTop = topLevelActivitiesOrdered[topLevelActivitiesOrdered.length - 1];
-        if (lastTop.nextActivityType === 'individual' && lastTop.nextIndividualActivityRef && !isNaN(Number(lastTop.nextIndividualActivityRef))) {
-           // If the last one was pointing to a number (an activity that might have been deleted or is no longer next)
-           // We might want to clear it, or let the user manage "FIN"
-           // For now, if its ref is a number, and it's the last, clear it.
-           // This is a simple approach, might need more sophisticated logic for "FIN"
-           linkingUpdates.set(lastTop.id, '');
-        }
-
-
-        finalActivities = finalActivities.map(act => {
-            if (linkingUpdates.has(act.id)) {
-                return {...act, nextIndividualActivityRef: linkingUpdates.get(act.id)!};
-            }
-            return act;
-        });
-      }
-
-
+      
       return {
         ...currentPoa,
         activities: finalActivities,
@@ -391,7 +344,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         parentId: act.parentId || null,
         parentBranchCondition: act.parentBranchCondition || null,
         ...act,
-        systemNumber: act.systemNumber || `Error-${act.id.substring(0,4)}`, // ensure systemNumber exists
+        systemNumber: act.systemNumber || `Error-${act.id.substring(0,4)}`, 
         nextActivityType: act.nextActivityType || 'individual',
     }));
     const poaInstance = {
@@ -399,13 +352,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: name,
         header: {
             ...poaData.header,
-            title: name // Ensure header.title is also consistent with poa.name
+            title: name 
         },
         activities: renumberUserNumbers(loadedActivities),
         objectiveHelperData: poaData.objectiveHelperData || {...defaultPOAObjectiveHelperData},
     };
     setPoa(poaInstance);
-    setIsDirty(false); // Loaded POA is considered "not dirty" initially
+    setIsDirty(false); 
   }, []);
 
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
@@ -416,16 +369,16 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         responsible: '',
         userNumber: '', 
         activityName: '',
-        nextIndividualActivityRef: '', // Initialize as empty
+        nextIndividualActivityRef: '', 
         parentId: null,
         parentBranchCondition: null,
         ...act
     }));
     newPoaInstance.activities = renumberUserNumbers(initialActivities); 
-    newPoaInstance.header.title = name; // Ensure header title is set
+    newPoaInstance.header.title = name; 
     newPoaInstance.objectiveHelperData = {...defaultPOAObjectiveHelperData};
     setPoa(newPoaInstance);
-    setIsDirty(false); // New POA is considered "not dirty" initially
+    setIsDirty(false); 
     return newPoaInstance;
   }, []);
 
@@ -470,7 +423,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return {
         ...currentPoa,
-        activities: renumberUserNumbers(updatedActivities) // Re-number in case order matters
+        activities: renumberUserNumbers(updatedActivities) 
       };
     });
   }, []);
@@ -480,7 +433,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!currentPoa) return null;
       setIsDirty(true);
 
-      // Collect all descendant IDs of the branch to be removed
       const branchChildrenIdsToDelete = new Set<string>();
       const queue: string[] = currentPoa.activities
                                 .filter(act => act.parentId === activityId && act.parentBranchCondition === branchId)
@@ -490,7 +442,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const currentChildId = queue.shift()!;
         if (currentChildId) {
             branchChildrenIdsToDelete.add(currentChildId);
-            // Add grandchildren to the queue
             currentPoa.activities.filter(act => act.parentId === currentChildId)
                                  .forEach(grandchild => queue.push(grandchild.id));
         }
@@ -504,7 +455,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }
         return act;
-      }).filter(act => !branchChildrenIdsToDelete.has(act.id)); // Remove children of the deleted branch
+      }).filter(act => !branchChildrenIdsToDelete.has(act.id)); 
 
       return {
         ...currentPoa,
@@ -518,9 +469,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return poa.activities
       .filter(act => act.parentId === parentId && act.parentBranchCondition === parentBranchCondition)
       .sort((a, b) => {
-        // Sort by systemNumber (which includes parent path)
         if (!a.systemNumber || !b.systemNumber) return 0;
-        // Basic string sort on systemNumber should work for children of same parent
         return a.systemNumber.localeCompare(b.systemNumber, undefined, { numeric: true, sensitivity: 'base' });
       });
   }, [poa]);
@@ -552,6 +501,3 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
-
-
-      

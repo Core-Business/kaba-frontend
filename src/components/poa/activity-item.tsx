@@ -82,7 +82,7 @@ export function ActivityItem({
         text: activity.description, 
         context: "activity_description", 
         expandByPercent: 50,
-        maxWords: targetMaxWords > 0 ? targetMaxWords : 20 // Ensure a minimum sensible maxWords
+        maxWords: targetMaxWords > 0 ? targetMaxWords : 20 
       });
       onUpdate(activity.id, { description: result.enhancedText });
       toast({ title: "Descripción Ampliada con IA", description: "La descripción de la actividad ha sido ampliada por IA." });
@@ -146,7 +146,6 @@ export function ActivityItem({
 
   const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // Allow empty string to clear the field, or only numbers
     if (value === '' || /^[0-9]+$/.test(value)) {
       onUpdate(activity.id, { [name]: value });
     }
@@ -322,7 +321,7 @@ export function ActivityItem({
                             name="nextIndividualActivityRef"
                             value={activity.nextIndividualActivityRef || ""}
                             onChange={handleInputChange}
-                            placeholder="Siguiente Actividad No. (No. Usuario, FIN o No Aplica)"
+                            placeholder="Siguiente Actividad No. (Número Entero o FIN o No Aplica)"
                             className="mt-0.5 w-full text-xs"
                         />
                     </div>
@@ -441,17 +440,14 @@ export function ActivityItem({
                 </Button>
               </div>
             )}
-          </>
-        )}
-        
-        {isExpanded && (
-            <div className="flex justify-end mt-1 mb-0.5">
+             <div className="flex justify-end mt-1 mb-0.5">
                 <span className="text-xs text-muted-foreground">
                     (Sistema: {activity.systemNumber})
                 </span>
             </div>
+          </>
         )}
-
+        
         <div className="flex justify-end items-center pt-1.5 border-t mt-0.5"> 
           <Button
             type="button"
