@@ -70,6 +70,7 @@ Para este OBJETIVO, aplica las siguientes reglas adicionales:
 - DEBE iniciar con un verbo en infinitivo (terminación -ar, -er o -ir).
 - Evita el uso de gerundios (terminaciones -ando, -iendo) y adjetivos calificativos innecesarios.
 - Debe ser breve, claro y preciso.
+- Evita incluir recomendaciones, comentarios, opiniones personales o cualquier contenido subjetivo. El objetivo debe ser una declaración factual y directa.
 No incluyas frases como "El objetivo es..." o "Este documento tiene como objetivo...". Ve directamente al objetivo redactado.
 
 {{#if generalDescription}}
