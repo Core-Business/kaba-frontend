@@ -48,15 +48,16 @@ export function ObjectiveForm() {
     };
   });
 
+  // Sync from context to local state
   useEffect(() => {
     const contextSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
     let kpisFromContext: string[];
-     if (contextSource.kpis && contextSource.kpis.length > 0) {
+    if (contextSource.kpis && contextSource.kpis.length > 0) {
         kpisFromContext = [...contextSource.kpis];
     } else {
-        kpisFromContext = [''];
+        kpisFromContext = ['']; // Ensure at least one empty string if context has no kpis or empty array
     }
-    
+
     const newLocalStateCandidate = {
       generalDescription: contextSource.generalDescription || '',
       needOrProblem: contextSource.needOrProblem || '',
@@ -72,13 +73,13 @@ export function ObjectiveForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poa?.objectiveHelperData]);
 
+  // Sync from local state to context
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.objectiveHelperData || defaultPOAObjectiveHelperData))) {
       updatePoaObjectiveHelperData(helperData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [helperData]);
-
+  }, [helperData, poa?.id]); // Added poa.id to dependencies to ensure context is stable
 
   const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
     setHelperData(prev => ({ ...prev, [field]: value }));
@@ -253,6 +254,7 @@ export function ObjectiveForm() {
               Ayuda para Redactar el Objetivo
             </Label>
           </div>
+          
           {showHelperSection && (
             <div className="flex items-center gap-2">
               <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
@@ -300,10 +302,11 @@ export function ObjectiveForm() {
             </div>
 
             <div className="space-y-2 w-full">
-              <Label className="block mb-1">Indicadores Clave de Desempeño (KPIs)</Label>
+              <Label htmlFor="kpis" className="block mb-1">Indicadores Clave de Desempeño (KPIs)</Label>
               {helperData.kpis.map((kpi, index) => (
                 <div key={index} className="flex items-center gap-2 w-full">
                   <Input
+                    id={`kpi-${index}`}
                     value={kpi}
                     onChange={(e) => handleKpiChange(index, e.target.value)}
                     placeholder={`KPI ${index + 1}`}
@@ -320,7 +323,6 @@ export function ObjectiveForm() {
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
               </Button>
             </div>
-            {/* El botón de generar objetivo se movió arriba */}
           </div>
         )}
       </CardContent>
@@ -333,4 +335,3 @@ export function ObjectiveForm() {
     </Card>
   );
 }
-
