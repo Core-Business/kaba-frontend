@@ -54,7 +54,7 @@ export function ActivityItem({
     getChildActivities,
     expandedActivityIds,
     toggleActivityExpansion,
-    poa, // Get poa from context
+    poa, 
   } = usePOA(); 
   
   const isExpanded = expandedActivityIds.has(activity.id);
@@ -201,29 +201,56 @@ export function ActivityItem({
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
-    // Fetch the most current state of this activity (which is the parent) from the poa context
-    const currentParentActivityState = poa?.activities.find(a => a.id === activity.id);
+    if (!poa) {
+      toast({
+        title: "Error de Carga",
+        description: "Los datos del POA no están disponibles. Intenta recargar.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    if (!currentParentActivityState) {
+    const currentParentActivityFromContext = poa.activities.find(a => a.id === activity.id);
+
+    if (!currentParentActivityFromContext) {
       toast({
         title: "Error",
-        description: "No se pudo encontrar la actividad padre para validación.",
+        description: `No se pudo encontrar la actividad padre (ID: ${activity.id.substring(0,4)}) para validación.`,
         variant: "destructive",
       });
       return;
     }
+    
+    const siblingActivitiesInBranch = getChildActivities(activity.id, parentBranchCondition);
+    let activityToValidateId: string | undefined = undefined;
+    let validationMessageContext = "";
 
-    // Use currentParentActivityState for validation
-    if (!currentParentActivityState.responsible || !currentParentActivityState.description) {
+    if (siblingActivitiesInBranch.length > 0) {
+      activityToValidateId = siblingActivitiesInBranch[siblingActivitiesInBranch.length - 1].id;
+      const branchLabelForMessage = currentParentActivityFromContext.nextActivityType === 'decision' 
+                                      ? parentBranchCondition 
+                                      : currentParentActivityFromContext.alternativeBranches?.find(b => b.id === parentBranchCondition)?.label || parentBranchCondition;
+      validationMessageContext = `la última sub-actividad en la rama "${branchLabelForMessage}"`;
+    } else { 
+      activityToValidateId = currentParentActivityFromContext.id;
+      validationMessageContext = `la actividad padre (No. ${currentParentActivityFromContext.userNumber || currentParentActivityFromContext.systemNumber})`;
+    }
+    
+    const definitiveActivityToValidate = poa.activities.find(a => a.id === activityToValidateId);
+
+    if (definitiveActivityToValidate && (!definitiveActivityToValidate.responsible || !definitiveActivityToValidate.description)) {
       toast({
-        title: "Campos Incompletos en Actividad Padre",
-        description: "Por favor, completa los campos 'Responsable' y 'Descripción' de esta actividad antes de añadir una sub-actividad.",
+        title: "Campos Incompletos",
+        description: `Por favor, completa los campos 'Responsable' y 'Descripción' de ${validationMessageContext} antes de añadir una nueva actividad a esta rama.`,
         variant: "destructive",
+        duration: 5000,
       });
       return;
     }
-    addActivity({ parentId: activity.id, parentBranchCondition }); // Still use activity.id for parentId, as ID doesn't change
+    
+    addActivity({ parentId: activity.id, parentBranchCondition });
   };
+
 
   return (
     <Card
@@ -515,5 +542,7 @@ export function ActivityItem({
     </Card>
   );
 }
+
+    
 
     
