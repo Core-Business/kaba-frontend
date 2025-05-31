@@ -34,9 +34,9 @@ export function ObjectiveForm() {
     const initialSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
     let kpisFromInitialSource: string[];
     if (initialSource.kpis && initialSource.kpis.length > 0) {
-        kpisFromInitialSource = [...initialSource.kpis]; // Create a copy
+        kpisFromInitialSource = [...initialSource.kpis];
     } else {
-        kpisFromInitialSource = ['']; // Default to one empty string if source is undefined, null, or empty array
+        kpisFromInitialSource = [''];
     }
     return {
       generalDescription: initialSource.generalDescription || '',
@@ -48,15 +48,15 @@ export function ObjectiveForm() {
     };
   });
 
-  // Effect to sync helperData from context (poa.objectiveHelperData) to local state
   useEffect(() => {
     const contextSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
     let kpisFromContext: string[];
-    if (contextSource.kpis && contextSource.kpis.length > 0) {
-        kpisFromContext = [...contextSource.kpis]; // Create a copy
+     if (contextSource.kpis && contextSource.kpis.length > 0) {
+        kpisFromContext = [...contextSource.kpis];
     } else {
-        kpisFromContext = ['']; // Default to one empty string
+        kpisFromContext = [''];
     }
+    
     const newLocalStateCandidate = {
       generalDescription: contextSource.generalDescription || '',
       needOrProblem: contextSource.needOrProblem || '',
@@ -66,21 +66,18 @@ export function ObjectiveForm() {
       kpis: kpisFromContext,
     };
 
-    // Only update local state if the content from context has actually changed
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
       setHelperData(newLocalStateCandidate);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [poa?.objectiveHelperData]); // Only depends on the context's data
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poa?.objectiveHelperData]);
 
-  // Effect to sync local helperData changes back to context
   useEffect(() => {
-    // Ensure poa is loaded and local data is different from context data (or default if context is empty)
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.objectiveHelperData || defaultPOAObjectiveHelperData))) {
       updatePoaObjectiveHelperData(helperData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [helperData]); // Only depends on local helperData
+  }, [helperData]);
 
 
   const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
@@ -105,7 +102,6 @@ export function ObjectiveForm() {
   const removeKpiField = (index: number) => {
     setHelperData(prev => {
       const newKpis = prev.kpis.filter((_, i) => i !== index);
-      // Ensure at least one empty string if all are removed
       return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }; 
     });
     setIsDirty(true);
@@ -245,16 +241,38 @@ export function ObjectiveForm() {
 
         <hr className="my-4 w-full" />
 
-        <div className="flex items-center space-x-2 mb-3">
-          <Switch
-            id="toggle-helper-section"
-            checked={showHelperSection}
-            onCheckedChange={setShowHelperSection}
-          />
-          <Label htmlFor="toggle-helper-section" className="text-md font-semibold text-primary flex items-center">
-            <Lightbulb className="mr-2 h-5 w-5" /> 
-            Ayuda para Redactar el Objetivo
-          </Label>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="toggle-helper-section"
+              checked={showHelperSection}
+              onCheckedChange={setShowHelperSection}
+            />
+            <Label htmlFor="toggle-helper-section" className="text-md font-semibold text-primary flex items-center">
+              <Lightbulb className="mr-2 h-5 w-5" /> 
+              Ayuda para Redactar el Objetivo
+            </Label>
+          </div>
+          {showHelperSection && (
+            <div className="flex items-center gap-2">
+              <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
+                {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
+                {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
+              </Button>
+               {objectiveBeforeAi !== null && !isLoadingAiEnhance && ( 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleUndoAi}
+                  disabled={isLoadingAiGenerate}
+                  title="Deshacer última operación de IA"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {showHelperSection && (
@@ -302,25 +320,7 @@ export function ObjectiveForm() {
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
               </Button>
             </div>
-
-            <div className="flex justify-end items-center gap-2 mt-3 w-full">
-              <Button onClick={handleGenerateObjective} disabled={isLoadingAiGenerate || !canGenerate}>
-                {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
-                {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
-              </Button>
-               {objectiveBeforeAi !== null && !isLoadingAiEnhance && ( 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleUndoAi}
-                  disabled={isLoadingAiGenerate}
-                  title="Deshacer última operación de IA"
-                >
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            {/* El botón de generar objetivo se movió arriba */}
           </div>
         )}
       </CardContent>
@@ -333,3 +333,4 @@ export function ObjectiveForm() {
     </Card>
   );
 }
+
