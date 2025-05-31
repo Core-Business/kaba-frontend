@@ -166,8 +166,7 @@ export function ActivityItem({
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
     if (newType === 'individual') {
-        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || ''; // Keep existing if any
-        // If it's empty AND userNumber is valid, pre-fill
+        updates.nextIndividualActivityRef = activity.nextIndividualActivityRef || ''; 
         if ((!activity.nextIndividualActivityRef || activity.nextIndividualActivityRef.trim() === '') && activity.userNumber && /^\d+$/.test(activity.userNumber)) {
            const currentUserNumber = parseInt(activity.userNumber, 10);
            if(!isNaN(currentUserNumber) && currentUserNumber > 0) {
@@ -201,6 +200,14 @@ export function ActivityItem({
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
+    if (!activity.responsible || !activity.description) {
+      toast({
+        title: "Campos Incompletos en Actividad Padre",
+        description: "Por favor, completa los campos 'Responsable' y 'Descripción' de esta actividad antes de añadir una sub-actividad.",
+        variant: "destructive",
+      });
+      return;
+    }
     addActivity({ parentId: activity.id, parentBranchCondition });
   };
 
@@ -384,7 +391,7 @@ export function ActivityItem({
                     ))}
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('yes')} className="text-xs h-7 px-2 py-1 border-green-600 text-green-700 hover:bg-green-100">
-                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Rama Sí
+                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - Sí
                   </Button>
                 </div>
 
@@ -411,7 +418,7 @@ export function ActivityItem({
                     ))}
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('no')} className="text-xs h-7 px-2 py-1 border-red-600 text-red-700 hover:bg-red-100">
-                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Rama No
+                    <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - No
                   </Button>
                 </div>
               </div>
@@ -456,7 +463,7 @@ export function ActivityItem({
                       ))}
                     </div>
                      <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity(branch.id)} className="text-xs h-7 px-2 py-1 border-blue-600 text-blue-700 hover:bg-blue-100">
-                        <PlusCircle className="mr-1 h-3 w-3" /> Agregar a Alternativa
+                        <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - Alternativa
                      </Button>
                   </div>
                 ))}

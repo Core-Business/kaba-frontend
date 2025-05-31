@@ -27,20 +27,20 @@ export function ActivitiesForm() {
             (act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined) ||
             act.responsible === undefined ||
             act.userNumber === undefined ||
-            act.parentId === undefined // Check for new nesting fields
+            act.parentId === undefined 
         );
 
         if (needsMigration) {
             const migratedActivities = poa.activities.map(act => ({
                 userNumber: '',
                 responsible: '',
-                decisionBranches: { yesLabel: '', noLabel: '' }, // Default to empty strings
+                decisionBranches: { yesLabel: '', noLabel: '' }, 
                 alternativeBranches: [],
                 parentId: null,
                 parentBranchCondition: null,
                 nextIndividualActivityRef: '',
                 ...act,
-                ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: '', noLabel: '' } }), // Default to empty
+                ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: '', noLabel: '' } }), 
                 ...(act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined && { alternativeBranches: [{id: crypto.randomUUID(), label: 'Alternativa 1'}] }),
             }));
             setActivities(migratedActivities);
@@ -63,11 +63,9 @@ export function ActivitiesForm() {
         return;
       }
     }
-    // No parentId or parentBranchCondition for top-level
     addActivity({});
   };
 
-  // Drag and drop is simplified for top-level activities only for now
   const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedItemIndex(index);
     e.dataTransfer.effectAllowed = "move";
@@ -92,11 +90,9 @@ export function ActivitiesForm() {
     const actualDraggedItemIndexInAll = reorderedAllActivities.findIndex(act => act.id === draggedItemId);
     const draggedItem = reorderedAllActivities.splice(actualDraggedItemIndexInAll, 1)[0];
 
-    // Find the ID of the item at the dropIndex in the top-level list
     const itemAtDropIndexId = currentTopLevelActivities[dropIndex].id;
     const actualDropIndexInAll = reorderedAllActivities.findIndex(act => act.id === itemAtDropIndexId);
 
-    // Insert the dragged item at the correct position in the full list
     if (draggedItemIndex < dropIndex) {
         reorderedAllActivities.splice(actualDropIndexInAll, 0, draggedItem);
     } else {
@@ -105,10 +101,9 @@ export function ActivitiesForm() {
 
     let topLevelCounter = 1;
     const renumberedActivities = reorderedAllActivities.map((act) => {
-      if (!act.parentId) { // Renumber only top-level activities
+      if (!act.parentId) { 
         return { ...act, systemNumber: (topLevelCounter++).toString() };
       }
-      // Sub-activity numbering is handled during creation or would need more complex logic here
       return act;
     });
 
@@ -134,11 +129,11 @@ export function ActivitiesForm() {
             <p className="mt-4 text-lg font-medium text-muted-foreground">Aún no hay actividades definidas.</p>
             <p className="text-sm text-muted-foreground">Añade tu primera actividad para comenzar.</p>
             <Button onClick={handleAddTopLevelActivity} className="mt-6">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Primera Actividad
+              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
             </Button>
           </div>
         ) : (
-          <div className="space-y-1"> {/* Reduced space-y */}
+          <div className="space-y-1"> 
             {topLevelActivities.map((activity, index) => (
               <ActivityItem
                 key={activity.id}
@@ -159,7 +154,7 @@ export function ActivitiesForm() {
         {topLevelActivities.length > 0 && (
            <div className="mt-3 pt-3 border-t">
             <Button onClick={handleAddTopLevelActivity} variant="outline" size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Otra Actividad (Nivel Principal)
+              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
             </Button>
           </div>
         )}
