@@ -106,7 +106,6 @@ export default function BuilderLayout({
             documentCode: 'POA-RES-001',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
-          // Ensure introduction is sourced safely if poa is not yet defined during this call
           introduction: poa?.introduction ?? '',
           procedureDescription: 'Descripción de procedimiento/introducción cargada (desde resumen). Edita y guarda para más detalles.',
           scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
@@ -164,12 +163,10 @@ export default function BuilderLayout({
       return;
     }
 
-    // Case 1: Current poa in context matches the poaId from URL
     if (poa && poa.id === poaId) {
       return;
     }
 
-    // Case 2: URL requests a "new" POA
     if (poaId === "new") {
       if (poa && poa.id === "new") {
         return;
@@ -178,7 +175,6 @@ export default function BuilderLayout({
       return; 
     }
 
-    // Case 3: URL requests an existing POA, but it's not loaded or doesn't match
     const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
     if (fullPoaRaw) {
       try {
@@ -196,7 +192,7 @@ export default function BuilderLayout({
     } else {
       loadFromSummaryOrMock();
     }
-  }, [poaId, poa, loadPoa, createNew, loadFromSummaryOrMock]);
+  }, [poaId, poa, loadPoa, createNew, loadFromSummaryOrMock, router]);
 
 
   useEffect(() => {
@@ -213,45 +209,37 @@ export default function BuilderLayout({
     };
   }, [isDirty]);
 
-
-  const handleNavigationAttempt = (e: React.MouseEvent<HTMLAnchorElement> | React.MouseEvent<HTMLButtonElement>, href: string) => {
-    if (isDirty) {
-      e.preventDefault();
-      setNextPath(href);
-      setShowUnsavedDialog(true);
-    } else {
-      // If not dirty, navigate directly. Added this to prevent issues if isDirty logic changes.
-      router.push(href);
-    }
-  };
-
-  const handleDashboardNavigation = (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (isDirty) {
-      e.preventDefault();
-      setNextPath('/dashboard');
-      setShowUnsavedDialog(true);
-    } else {
-      router.push('/dashboard');
-    }
-  };
-
-
   const confirmNavigation = (discardChanges: boolean) => {
     setShowUnsavedDialog(false);
     if (nextPath) {
       if (discardChanges) {
-        setIsDirty(false);
+        setIsDirty(false); // Ensure isDirty is false before navigating
         router.push(nextPath);
       } else {
-        saveCurrentPOA();
-        setTimeout(() => router.push(nextPath), 50);
+        saveCurrentPOA(); // This will set isDirty to false on success
+        // Wait for save to complete (and isDirty to be set to false)
+        // A short timeout can help, but ideally, saveCurrentPOA would return a promise
+        // or a callback would be used.
+        setTimeout(() => {
+            router.push(nextPath)
+        }, 100); // Small delay to allow state update from save
       }
     }
     setNextPath(null);
   };
+  
+  const handleDashboardNavigationClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isDirty) {
+          e.preventDefault();
+          setNextPath('/dashboard');
+          setShowUnsavedDialog(true);
+      } else {
+          router.push('/dashboard');
+      }
+  };
 
-  // Adjusted loading conditions
-  if (!poaId) { // Handles case where poaId might be initially undefined
+
+  if (!poaId) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
@@ -278,7 +266,6 @@ export default function BuilderLayout({
     );
   }
   
-  // If poa is null even after checks, it's an unexpected state or initial render before useEffect kicks in fully
   if (!poa) {
      return (
       <div className="flex h-screen items-center justify-center">
@@ -295,7 +282,7 @@ export default function BuilderLayout({
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" onClick={handleDashboardNavigation} className="text-sidebar-foreground hover:bg-sidebar-accent">
+                <Button variant="ghost" size="sm" onClick={handleDashboardNavigationClick} className="text-sidebar-foreground hover:bg-sidebar-accent">
                     <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
                 </Button>
                 <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
@@ -304,7 +291,6 @@ export default function BuilderLayout({
           <SidebarContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                // Use poa.id if it's loaded and valid, otherwise fallback to poaId from URL (especially for "new")
                 const currentPoaIdForLink = (poa && poa.id && poa.id !== "new") ? poa.id : poaId;
                 const itemPath = `/builder/${currentPoaIdForLink}/${item.href}`;
                 const isActive = pathname === itemPath ||
@@ -313,50 +299,51 @@ export default function BuilderLayout({
 
                 return (
                   <SidebarMenuItem key={item.name}>
-                    <Link href={itemPath} passHref legacyBehavior>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        className="justify-start text-sm"
-                        tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className="justify-start text-sm"
+                      tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
+                    >
+                       <Link
+                        href={itemPath}
+                        onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                          if (isDirty) {
+                            e.preventDefault(); 
+                            setNextPath(itemPath);
+                            setShowUnsavedDialog(true);
+                          }
+                        }}
                       >
-                         {/* Pass href to handleNavigationAttempt to decide if navigation should proceed */}
-                         <a onClick={(e) => {
-                            if (isDirty) {
-                              handleNavigationAttempt(e, itemPath);
-                            } else {
-                              // Allow direct navigation if not dirty
-                            }
-                         }}>
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.name}</span>
-                        </a>
-                      </SidebarMenuButton>
-                    </Link>
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
               })}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter className="p-2 border-t border-sidebar-border">
-            <Link href="/dashboard" legacyBehavior passHref>
-                <SidebarMenuButton
-                    asChild
-                    className="justify-start text-sm w-full"
-                    tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+              <SidebarMenuButton
+                  asChild
+                  className="justify-start text-sm w-full"
+                  tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+              >
+                <Link
+                  href="/dashboard"
+                  onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                    if (isDirty) {
+                      e.preventDefault();
+                      setNextPath('/dashboard');
+                      setShowUnsavedDialog(true);
+                    }
+                  }}
                 >
-                  <a onClick={(e) => {
-                      if (isDirty) {
-                        handleNavigationAttempt(e, '/dashboard');
-                      } else {
-                        // Allow direct navigation if not dirty
-                      }
-                  }}>
-                    <Home className="h-5 w-5" />
-                    <span>POA - Inicio</span>
-                  </a>
-                </SidebarMenuButton>
-            </Link>
+                  <Home className="h-5 w-5" />
+                  <span>POA - Inicio</span>
+                </Link>
+              </SidebarMenuButton>
           </SidebarFooter>
         </Sidebar>
 
@@ -387,3 +374,5 @@ export default function BuilderLayout({
   );
 }
     
+
+      
