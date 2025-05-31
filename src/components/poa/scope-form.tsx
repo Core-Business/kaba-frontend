@@ -8,20 +8,18 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, XCircle } from "lucide-react";
+import { Save, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
 
 export function ScopeForm() {
-  const { poa, updateField, saveCurrentPOA, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
+  const { poa, updateField, saveCurrentPOA, setIsDirty } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
   const [maxWords, setMaxWords] = useState(60);
@@ -29,108 +27,11 @@ export function ScopeForm() {
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false);
 
-  const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
-    const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
-    return JSON.parse(JSON.stringify(initialSource));
-  });
-
-  // Sync from context to local state
-  useEffect(() => {
-    const contextSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
-    if (JSON.stringify(helperData) !== JSON.stringify(contextSource)) {
-      setHelperData(JSON.parse(JSON.stringify(contextSource)));
-    }
-  }, [poa?.scopeHelperData, helperData]); // Kept helperData here as per original working state before attempting to remove. If issues persist, this is a candidate for removal.
-
-  // Sync from local state to context
-  useEffect(() => {
-    if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
-        updatePoaScopeHelperData(helperData);
-    }
-  // updatePoaScopeHelperData is memoized in context, poa might change, helperData is local.
-  }, [helperData, poa, updatePoaScopeHelperData]);
-
-
   const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("scope", e.target.value);
     setScopeBeforeAi(null);
-  }, [updateField]);
-
-  const handleHelperInputChange = useCallback((field: keyof Omit<POAScopeHelperData, 'departamentosOAreas' | 'productosOServicios' | 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas'>, value: string) => {
-    setHelperData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
-  }, [setIsDirty]);
-
-  const handleHelperArrayStringChange = useCallback((field: 'departamentosOAreas' | 'productosOServicios', index: number, value: string) => {
-    setHelperData(prev => {
-      const currentArray = prev[field] || [];
-      const newArray = [...currentArray];
-      newArray[index] = value;
-      return { ...prev, [field]: newArray };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const addHelperArrayStringItem = useCallback((field: 'departamentosOAreas' | 'productosOServicios') => {
-    setHelperData(prev => {
-      const currentArray = prev[field] || [];
-      return { ...prev, [field]: [...currentArray, ''] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const removeHelperArrayStringItem = useCallback((field: 'departamentosOAreas' | 'productosOServicios', index: number) => {
-    setHelperData(prev => {
-      const currentArray = prev[field] || [];
-      const newArray = currentArray.filter((_, i) => i !== index);
-      return { ...prev, [field]: newArray.length > 0 ? newArray : [''] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const handleHelperObjectChange = useCallback(<T extends POAScopeUsuarioRol | POAScopeConexionDocumental | POAScopeReferenciaNorma>(
-    field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas',
-    index: number,
-    propName: keyof T,
-    value: string
-  ) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] || []) as T[];
-      const newArray = currentArray.map((item, i) =>
-        i === index ? { ...item, [propName]: value } : item
-      );
-      return { ...prev, [field]: newArray };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const addHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas') => {
-    setHelperData(prev => {
-      const currentArray = prev[field] || [];
-      let newItem;
-      if (field === 'usuariosYRoles') newItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
-      else if (field === 'conexionesDocumentales') newItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else newItem = { id: crypto.randomUUID(), referencia: '', codigo: '' }; // For referenciaANormas
-      return { ...prev, [field]: [...currentArray, newItem] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const removeHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas', index: number) => {
-    setHelperData(prev => {
-      const currentArray = prev[field] || [];
-      const newArray = currentArray.filter((_, i) => i !== index);
-      let finalArray = newArray;
-      if (newArray.length === 0) {
-        // If array becomes empty, add a default placeholder item back
-        if (field === 'usuariosYRoles') finalArray = [{ id: crypto.randomUUID(), usuario: '', rol: '' }];
-        else if (field === 'conexionesDocumentales') finalArray = [{ id: crypto.randomUUID(), documento: '', codigo: '' }];
-        else finalArray = [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]; // For referenciaANormas
-      }
-      return { ...prev, [field]: finalArray };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
+  }, [updateField, setIsDirty]);
 
   const handleAiEnhance = useCallback(async () => {
     if (!poa?.scope) {
@@ -146,35 +47,39 @@ export function ScopeForm() {
     } catch (error) {
       console.error("Error editando alcance con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del alcance.", variant: "destructive" });
-      setScopeBeforeAi(null); // Reset undo state on error
+      setScopeBeforeAi(null); 
     }
     setIsLoadingAiEnhance(false);
   }, [poa, updateField, toast, maxWords]);
 
   const handleGenerateScope = useCallback(async () => {
     if (!poa) return;
+    
+    const currentHelperData = poa.scopeHelperData || defaultPOAScopeHelperData;
+
     setScopeBeforeAi(poa.scope);
     setIsLoadingAiGenerate(true);
     try {
       const inputForAI: GenerateScopeInput = {
-        ...helperData,
+        ...currentHelperData,
         maxWords,
-        departamentosOAreas: (helperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
-        productosOServicios: (helperData.productosOServicios || []).filter(p => p.trim() !== ''),
-        usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
-        conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.documento?.trim() !== '' || c.codigo?.trim() !== ''),
-        referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.referencia?.trim() !== '' || r.codigo?.trim() !== ''),
+        // Ensure arrays are filtered even if they come from defaults or context
+        departamentosOAreas: (currentHelperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
+        productosOServicios: (currentHelperData.productosOServicios || []).filter(p => p.trim() !== ''),
+        usuariosYRoles: (currentHelperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
+        conexionesDocumentales: (currentHelperData.conexionesDocumentales || []).filter(c => c.documento?.trim() !== '' || c.codigo?.trim() !== ''),
+        referenciaANormas: (currentHelperData.referenciaANormas || []).filter(r => r.referencia?.trim() !== '' || r.codigo?.trim() !== ''),
       };
       const result = await generateScope(inputForAI);
       updateField("scope", result.generatedScope);
-      toast({ title: "Alcance Generado con IA", description: "Se ha generado un nuevo alcance utilizando las preguntas de ayuda." });
+      toast({ title: "Alcance Generado con IA", description: "Se ha generado un nuevo alcance." });
     } catch (error) {
       console.error("Error generando alcance con IA:", error);
       toast({ title: "Fallo al Generar Alcance", description: "No se pudo generar el alcance.", variant: "destructive" });
-      setScopeBeforeAi(null); // Reset undo state on error
+      setScopeBeforeAi(null); 
     }
     setIsLoadingAiGenerate(false);
-  }, [poa, helperData, updateField, toast, maxWords]);
+  }, [poa, updateField, toast, maxWords]);
 
   const handleUndoAi = useCallback(() => {
     if (scopeBeforeAi !== null && poa) {
@@ -193,104 +98,12 @@ export function ScopeForm() {
   if (!poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
-  const canGenerateFromHelper = Object.values(helperData).some(val => {
-    if (Array.isArray(val)) {
-      return val.some(item => {
-        if (typeof item === 'string') return item.trim() !== '';
-        if (typeof item === 'object' && item !== null && typeof (item as any).id === 'string') {
-          return Object.entries(item).some(([key, v]) => key !== 'id' && typeof v === 'string' && v.trim() !== '');
-        }
-        return false;
-      });
-    }
-    return typeof val === 'string' && val.trim() !== '';
-  });
+  
+  // For "Generar Alcance con IA", we might not have inputs anymore, 
+  // so its enablement might depend on whether poa.scopeHelperData has content or if AI can generate from scratch/other fields.
+  // For now, let's assume it can always be attempted if the section is visible.
+  const canGenerateFromHelper = showHelperSection;
 
-  const renderArrayStringInputs = (
-    fieldKey: 'departamentosOAreas' | 'productosOServicios',
-    label: string,
-    placeholder: string
-  ) => (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      {(helperData[fieldKey] || ['']).map((item, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <Input
-            value={item}
-            onChange={(e) => handleHelperArrayStringChange(fieldKey, index, e.target.value)}
-            placeholder={`${placeholder} ${index + 1}`}
-            className="flex-grow"
-          />
-          {(helperData[fieldKey] || []).length > 1 ? (
-            <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem(fieldKey, index)} className="text-destructive shrink-0">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          ) : (helperData[fieldKey]?.length === 1 && (helperData[fieldKey]?.[0]?.trim() !== '') &&
-            <Button type="button" variant="ghost" size="icon" onClick={() => handleHelperArrayStringChange(fieldKey, index, '')} className="text-muted-foreground hover:text-destructive shrink-0">
-              <XCircle className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem(fieldKey)}>
-        <PlusCircle className="mr-2 h-4 w-4" /> Añadir {label.endsWith('s') ? label.slice(0, -1) : label}
-      </Button>
-    </div>
-  );
-
-  const renderObjectInputs = <K extends 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas'>(
-    fieldKey: K,
-    label: string,
-    prop1Key: keyof POAScopeHelperData[K][0],
-    prop1Label: string,
-    prop1Placeholder: string,
-    prop2Key: keyof POAScopeHelperData[K][0],
-    prop2Label: string,
-    prop2Placeholder: string
-  ) => (
-    <div className="space-y-2">
-      <Label className="block mb-1">{label}</Label>
-      {(helperData[fieldKey] || [{ id: crypto.randomUUID() } as POAScopeHelperData[K][0]]).map((item, index) => (
-        <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-end gap-2 p-2 border rounded-md">
-          <div className="flex-grow w-full sm:w-auto">
-            <Label htmlFor={`${fieldKey}-${index}-${String(prop1Key)}`} className="text-xs">{prop1Label}</Label>
-            <Input
-              id={`${fieldKey}-${index}-${String(prop1Key)}`}
-              value={item[prop1Key] as string || ''}
-              onChange={(e) => handleHelperObjectChange(fieldKey, index, prop1Key, e.target.value)}
-              placeholder={prop1Placeholder}
-              className="mt-1 w-full"
-            />
-          </div>
-          <div className="flex-grow w-full sm:w-auto">
-            <Label htmlFor={`${fieldKey}-${index}-${String(prop2Key)}`} className="text-xs">{prop2Label}</Label>
-            <Input
-              id={`${fieldKey}-${index}-${String(prop2Key)}`}
-              value={item[prop2Key] as string || ''}
-              onChange={(e) => handleHelperObjectChange(fieldKey, index, prop2Key, e.target.value)}
-              placeholder={prop2Placeholder}
-              className="mt-1 w-full"
-            />
-          </div>
-          {(helperData[fieldKey] || []).length > 1 ? (
-            <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem(fieldKey, index)} className="text-destructive shrink-0 self-center sm:self-end">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-           ) : ( (helperData[fieldKey]?.length === 1 && (item[prop1Key] || item[prop2Key])) &&
-            <Button type="button" variant="ghost" size="icon" onClick={() => {
-                handleHelperObjectChange(fieldKey, index, prop1Key, '');
-                handleHelperObjectChange(fieldKey, index, prop2Key, '');
-            }} className="text-muted-foreground hover:text-destructive shrink-0 self-center sm:self-end">
-              <XCircle className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem(fieldKey)} className="mt-2">
-        <PlusCircle className="mr-2 h-4 w-4" /> Añadir {label.replace(/es y Roles$/, 'e y Rol').replace(/es Documentales$/, ' Documental').replace(/a Normas$/, ' Norma')}
-      </Button>
-    </div>
-  );
 
   return (
     <Card className="shadow-lg w-full">
@@ -342,37 +155,37 @@ export function ScopeForm() {
         <hr className="my-4" />
 
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="toggle-scope-helper-section"
-              checked={showHelperSection}
-              onCheckedChange={setShowHelperSection}
-            />
-            <Label htmlFor="toggle-scope-helper-section" className="text-md font-semibold text-primary flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5" />
-              Ayuda para Redactar el Alcance
-            </Label>
-          </div>
-          {showHelperSection && (
-            <div className="flex items-center gap-2">
-              <Button onClick={handleGenerateScope} disabled={isLoadingAiGenerate || !canGenerateFromHelper}>
-                {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
-                {isLoadingAiGenerate ? "Generando..." : "Generar Alcance con IA"}
-              </Button>
-              {scopeBeforeAi !== null && !isLoadingAiEnhance && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleUndoAi}
-                  disabled={isLoadingAiGenerate}
-                  title="Deshacer última operación de IA"
-                >
-                  <Undo2 className="h-4 w-4" />
-                </Button>
-              )}
+            <div className="flex items-center space-x-2">
+                <Switch
+                id="toggle-scope-helper-section"
+                checked={showHelperSection}
+                onCheckedChange={setShowHelperSection}
+                />
+                <Label htmlFor="toggle-scope-helper-section" className="text-md font-semibold text-primary flex items-center">
+                <Lightbulb className="mr-2 h-5 w-5" />
+                Ayuda para Redactar el Alcance
+                </Label>
             </div>
-          )}
+            {showHelperSection && (
+                <div className="flex items-center gap-2">
+                <Button onClick={handleGenerateScope} disabled={isLoadingAiGenerate || !canGenerateFromHelper}>
+                    {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
+                    {isLoadingAiGenerate ? "Generando..." : "Generar Alcance con IA"}
+                </Button>
+                {scopeBeforeAi !== null && !isLoadingAiEnhance && (
+                    <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleUndoAi}
+                    disabled={isLoadingAiGenerate}
+                    title="Deshacer última operación de IA"
+                    >
+                    <Undo2 className="h-4 w-4" />
+                    </Button>
+                )}
+                </div>
+            )}
         </div>
 
         {showHelperSection && (
@@ -381,21 +194,33 @@ export function ScopeForm() {
                 <h4 className="text-sm font-semibold text-primary mb-2">1. Definición del Ámbito de Aplicación</h4>
                 <div className="space-y-3">
                     <div>
-                        <Label htmlFor="procesosYActividades">Procesos y actividades clave cubiertos</Label>
-                        <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ''} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} placeholder="Ej., Gestión de incidencias de TI, desarrollo de nuevo software, atención al cliente post-venta." className="min-h-[60px] mt-1"/>
+                        <Label>Procesos y actividades clave cubiertos</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Gestión de incidencias de TI, desarrollo de nuevo software, atención al cliente post-venta.</p>
                     </div>
-                    {renderArrayStringInputs('departamentosOAreas', 'Departamentos o Áreas Involucradas', 'Ej., TI, Desarrollo, Soporte')}
-                    {renderArrayStringInputs('productosOServicios', 'Productos o Servicios Afectados', 'Ej., Sistema CRM, App Móvil X')}
+                    <div>
+                        <Label>Departamentos o Áreas Involucradas</Label>
+                         <p className="text-xs text-muted-foreground mt-1 italic">Ej., TI, Desarrollo, Soporte</p>
+                    </div>
+                    <div>
+                        <Label>Productos o Servicios Afectados</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Sistema CRM, App Móvil X</p>
+                    </div>
                 </div>
             </div>
 
             <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">2. Aplicabilidad y Responsables</h4>
                 <div className="space-y-3">
-                    {renderObjectInputs('usuariosYRoles', 'Usuarios y Roles Específicos', 'usuario', 'Usuario/Puesto', 'Ej. Analista de Soporte N1', 'rol', 'Rol en el Procedimiento', 'Ej. Ejecutor, Revisor, Aprobador')}
+                    <div>
+                        <Label>Usuarios y Roles Específicos</Label>
+                        <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Usuario/Puesto (Ej. Analista de Soporte N1)</p></div>
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Rol en el Procedimiento (Ej. Ejecutor, Revisor)</p></div>
+                        </div>
+                    </div>
                      <div>
-                        <Label htmlFor="gradoDeInclusion">Grado de inclusión o exclusión</Label>
-                        <Textarea id="gradoDeInclusion" value={helperData.gradoDeInclusion || ''} onChange={(e) => handleHelperInputChange('gradoDeInclusion', e.target.value)} placeholder="Ej., Aplica a todos los empleados del departamento X, excluye personal temporal." className="min-h-[60px] mt-1"/>
+                        <Label>Grado de inclusión o exclusión</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Aplica a todos los empleados del departamento X, excluye personal temporal.</p>
                     </div>
                 </div>
             </div>
@@ -404,12 +229,12 @@ export function ScopeForm() {
                 <h4 className="text-sm font-semibold text-primary mb-2">3. Límites y Exclusiones</h4>
                 <div className="space-y-3">
                      <div>
-                        <Label htmlFor="delimitacionPrecisa">Delimitación precisa (inicio/fin)</Label>
-                        <Textarea id="delimitacionPrecisa" value={helperData.delimitacionPrecisa || ''} onChange={(e) => handleHelperInputChange('delimitacionPrecisa', e.target.value)} placeholder="Ej., Inicia con la recepción de la solicitud del cliente y finaliza con la confirmación de la solución." className="min-h-[60px] mt-1"/>
+                        <Label>Delimitación precisa (inicio/fin)</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Inicia con la recepción de la solicitud del cliente y finaliza con la confirmación de la solución.</p>
                     </div>
                     <div>
-                        <Label htmlFor="condicionesDeExclusion">Condiciones de exclusión</Label>
-                        <Textarea id="condicionesDeExclusion" value={helperData.condicionesDeExclusion || ''} onChange={(e) => handleHelperInputChange('condicionesDeExclusion', e.target.value)} placeholder="Ej., No aplica para solicitudes de hardware, no cubre fallos de infraestructura de red." className="min-h-[60px] mt-1"/>
+                        <Label>Condiciones de exclusión</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., No aplica para solicitudes de hardware, no cubre fallos de infraestructura de red.</p>
                     </div>
                 </div>
             </div>
@@ -418,12 +243,12 @@ export function ScopeForm() {
                 <h4 className="text-sm font-semibold text-primary mb-2">4. Condiciones y Contexto de Aplicación</h4>
                 <div className="space-y-3">
                     <div>
-                        <Label htmlFor="criteriosDeActivacion">Criterios de activación</Label>
-                        <Textarea id="criteriosDeActivacion" value={helperData.criteriosDeActivacion || ''} onChange={(e) => handleHelperInputChange('criteriosDeActivacion', e.target.value)} placeholder="Ej., Al recibir una alerta de sistema crítico, cuando un cliente reporta un error de tipo A." className="min-h-[60px] mt-1"/>
+                        <Label>Criterios de activación</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Al recibir una alerta de sistema crítico, cuando un cliente reporta un error de tipo A.</p>
                     </div>
                     <div>
-                        <Label htmlFor="contextoOperativo">Contexto operativo</Label>
-                        <Textarea id="contextoOperativo" value={helperData.contextoOperativo || ''} onChange={(e) => handleHelperInputChange('contextoOperativo', e.target.value)} placeholder="Ej., Se aplica en el sistema de ticketing Jira, utilizando la base de conocimiento Confluence." className="min-h-[60px] mt-1"/>
+                        <Label>Contexto operativo</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Se aplica en el sistema de ticketing Jira, utilizando la base de conocimiento Confluence.</p>
                     </div>
                 </div>
             </div>
@@ -431,8 +256,20 @@ export function ScopeForm() {
             <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">5. Interrelación con Otros Procesos y Normas</h4>
                 <div className="space-y-3">
-                    {renderObjectInputs('conexionesDocumentales', 'Conexiones Documentales', 'documento', 'Nombre del Documento', 'Ej. POA de Gestión de Cambios', 'codigo', 'Código/ID (Opcional)', 'Ej. GC-POA-002')}
-                    {renderObjectInputs('referenciaANormas', 'Referencia a Normativas o Estándares', 'referencia', 'Norma/Estándar', 'Ej. ISO 27001, Política de Seguridad Interna', 'codigo', 'Cláusula/Sección (Opcional)', 'Ej. Anexo A.12.1')}
+                     <div>
+                        <Label>Conexiones Documentales</Label>
+                         <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Nombre del Documento (Ej. POA de Gestión de Cambios)</p></div>
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Código/ID (Opcional, Ej. GC-POA-002)</p></div>
+                        </div>
+                    </div>
+                    <div>
+                        <Label>Referencia a Normativas o Estándares</Label>
+                        <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Norma/Estándar (Ej. ISO 27001)</p></div>
+                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Cláusula/Sección (Opcional, Ej. Anexo A.12.1)</p></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -440,12 +277,12 @@ export function ScopeForm() {
                 <h4 className="text-sm font-semibold text-primary mb-2">6. Vigencia y Revisión (Opcional)</h4>
                 <div className="space-y-3">
                      <div>
-                        <Label htmlFor="duracionYPeriodicidad">Duración y Periodicidad</Label>
-                        <Textarea id="duracionYPeriodicidad" value={helperData.duracionYPeriodicidad || ''} onChange={(e) => handleHelperInputChange('duracionYPeriodicidad', e.target.value)} placeholder="Ej., Vigente hasta 31/12/2025, aplicable durante el Q3 de cada año." className="min-h-[60px] mt-1"/>
+                        <Label>Duración y Periodicidad</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Vigente hasta 31/12/2025, aplicable durante el Q3 de cada año.</p>
                     </div>
                      <div>
-                        <Label htmlFor="revision">Revisión del Alcance</Label>
-                        <Textarea id="revision" value={helperData.revision || ''} onChange={(e) => handleHelperInputChange('revision', e.target.value)} placeholder="Ej., Revisión anual o tras cambios significativos en los sistemas involucrados." className="min-h-[60px] mt-1"/>
+                        <Label>Revisión del Alcance</Label>
+                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Revisión anual o tras cambios significativos en los sistemas involucrados.</p>
                     </div>
                 </div>
             </div>
