@@ -32,40 +32,55 @@ export function ObjectiveForm() {
 
   const [helperData, setHelperData] = useState<POAObjectiveHelperData>(() => {
     const initialSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
+    let kpisFromInitialSource: string[];
+    if (initialSource.kpis && initialSource.kpis.length > 0) {
+        kpisFromInitialSource = [...initialSource.kpis]; // Create a copy
+    } else {
+        kpisFromInitialSource = ['']; // Default to one empty string if source is undefined, null, or empty array
+    }
     return {
-        generalDescription: initialSource.generalDescription || '',
-        needOrProblem: initialSource.needOrProblem || '',
-        purposeOrExpectedResult: initialSource.purposeOrExpectedResult || '',
-        targetAudience: initialSource.targetAudience || '',
-        desiredImpact: initialSource.desiredImpact || '',
-        kpis: (initialSource.kpis && initialSource.kpis.length > 0 && initialSource.kpis.some(kpi => kpi.trim() !== '')) ? initialSource.kpis.filter(kpi => kpi.trim() !== '') : [''],
+      generalDescription: initialSource.generalDescription || '',
+      needOrProblem: initialSource.needOrProblem || '',
+      purposeOrExpectedResult: initialSource.purposeOrExpectedResult || '',
+      targetAudience: initialSource.targetAudience || '',
+      desiredImpact: initialSource.desiredImpact || '',
+      kpis: kpisFromInitialSource,
     };
   });
 
+  // Effect to sync helperData from context (poa.objectiveHelperData) to local state
   useEffect(() => {
     const contextSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
+    let kpisFromContext: string[];
+    if (contextSource.kpis && contextSource.kpis.length > 0) {
+        kpisFromContext = [...contextSource.kpis]; // Create a copy
+    } else {
+        kpisFromContext = ['']; // Default to one empty string
+    }
     const newLocalStateCandidate = {
       generalDescription: contextSource.generalDescription || '',
       needOrProblem: contextSource.needOrProblem || '',
       purposeOrExpectedResult: contextSource.purposeOrExpectedResult || '',
       targetAudience: contextSource.targetAudience || '',
       desiredImpact: contextSource.desiredImpact || '',
-      kpis: (contextSource.kpis && contextSource.kpis.length > 0 && contextSource.kpis.some(kpi => kpi.trim() !== '')) ? contextSource.kpis.filter(kpi => kpi.trim() !== '') : [''],
+      kpis: kpisFromContext,
     };
 
+    // Only update local state if the content from context has actually changed
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
       setHelperData(newLocalStateCandidate);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poa?.objectiveHelperData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps 
+  }, [poa?.objectiveHelperData]); // Only depends on the context's data
 
-
+  // Effect to sync local helperData changes back to context
   useEffect(() => {
+    // Ensure poa is loaded and local data is different from context data (or default if context is empty)
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.objectiveHelperData || defaultPOAObjectiveHelperData))) {
       updatePoaObjectiveHelperData(helperData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [helperData, updatePoaObjectiveHelperData]);
+  }, [helperData]); // Only depends on local helperData
 
 
   const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
@@ -90,7 +105,8 @@ export function ObjectiveForm() {
   const removeKpiField = (index: number) => {
     setHelperData(prev => {
       const newKpis = prev.kpis.filter((_, i) => i !== index);
-      return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }; // Ensure at least one empty string if all removed
+      // Ensure at least one empty string if all are removed
+      return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }; 
     });
     setIsDirty(true);
   };
