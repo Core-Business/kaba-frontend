@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POAObjectiveHelperData } from "@/lib/schema";
+import { defaultPOAObjectiveHelperData } from "@/lib/schema";
 
 
 export function ObjectiveForm() {
@@ -29,51 +30,58 @@ export function ObjectiveForm() {
   const [objectiveBeforeAi, setObjectiveBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false); 
 
-  const [helperData, setHelperData] = useState<POAObjectiveHelperData>({
-    generalDescription: '',
-    needOrProblem: '',
-    purposeOrExpectedResult: '',
-    targetAudience: '',
-    desiredImpact: '',
-    kpis: [''],
+  const [helperData, setHelperData] = useState<POAObjectiveHelperData>(() => {
+    // Initialize from poa context or default, ensuring kpis is [''] if empty
+    const initialSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
+    return {
+        generalDescription: initialSource.generalDescription || '',
+        needOrProblem: initialSource.needOrProblem || '',
+        purposeOrExpectedResult: initialSource.purposeOrExpectedResult || '',
+        targetAudience: initialSource.targetAudience || '',
+        desiredImpact: initialSource.desiredImpact || '',
+        kpis: (initialSource.kpis && initialSource.kpis.length > 0 ? initialSource.kpis.filter(kpi => kpi.trim() !== '') : ['']),
+    };
   });
 
+  // Effect to sync from context (poa.objectiveHelperData) to local helperData
   useEffect(() => {
-    if (poa?.objectiveHelperData) {
-      const currentHelperData = poa.objectiveHelperData;
-      setHelperData({
-        generalDescription: currentHelperData.generalDescription || '',
-        needOrProblem: currentHelperData.needOrProblem || '',
-        purposeOrExpectedResult: currentHelperData.purposeOrExpectedResult || '',
-        targetAudience: currentHelperData.targetAudience || '',
-        desiredImpact: currentHelperData.desiredImpact || '',
-        kpis: currentHelperData.kpis && currentHelperData.kpis.length > 0 ? currentHelperData.kpis.filter(kpi => kpi.trim() !== '') : [''],
-      });
-      const hasContent = Object.values(currentHelperData).some(val => 
-        Array.isArray(val) ? val.some(s => s?.trim() !== '') : typeof val === 'string' && val.trim() !== ''
-      );
-      if (hasContent && !showHelperSection) { 
-         // setShowHelperSection(true); // Commented out to prevent auto-opening on load if previously saved
-      }
-    } else {
-      // Reset helperData if poa.objectiveHelperData is null/undefined
-      setHelperData({
-        generalDescription: '',
-        needOrProblem: '',
-        purposeOrExpectedResult: '',
-        targetAudience: '',
-        desiredImpact: '',
-        kpis: [''],
-      });
+    const contextSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
+    const newLocalStateCandidate = {
+      generalDescription: contextSource.generalDescription || '',
+      needOrProblem: contextSource.needOrProblem || '',
+      purposeOrExpectedResult: contextSource.purposeOrExpectedResult || '',
+      targetAudience: contextSource.targetAudience || '',
+      desiredImpact: contextSource.desiredImpact || '',
+      kpis: (contextSource.kpis && contextSource.kpis.length > 0 ? contextSource.kpis.filter(kpi => kpi.trim() !== '') : ['']),
+    };
+
+    if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
+      setHelperData(newLocalStateCandidate);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poa?.objectiveHelperData]);
 
+
+  // Effect to sync from local helperData to context (poa.objectiveHelperData)
+  useEffect(() => {
+    const contextEquivalent = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
+    // Normalize both kpis for comparison to ensure [''] vs [] are handled correctly if needed,
+    // though the local state and context init should keep them consistent.
+    const normalizedLocalKpis = (helperData.kpis && helperData.kpis.length > 0) ? helperData.kpis : [''];
+    const normalizedContextKpis = (contextEquivalent.kpis && contextEquivalent.kpis.length > 0) ? contextEquivalent.kpis : [''];
+
+    if (poa && (JSON.stringify({...helperData, kpis: normalizedLocalKpis}) !== JSON.stringify({...contextEquivalent, kpis: normalizedContextKpis}))) {
+      updatePoaObjectiveHelperData(helperData);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [helperData, updatePoaObjectiveHelperData]);
+  // Note: We don't include `poa` directly in the dependency array of the second useEffect
+  // to prevent it from re-triggering itself immediately after `updatePoaObjectiveHelperData` updates `poa`.
+  // `updatePoaObjectiveHelperData` is stable. `helperData` is the primary trigger.
+
+
   const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
-    setHelperData(prev => {
-      const newData = { ...prev, [field]: value };
-      updatePoaObjectiveHelperData(newData); 
-      return newData;
-    });
+    setHelperData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
   };
 
@@ -81,35 +89,27 @@ export function ObjectiveForm() {
     setHelperData(prev => {
       const newKpis = [...prev.kpis];
       newKpis[index] = value;
-      const newData = { ...prev, kpis: newKpis };
-      updatePoaObjectiveHelperData(newData); 
-      return newData;
+      return { ...prev, kpis: newKpis };
     });
     setIsDirty(true);
   };
 
   const addKpiField = () => {
-    setHelperData(prev => {
-      const newData = { ...prev, kpis: [...prev.kpis, ''] };
-      updatePoaObjectiveHelperData(newData); 
-      return newData;
-    });
+    setHelperData(prev => ({ ...prev, kpis: [...prev.kpis, ''] }));
     setIsDirty(true);
   };
 
   const removeKpiField = (index: number) => {
     setHelperData(prev => {
       const newKpis = prev.kpis.filter((_, i) => i !== index);
-      const newData = { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] };
-      updatePoaObjectiveHelperData(newData); 
-      return newData;
+      return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] };
     });
     setIsDirty(true);
   };
 
   const handleAiEnhance = async () => {
     if (!poa) return;
-    if (!poa.objective && !showHelperSection) { // if no objective and helpers are off, nothing to enhance
+    if (!poa.objective && !showHelperSection) { 
         toast({ title: "Texto Requerido", description: "Por favor, escribe un objetivo para editarlo con IA.", variant: "destructive" });
         return;
     }
@@ -118,7 +118,7 @@ export function ObjectiveForm() {
     setIsLoadingAiEnhance(true);
     try {
       const enhanceInput: Parameters<typeof enhanceText>[0] = {
-        text: poa.objective || "", // Pass empty string if objective is null, AI might use context
+        text: poa.objective || "", 
         maxWords: maxWords, 
         context: "objective",
       };
@@ -138,7 +138,6 @@ export function ObjectiveForm() {
     } catch (error) {
       console.error("Error editando objetivo con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del objetivo.", variant: "destructive" });
-      // Do not clear objectiveBeforeAi on error, allow user to undo to previous state
     }
     setIsLoadingAiEnhance(false);
   };
@@ -160,13 +159,12 @@ export function ObjectiveForm() {
 
       const result = await generateObjective(inputForAI);
       updateField("objective", result.generatedObjective);
-      updatePoaObjectiveHelperData(helperData); 
+      // updatePoaObjectiveHelperData is already handled by the useEffect for helperData
       toast({ title: "Objetivo Generado con IA", description: "Se ha generado un nuevo objetivo utilizando las preguntas de ayuda." });
     } catch (error)
     {
       console.error("Error generando objetivo con IA:", error);
       toast({ title: "Fallo al Generar Objetivo", description: "No se pudo generar el objetivo.", variant: "destructive" });
-      // Do not clear objectiveBeforeAi on error
     }
     setIsLoadingAiGenerate(false);
   };
@@ -181,12 +179,12 @@ export function ObjectiveForm() {
 
   const handleObjectiveChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("objective", e.target.value);
-    setObjectiveBeforeAi(null); // Clear AI undo state if user types manually
+    setObjectiveBeforeAi(null); 
   };
 
   const handleSave = () => {
     if (poa) {
-      updatePoaObjectiveHelperData(helperData); 
+      // updatePoaObjectiveHelperData(helperData); // Not needed here, useEffect handles sync
       saveCurrentPOA();
     }
   };
@@ -235,7 +233,7 @@ export function ObjectiveForm() {
             onClick={handleAiEnhance}
             isLoading={isLoadingAiEnhance}
             textExists={canEnhance}
-            onUndo={objectiveBeforeAi !== null && !isLoadingAiGenerate ? handleUndoAi : undefined} // Only allow undo if not generating
+            onUndo={objectiveBeforeAi !== null && !isLoadingAiGenerate ? handleUndoAi : undefined} 
             canUndo={objectiveBeforeAi !== null && !isLoadingAiGenerate}
           >
             <Wand2 className="mr-2 h-4 w-4" />
@@ -308,7 +306,7 @@ export function ObjectiveForm() {
                 {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
                 {isLoadingAiGenerate ? "Generando..." : "Generar Objetivo con IA"}
               </Button>
-               {objectiveBeforeAi !== null && !isLoadingAiEnhance && ( // Only show undo if not enhancing
+               {objectiveBeforeAi !== null && !isLoadingAiEnhance && ( 
                 <Button
                   type="button"
                   variant="outline"
