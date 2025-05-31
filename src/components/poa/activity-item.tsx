@@ -53,7 +53,8 @@ export function ActivityItem({
     removeAlternativeBranch, 
     getChildActivities,
     expandedActivityIds,
-    toggleActivityExpansion
+    toggleActivityExpansion,
+    poa, // Get poa from context
   } = usePOA(); 
   
   const isExpanded = expandedActivityIds.has(activity.id);
@@ -200,7 +201,20 @@ export function ActivityItem({
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
-    if (!activity.responsible || !activity.description) {
+    // Fetch the most current state of this activity (which is the parent) from the poa context
+    const currentParentActivityState = poa?.activities.find(a => a.id === activity.id);
+
+    if (!currentParentActivityState) {
+      toast({
+        title: "Error",
+        description: "No se pudo encontrar la actividad padre para validación.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Use currentParentActivityState for validation
+    if (!currentParentActivityState.responsible || !currentParentActivityState.description) {
       toast({
         title: "Campos Incompletos en Actividad Padre",
         description: "Por favor, completa los campos 'Responsable' y 'Descripción' de esta actividad antes de añadir una sub-actividad.",
@@ -208,7 +222,7 @@ export function ActivityItem({
       });
       return;
     }
-    addActivity({ parentId: activity.id, parentBranchCondition });
+    addActivity({ parentId: activity.id, parentBranchCondition }); // Still use activity.id for parentId, as ID doesn't change
   };
 
   return (
@@ -501,3 +515,5 @@ export function ActivityItem({
     </Card>
   );
 }
+
+    
