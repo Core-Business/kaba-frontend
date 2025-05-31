@@ -6,6 +6,7 @@ import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData } fro
 import type React from 'react';
 import { createContext, useCallback, useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { getActivitiesInProceduralOrder } from '@/lib/activity-utils'; // Updated import
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -37,68 +38,13 @@ interface POAContextType {
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
 
-// Helper function to get activities in their procedural order
-function getActivitiesInProceduralOrder(allActivities: POAActivity[]): POAActivity[] {
-  const activitiesMap = new Map(allActivities.map(act => [act.id, act]));
-  const orderedActivities: POAActivity[] = [];
-  const processedIds = new Set<string>();
-
-  function sortSiblings(siblingActivities: POAActivity[]): POAActivity[] {
-    return siblingActivities.sort((a, b) =>
-      (a.systemNumber || "").localeCompare(b.systemNumber || "", undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }
-
-  function processActivityRecursive(activity: POAActivity | undefined) {
-    if (!activity || processedIds.has(activity.id)) return;
-
-    orderedActivities.push(activity);
-    processedIds.add(activity.id);
-
-    if (activity.nextActivityType === 'decision') {
-      const yesChildren = sortSiblings(
-        allActivities.filter(act => act.parentId === activity.id && act.parentBranchCondition === 'yes')
-      );
-      yesChildren.forEach(child => processActivityRecursive(activitiesMap.get(child.id)));
-
-      const noChildren = sortSiblings(
-        allActivities.filter(act => act.parentId === activity.id && act.parentBranchCondition === 'no')
-      );
-      noChildren.forEach(child => processActivityRecursive(activitiesMap.get(child.id)));
-    } else if (activity.nextActivityType === 'alternatives' && activity.alternativeBranches) {
-      activity.alternativeBranches.forEach(branch => {
-        const branchChildren = sortSiblings(
-          allActivities.filter(act => act.parentId === activity.id && act.parentBranchCondition === branch.id)
-        );
-        branchChildren.forEach(child => processActivityRecursive(activitiesMap.get(child.id)));
-      });
-    }
-  }
-
-  const topLevelActivities = sortSiblings(allActivities.filter(act => !act.parentId));
-  topLevelActivities.forEach(activity => processActivityRecursive(activitiesMap.get(activity.id)));
-  
-  const remainingActivities = allActivities.filter(act => !processedIds.has(act.id));
-  sortSiblings(remainingActivities).forEach(act => {
-    if (!processedIds.has(act.id)) { 
-        orderedActivities.push(act);
-        processedIds.add(act.id);
-    }
-  });
-  
-  return orderedActivities;
-}
-
-
 function renumberUserNumbers(activities: POAActivity[]): POAActivity[] {
   if (!activities || activities.length === 0) return [];
   const proceduralOrder = getActivitiesInProceduralOrder(activities);
   const userNumberMap = new Map(proceduralOrder.map((act, index) => [act.id, (index + 1).toString()]));
 
-  // Ensure every activity object in the returned array is a new instance
-  // to help React detect changes when the array is passed down as props.
   return activities.map(act => ({
-    ...act,
+    ...act, // Spread existing activity to create a new object instance
     userNumber: userNumberMap.get(act.id) || act.userNumber || '',
   }));
 }
@@ -208,6 +154,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateObjectiveHelperData = useCallback((data: POAObjectiveHelperData) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
+      // Check if data is actually different to prevent unnecessary updates & dirty flag
+      if (JSON.stringify(currentPoa.objectiveHelperData || defaultPOAObjectiveHelperData) === JSON.stringify(data)) {
+        return currentPoa;
+      }
       setIsDirty(true);
       return { ...currentPoa, objectiveHelperData: data };
     });
@@ -279,7 +229,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       setExpandedActivityIds(prev => {
         const newSet = new Set(prev);
-        newSet.add(newActivity.id); // Expand new activity
+        newSet.add(newActivity.id); 
+        if (parentId) newSet.add(parentId); // Also ensure parent is expanded
         return newSet;
       });
 
@@ -294,17 +245,15 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
-      // Ensure a new array and new object for the updated activity
       let newActivitiesArray = currentPoa.activities.map(act =>
         act.id === activityId ? { ...act, ...updates } : act
       );
-      // if nextActivityType or other structural properties change, renumber all
       if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates || 'activityName' in updates) {
         newActivitiesArray = renumberUserNumbers(newActivitiesArray);
       }
       return {
-        ...currentPoa, // New POA object
-        activities: newActivitiesArray, // New activities array
+        ...currentPoa, 
+        activities: newActivitiesArray, 
       };
     });
   }, []);
@@ -347,7 +296,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!currentPoa) return null;
       setIsDirty(true);
       const renumbered = renumberUserNumbers(activities);
-      // Ensure expanded state reflects current activities
       setExpandedActivityIds(new Set(renumbered.map(act => act.id)));
       return { ...currentPoa, activities: renumbered };
     });
@@ -379,7 +327,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         objectiveHelperData: poaData.objectiveHelperData || {...defaultPOAObjectiveHelperData},
     };
     setPoa(poaInstance);
-    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id))); // Expand all on load
+    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id))); 
     setIsDirty(false); 
   }, []);
 
@@ -400,7 +348,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newPoaInstance.header.title = name; 
     newPoaInstance.objectiveHelperData = {...defaultPOAObjectiveHelperData};
     setPoa(newPoaInstance);
-    setExpandedActivityIds(new Set()); // No activities yet, so empty set
+    setExpandedActivityIds(new Set()); 
     setIsDirty(false); 
     return newPoaInstance;
   }, []);
@@ -545,6 +493,3 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
-
-
-    

@@ -11,13 +11,13 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import type { POAActivity } from "@/lib/schema";
 import { useToast } from "@/hooks/use-toast";
+import { getActivitiesInProceduralOrder } from '@/lib/activity-utils'; // Import afrer moving the function
 
 export function ActivitiesForm() {
   const { poa, addActivity, updateActivity, deleteActivity, setActivities, saveCurrentPOA } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
-  // Filter for top-level activities
   const topLevelActivities = poa?.activities.filter(act => !act.parentId) || [];
 
   useEffect(() => {
@@ -52,18 +52,22 @@ export function ActivitiesForm() {
   if (!poa) return <div className="flex justify-center items-center h-64"><p>Cargando datos del Procedimiento POA...</p></div>;
 
   const handleAddTopLevelActivity = () => {
-    if (topLevelActivities.length > 0) {
-      const lastActivity = topLevelActivities[topLevelActivities.length - 1];
-      if (!lastActivity.responsible || !lastActivity.description) {
-        toast({
-          title: "Campos Incompletos",
-          description: "Por favor, completa los campos 'Responsable' y 'Descripción' de la última actividad antes de añadir una nueva.",
-          variant: "destructive",
-        });
-        return;
+    if (poa && poa.activities.length > 0) {
+      const orderedActivities = getActivitiesInProceduralOrder(poa.activities);
+      if (orderedActivities.length > 0) {
+        const lastActivityInFlow = orderedActivities[orderedActivities.length - 1];
+        if (!lastActivityInFlow.responsible || !lastActivityInFlow.description) {
+          toast({
+            title: "Campos Incompletos",
+            description: `Por favor, completa 'Responsable' y 'Descripción' de la última actividad del flujo (No. ${lastActivityInFlow.userNumber || lastActivityInFlow.systemNumber}) antes de añadir una nueva actividad principal.`,
+            variant: "destructive",
+            duration: 7000,
+          });
+          return;
+        }
       }
     }
-    addActivity({});
+    addActivity({}); // Adds a top-level activity
   };
 
   const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
