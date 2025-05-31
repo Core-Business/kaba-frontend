@@ -95,9 +95,11 @@ function renumberUserNumbers(activities: POAActivity[]): POAActivity[] {
   const proceduralOrder = getActivitiesInProceduralOrder(activities);
   const userNumberMap = new Map(proceduralOrder.map((act, index) => [act.id, (index + 1).toString()]));
 
+  // Ensure every activity object in the returned array is a new instance
+  // to help React detect changes when the array is passed down as props.
   return activities.map(act => ({
     ...act,
-    userNumber: userNumberMap.get(act.id) || act.userNumber || '', 
+    userNumber: userNumberMap.get(act.id) || act.userNumber || '',
   }));
 }
 
@@ -292,15 +294,17 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
-      let updatedActivities = currentPoa.activities.map(act =>
+      // Ensure a new array and new object for the updated activity
+      let newActivitiesArray = currentPoa.activities.map(act =>
         act.id === activityId ? { ...act, ...updates } : act
       );
+      // if nextActivityType or other structural properties change, renumber all
       if (updates.nextActivityType || 'systemNumber' in updates || 'parentId' in updates || 'description' in updates || 'responsible' in updates || 'userNumber' in updates || 'activityName' in updates) {
-        updatedActivities = renumberUserNumbers(updatedActivities);
+        newActivitiesArray = renumberUserNumbers(newActivitiesArray);
       }
       return {
-        ...currentPoa,
-        activities: updatedActivities,
+        ...currentPoa, // New POA object
+        activities: newActivitiesArray, // New activities array
       };
     });
   }, []);
@@ -496,7 +500,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return newSet;
     });
-    setIsDirty(true); // Expanding/collapsing an activity could be considered a change to persist UI state if needed
+    setIsDirty(true); 
   }, []);
 
   const expandAllActivitiesInContext = useCallback(() => {
@@ -541,3 +545,6 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </POAContext.Provider>
   );
 };
+
+
+    
