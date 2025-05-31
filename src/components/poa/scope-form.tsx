@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { enhanceText } from "@/ai/flows/enhance-text";
-import { generateScope } from "@/ai/flows/generate-scope"; // Ensure this is the correct import
+import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, AlertTriangle } from "lucide-react";
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react"; 
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
@@ -24,32 +24,29 @@ export function ScopeForm() {
   const { poa, updateField, saveCurrentPOA, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
-  const [maxWords, setMaxWords] = useState(60); // Default max words for scope
+  const [maxWords, setMaxWords] = useState(60); 
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false);
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
-    return JSON.parse(JSON.stringify(initialSource)); // Deep copy to avoid mutation issues
+    return JSON.parse(JSON.stringify(initialSource)); 
   });
 
-  // Sync from context to local state
   useEffect(() => {
     const contextSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
     if (JSON.stringify(helperData) !== JSON.stringify(contextSource)) {
-      setHelperData(JSON.parse(JSON.stringify(contextSource))); // Deep copy
+      setHelperData(JSON.parse(JSON.stringify(contextSource))); 
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poa?.scopeHelperData]);
+  }, [poa?.scopeHelperData, helperData]);
 
-  // Sync from local state to context
+
   useEffect(() => {
     if (poa && JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData)) {
       updatePoaScopeHelperData(helperData);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [helperData, poa?.id]);
+  }, [helperData, poa, updatePoaScopeHelperData]);
 
   const handleMainScopeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("scope", e.target.value);
@@ -157,6 +154,7 @@ export function ScopeForm() {
       const inputForAI: GenerateScopeInput = {
         ...helperData,
         maxWords,
+        // Ensure arrays are passed correctly, filtering out empty/default items if necessary
         departamentosOAreas: (helperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
         productosOServicios: (helperData.productosOServicios || []).filter(p => p.trim() !== ''),
         usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
@@ -187,20 +185,22 @@ export function ScopeForm() {
     }
   };
 
-  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (!poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
   const canGenerateFromHelper = Object.values(helperData).some(val => {
     if (Array.isArray(val)) {
       return val.some(item => {
         if (typeof item === 'string') return item.trim() !== '';
-        if (typeof item === 'object' && item !== null) return Object.values(item).some(v => typeof v === 'string' && v.trim() !== '');
+        if (typeof item === 'object' && item !== null && typeof (item as any).id === 'string') { // Check if it's one of our structured objects
+          return Object.entries(item).some(([key, v]) => key !== 'id' && typeof v === 'string' && v.trim() !== '');
+        }
         return false;
       });
     }
     return typeof val === 'string' && val.trim() !== '';
   });
-
+  
   const renderArrayStringInputs = (
     fieldKey: 'departamentosOAreas' | 'productosOServicios',
     label: string,
@@ -216,9 +216,13 @@ export function ScopeForm() {
             placeholder={`${placeholder} ${index + 1}`}
             className="flex-grow"
           />
-          {(helperData[fieldKey] || []).length > 1 && (
+          {(helperData[fieldKey] || []).length > 1 ? (
             <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem(fieldKey, index)} className="text-destructive shrink-0">
               <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : (helperData[fieldKey]?.length === 1 && (helperData[fieldKey]?.[0]?.trim() !== '') && // Show clear button only if one item and not empty
+            <Button type="button" variant="ghost" size="icon" onClick={() => handleHelperArrayStringChange(fieldKey, index, '')} className="text-muted-foreground hover:text-destructive shrink-0">
+              <XCircle className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -241,13 +245,13 @@ export function ScopeForm() {
   ) => (
     <div className="space-y-2">
       <Label className="block mb-1">{label}</Label>
-      {(helperData[fieldKey] || [{ id: crypto.randomUUID() }]).map((item, index) => (
+      {(helperData[fieldKey] || [{ id: crypto.randomUUID() } as POAScopeHelperData[K][0]]).map((item, index) => (
         <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-end gap-2 p-2 border rounded-md">
           <div className="flex-grow w-full sm:w-auto">
             <Label htmlFor={`${fieldKey}-${index}-${String(prop1Key)}`} className="text-xs">{prop1Label}</Label>
             <Input
               id={`${fieldKey}-${index}-${String(prop1Key)}`}
-              value={item[prop1Key] || ''}
+              value={item[prop1Key] as string || ''}
               onChange={(e) => handleHelperObjectChange(fieldKey, index, prop1Key, e.target.value)}
               placeholder={prop1Placeholder}
               className="mt-1 w-full"
@@ -257,15 +261,22 @@ export function ScopeForm() {
             <Label htmlFor={`${fieldKey}-${index}-${String(prop2Key)}`} className="text-xs">{prop2Label}</Label>
             <Input
               id={`${fieldKey}-${index}-${String(prop2Key)}`}
-              value={item[prop2Key] || ''}
+              value={item[prop2Key] as string || ''}
               onChange={(e) => handleHelperObjectChange(fieldKey, index, prop2Key, e.target.value)}
               placeholder={prop2Placeholder}
               className="mt-1 w-full"
             />
           </div>
-          {(helperData[fieldKey] || []).length > 1 && (
+          {(helperData[fieldKey] || []).length > 1 ? (
             <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem(fieldKey, index)} className="text-destructive shrink-0 self-center sm:self-end">
               <Trash2 className="h-4 w-4" />
+            </Button>
+           ) : ( (helperData[fieldKey]?.length === 1 && (item[prop1Key] || item[prop2Key])) && // Show clear only if one item and not empty
+            <Button type="button" variant="ghost" size="icon" onClick={() => {
+                handleHelperObjectChange(fieldKey, index, prop1Key, '');
+                handleHelperObjectChange(fieldKey, index, prop2Key, '');
+            }} className="text-muted-foreground hover:text-destructive shrink-0 self-center sm:self-end">
+              <XCircle className="h-4 w-4" />
             </Button>
           )}
         </div>
@@ -361,52 +372,76 @@ export function ScopeForm() {
         
         {showHelperSection && (
           <div className="space-y-4 w-full pl-2 border-l-2 border-primary/30">
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">1. Definición del Ámbito de Aplicación</h4>
                 <div className="space-y-3">
-                    <Textarea value={helperData.procesosYActividades || ''} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} placeholder="Procesos y actividades clave cubiertos" label="Procesos y actividades clave cubiertos" className="min-h-[60px]"/>
-                    {renderArrayStringInputs('departamentosOAreas', 'Departamentos o Áreas Involucradas', 'Departamento/Área')}
-                    {renderArrayStringInputs('productosOServicios', 'Productos o Servicios Afectados', 'Producto/Servicio')}
+                    <div>
+                        <Label htmlFor="procesosYActividades">Procesos y actividades clave cubiertos</Label>
+                        <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ''} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} placeholder="Ej., Gestión de incidencias de TI, desarrollo de nuevo software, atención al cliente post-venta." className="min-h-[60px] mt-1"/>
+                    </div>
+                    {renderArrayStringInputs('departamentosOAreas', 'Departamentos o Áreas Involucradas', 'Ej., TI, Desarrollo, Soporte')}
+                    {renderArrayStringInputs('productosOServicios', 'Productos o Servicios Afectados', 'Ej., Sistema CRM, App Móvil X')}
                 </div>
             </div>
 
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">2. Aplicabilidad y Responsables</h4>
                 <div className="space-y-3">
-                    {renderObjectInputs('usuariosYRoles', 'Usuarios y Roles Específicos', 'usuario', 'Usuario', 'Ej. Analista de Soporte', 'rol', 'Rol', 'Ej. Ejecutor del procedimiento')}
-                    <Textarea value={helperData.gradoDeInclusion || ''} onChange={(e) => handleHelperInputChange('gradoDeInclusion', e.target.value)} placeholder="Grado de inclusión o exclusión de ciertos roles" label="Grado de inclusión o exclusión" className="min-h-[60px]"/>
+                    {renderObjectInputs('usuariosYRoles', 'Usuarios y Roles Específicos', 'usuario', 'Usuario/Puesto', 'Ej. Analista de Soporte N1', 'rol', 'Rol en el Procedimiento', 'Ej. Ejecutor, Revisor, Aprobador')}
+                     <div>
+                        <Label htmlFor="gradoDeInclusion">Grado de inclusión o exclusión</Label>
+                        <Textarea id="gradoDeInclusion" value={helperData.gradoDeInclusion || ''} onChange={(e) => handleHelperInputChange('gradoDeInclusion', e.target.value)} placeholder="Ej., Aplica a todos los empleados del departamento X, excluye personal temporal." className="min-h-[60px] mt-1"/>
+                    </div>
                 </div>
             </div>
 
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">3. Límites y Exclusiones</h4>
                 <div className="space-y-3">
-                    <Textarea value={helperData.delimitacionPrecisa || ''} onChange={(e) => handleHelperInputChange('delimitacionPrecisa', e.target.value)} placeholder="Delimitación precisa del inicio y fin del procedimiento" label="Delimitación precisa (inicio/fin)" className="min-h-[60px]"/>
-                    <Textarea value={helperData.condicionesDeExclusion || ''} onChange={(e) => handleHelperInputChange('condicionesDeExclusion', e.target.value)} placeholder="Condiciones específicas bajo las cuales el procedimiento NO aplica" label="Condiciones de exclusión" className="min-h-[60px]"/>
+                     <div>
+                        <Label htmlFor="delimitacionPrecisa">Delimitación precisa (inicio/fin)</Label>
+                        <Textarea id="delimitacionPrecisa" value={helperData.delimitacionPrecisa || ''} onChange={(e) => handleHelperInputChange('delimitacionPrecisa', e.target.value)} placeholder="Ej., Inicia con la recepción de la solicitud del cliente y finaliza con la confirmación de la solución." className="min-h-[60px] mt-1"/>
+                    </div>
+                    <div>
+                        <Label htmlFor="condicionesDeExclusion">Condiciones de exclusión</Label>
+                        <Textarea id="condicionesDeExclusion" value={helperData.condicionesDeExclusion || ''} onChange={(e) => handleHelperInputChange('condicionesDeExclusion', e.target.value)} placeholder="Ej., No aplica para solicitudes de hardware, no cubre fallos de infraestructura de red." className="min-h-[60px] mt-1"/>
+                    </div>
                 </div>
             </div>
 
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">4. Condiciones y Contexto de Aplicación</h4>
                 <div className="space-y-3">
-                    <Textarea value={helperData.criteriosDeActivacion || ''} onChange={(e) => handleHelperInputChange('criteriosDeActivacion', e.target.value)} placeholder="Criterios o eventos que activan la aplicación del procedimiento" label="Criterios de activación" className="min-h-[60px]"/>
-                    <Textarea value={helperData.contextoOperativo || ''} onChange={(e) => handleHelperInputChange('contextoOperativo', e.target.value)} placeholder="Contexto operativo (ej. sistemas, herramientas, entornos específicos)" label="Contexto operativo" className="min-h-[60px]"/>
+                    <div>
+                        <Label htmlFor="criteriosDeActivacion">Criterios de activación</Label>
+                        <Textarea id="criteriosDeActivacion" value={helperData.criteriosDeActivacion || ''} onChange={(e) => handleHelperInputChange('criteriosDeActivacion', e.target.value)} placeholder="Ej., Al recibir una alerta de sistema crítico, cuando un cliente reporta un error de tipo A." className="min-h-[60px] mt-1"/>
+                    </div>
+                    <div>
+                        <Label htmlFor="contextoOperativo">Contexto operativo</Label>
+                        <Textarea id="contextoOperativo" value={helperData.contextoOperativo || ''} onChange={(e) => handleHelperInputChange('contextoOperativo', e.target.value)} placeholder="Ej., Se aplica en el sistema de ticketing Jira, utilizando la base de conocimiento Confluence." className="min-h-[60px] mt-1"/>
+                    </div>
                 </div>
             </div>
             
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">5. Interrelación con Otros Procesos y Normas</h4>
                 <div className="space-y-3">
-                    {renderObjectInputs('conexionesDocumentales', 'Conexiones Documentales (Otros POAs, Guías, etc.)', 'documento', 'Documento', 'Ej. POA de Gestión de Incidentes', 'codigo', 'Código/ID (Opcional)', 'Ej. TI-POA-005')}
-                    {renderObjectInputs('referenciaANormas', 'Referencia a Normativas o Estándares', 'referencia', 'Norma/Estándar', 'Ej. ISO 9001:2015', 'codigo', 'Cláusula/Sección (Opcional)', 'Ej. 7.5.3')}
+                    {renderObjectInputs('conexionesDocumentales', 'Conexiones Documentales', 'documento', 'Nombre del Documento', 'Ej. POA de Gestión de Cambios', 'codigo', 'Código/ID (Opcional)', 'Ej. GC-POA-002')}
+                    {renderObjectInputs('referenciaANormas', 'Referencia a Normativas o Estándares', 'referencia', 'Norma/Estándar', 'Ej. ISO 27001, Política de Seguridad Interna', 'codigo', 'Cláusula/Sección (Opcional)', 'Ej. Anexo A.12.1')}
                 </div>
             </div>
             
-            <div className="p-3 border rounded-md bg-muted/30">
+            <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">6. Vigencia y Revisión (Opcional)</h4>
                 <div className="space-y-3">
-                     <Textarea value={helperData.duracionYPeriodicidad || ''} onChange={(e) => handleHelperInputChange('duracionYPeriodicidad', e.target.value)} placeholder="Duración, fechas de inicio/fin, o periodicidad de aplicación" label="Duración y Periodicidad" className="min-h-[60px]"/>
-                     <Textarea value={helperData.revision || ''} onChange={(e) => handleHelperInputChange('revision', e.target.value)} placeholder="Frecuencia o condiciones para la revisión y actualización del alcance" label="Revisión del Alcance" className="min-h-[60px]"/>
+                     <div>
+                        <Label htmlFor="duracionYPeriodicidad">Duración y Periodicidad</Label>
+                        <Textarea id="duracionYPeriodicidad" value={helperData.duracionYPeriodicidad || ''} onChange={(e) => handleHelperInputChange('duracionYPeriodicidad', e.target.value)} placeholder="Ej., Vigente hasta 31/12/2025, aplicable durante el Q3 de cada año." className="min-h-[60px] mt-1"/>
+                    </div>
+                     <div>
+                        <Label htmlFor="revision">Revisión del Alcance</Label>
+                        <Textarea id="revision" value={helperData.revision || ''} onChange={(e) => handleHelperInputChange('revision', e.target.value)} placeholder="Ej., Revisión anual o tras cambios significativos en los sistemas involucrados." className="min-h-[60px] mt-1"/>
+                    </div>
                 </div>
             </div>
           </div>
@@ -421,3 +456,4 @@ export function ScopeForm() {
     </Card>
   );
 }
+
