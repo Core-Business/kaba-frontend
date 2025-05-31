@@ -16,13 +16,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type { POAScopeHelperData } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
 
+
 export function ScopeForm() {
-  const { poa, updateField, saveCurrentPOA, setIsDirty } = usePOA();
+  const { poa, updateField, saveCurrentPOA, setIsDirty, updateScopeHelperData } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
-  const [maxWords, setMaxWords] = useState(60);
+  const [maxWords, setMaxWords] = useState(100); // Default for scope might be higher
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false);
@@ -47,7 +49,7 @@ export function ScopeForm() {
     } catch (error) {
       console.error("Error editando alcance con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del alcance.", variant: "destructive" });
-      setScopeBeforeAi(null); 
+      setScopeBeforeAi(null);
     }
     setIsLoadingAiEnhance(false);
   }, [poa, updateField, toast, maxWords]);
@@ -63,7 +65,6 @@ export function ScopeForm() {
       const inputForAI: GenerateScopeInput = {
         ...currentHelperData,
         maxWords,
-        // Ensure arrays are filtered even if they come from defaults or context
         departamentosOAreas: (currentHelperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
         productosOServicios: (currentHelperData.productosOServicios || []).filter(p => p.trim() !== ''),
         usuariosYRoles: (currentHelperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
@@ -76,7 +77,7 @@ export function ScopeForm() {
     } catch (error) {
       console.error("Error generando alcance con IA:", error);
       toast({ title: "Fallo al Generar Alcance", description: "No se pudo generar el alcance.", variant: "destructive" });
-      setScopeBeforeAi(null); 
+      setScopeBeforeAi(null);
     }
     setIsLoadingAiGenerate(false);
   }, [poa, updateField, toast, maxWords]);
@@ -98,10 +99,6 @@ export function ScopeForm() {
   if (!poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
-  
-  // For "Generar Alcance con IA", we might not have inputs anymore, 
-  // so its enablement might depend on whether poa.scopeHelperData has content or if AI can generate from scratch/other fields.
-  // For now, let's assume it can always be attempted if the section is visible.
   const canGenerateFromHelper = showHelperSection;
 
 
@@ -130,9 +127,9 @@ export function ScopeForm() {
           <Slider
             id="maxWordsSliderScopeAi"
             min={20}
-            max={200}
+            max={250} // Increased max for scope
             step={10}
-            defaultValue={[60]}
+            defaultValue={[100]}
             value={[maxWords]}
             onValueChange={(value) => setMaxWords(value[0])}
             className="w-full"
@@ -189,102 +186,59 @@ export function ScopeForm() {
         </div>
 
         {showHelperSection && (
-          <div className="space-y-4 w-full pl-2 border-l-2 border-primary/30">
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">1. Definición del Ámbito de Aplicación</h4>
-                <div className="space-y-3">
-                    <div>
-                        <Label>Procesos y actividades clave cubiertos</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Gestión de incidencias de TI, desarrollo de nuevo software, atención al cliente post-venta.</p>
-                    </div>
-                    <div>
-                        <Label>Departamentos o Áreas Involucradas</Label>
-                         <p className="text-xs text-muted-foreground mt-1 italic">Ej., TI, Desarrollo, Soporte</p>
-                    </div>
-                    <div>
-                        <Label>Productos o Servicios Afectados</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Sistema CRM, App Móvil X</p>
-                    </div>
-                </div>
+          <div className="space-y-3 w-full pl-2 border-l-2 border-primary/30">
+            <div>
+                <Label>Procesos y actividades clave cubiertos por el procedimiento</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Gestión de incidencias de TI, desarrollo de nuevo software, atención al cliente post-venta.</p>
             </div>
-
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">2. Aplicabilidad y Responsables</h4>
-                <div className="space-y-3">
-                    <div>
-                        <Label>Usuarios y Roles Específicos</Label>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Usuario/Puesto (Ej. Analista de Soporte N1)</p></div>
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Rol en el Procedimiento (Ej. Ejecutor, Revisor)</p></div>
-                        </div>
-                    </div>
-                     <div>
-                        <Label>Grado de inclusión o exclusión</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Aplica a todos los empleados del departamento X, excluye personal temporal.</p>
-                    </div>
-                </div>
+            <div>
+                <Label>Departamentos o áreas organizativas involucradas o afectadas</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., TI, Desarrollo, Soporte, Finanzas, Recursos Humanos.</p>
             </div>
-
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">3. Límites y Exclusiones</h4>
-                <div className="space-y-3">
-                     <div>
-                        <Label>Delimitación precisa (inicio/fin)</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Inicia con la recepción de la solicitud del cliente y finaliza con la confirmación de la solución.</p>
-                    </div>
-                    <div>
-                        <Label>Condiciones de exclusión</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., No aplica para solicitudes de hardware, no cubre fallos de infraestructura de red.</p>
-                    </div>
-                </div>
+            <div>
+                <Label>Productos o servicios específicos a los que se aplica el procedimiento</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Sistema CRM Corporativo, Aplicación Móvil para Clientes, Plataforma de E-learning Interna.</p>
             </div>
-
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">4. Condiciones y Contexto de Aplicación</h4>
-                <div className="space-y-3">
-                    <div>
-                        <Label>Criterios de activación</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Al recibir una alerta de sistema crítico, cuando un cliente reporta un error de tipo A.</p>
-                    </div>
-                    <div>
-                        <Label>Contexto operativo</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Se aplica en el sistema de ticketing Jira, utilizando la base de conocimiento Confluence.</p>
-                    </div>
-                </div>
+            <div>
+                <Label>Usuarios o roles específicos responsables o afectados</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej. Usuario/Puesto: Analista de Soporte N1, Gerente de Proyectos, Auditor Interno.</p>
+                <p className="text-xs text-muted-foreground mt-1 italic ml-2">Ej. Rol en el Procedimiento: Ejecutor, Revisor, Aprobador, Consultado.</p>
             </div>
-
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">5. Interrelación con Otros Procesos y Normas</h4>
-                <div className="space-y-3">
-                     <div>
-                        <Label>Conexiones Documentales</Label>
-                         <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Nombre del Documento (Ej. POA de Gestión de Cambios)</p></div>
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Código/ID (Opcional, Ej. GC-POA-002)</p></div>
-                        </div>
-                    </div>
-                    <div>
-                        <Label>Referencia a Normativas o Estándares</Label>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-1">
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Norma/Estándar (Ej. ISO 27001)</p></div>
-                            <div className="flex-grow"><p className="text-xs text-muted-foreground italic">Cláusula/Sección (Opcional, Ej. Anexo A.12.1)</p></div>
-                        </div>
-                    </div>
-                </div>
+            <div>
+                <Label>Grado de inclusión o exclusión de ciertos roles o situaciones</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Aplica a todos los empleados del departamento X, excluye personal temporal o consultores externos.</p>
             </div>
-
-            <div className="p-3 border rounded-md bg-muted/20">
-                <h4 className="text-sm font-semibold text-primary mb-2">6. Vigencia y Revisión (Opcional)</h4>
-                <div className="space-y-3">
-                     <div>
-                        <Label>Duración y Periodicidad</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Vigente hasta 31/12/2025, aplicable durante el Q3 de cada año.</p>
-                    </div>
-                     <div>
-                        <Label>Revisión del Alcance</Label>
-                        <p className="text-xs text-muted-foreground mt-1 italic">Ej., Revisión anual o tras cambios significativos en los sistemas involucrados.</p>
-                    </div>
-                </div>
+            <div>
+                <Label>Delimitación precisa del inicio y fin del procedimiento</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Inicia con la recepción de la solicitud del cliente y finaliza con la confirmación de la solución y cierre del ticket.</p>
+            </div>
+            <div>
+                <Label>Condiciones o escenarios específicos bajo los cuales el procedimiento NO aplica</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., No aplica para solicitudes de cambio de hardware, no cubre fallos de infraestructura de red gestionados por terceros.</p>
+            </div>
+            <div>
+                <Label>Criterios, eventos o condiciones que activan la aplicación del procedimiento</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Al recibir una alerta de sistema crítico, cuando un cliente reporta un error de tipo A, al inicio de cada trimestre fiscal.</p>
+            </div>
+            <div>
+                <Label>Contexto operativo relevante (sistemas, herramientas, software, entornos físicos)</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Se aplica en el sistema de ticketing Jira, utilizando la base de conocimiento Confluence y las herramientas de diagnóstico remoto X.</p>
+            </div>
+            <div>
+                <Label>Otros documentos, POAs, guías o manuales relacionados o referenciados</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej. Documento: POA de Gestión de Cambios (Código: GC-POA-002), Manual de Usuario del Sistema X.</p>
+            </div>
+            <div>
+                <Label>Normativas, estándares, políticas internas o regulaciones externas a cumplir</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej. Norma: ISO 27001 (Cláusula/Sección: Anexo A.12.1), Política Interna de Seguridad de la Información.</p>
+            </div>
+            <div>
+                <Label>Duración de la aplicabilidad, fechas de inicio/fin, o periodicidad (si aplica)</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Vigente hasta 31/12/2025, aplicable durante el Q3 de cada año, o de aplicación continua.</p>
+            </div>
+            <div>
+                <Label>Frecuencia o condiciones para la revisión y actualización del alcance</Label>
+                <p className="text-xs text-muted-foreground mt-1 italic">Ej., Revisión anual o tras cambios significativos en los sistemas o procesos involucrados.</p>
             </div>
           </div>
         )}
@@ -298,3 +252,4 @@ export function ScopeForm() {
     </Card>
   );
 }
+
