@@ -31,7 +31,6 @@ export function ObjectiveForm() {
   const [showHelperSection, setShowHelperSection] = useState(false); 
 
   const [helperData, setHelperData] = useState<POAObjectiveHelperData>(() => {
-    // Initialize from poa context or default, ensuring kpis is [''] if empty
     const initialSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
     return {
         generalDescription: initialSource.generalDescription || '',
@@ -39,11 +38,10 @@ export function ObjectiveForm() {
         purposeOrExpectedResult: initialSource.purposeOrExpectedResult || '',
         targetAudience: initialSource.targetAudience || '',
         desiredImpact: initialSource.desiredImpact || '',
-        kpis: (initialSource.kpis && initialSource.kpis.length > 0 ? initialSource.kpis.filter(kpi => kpi.trim() !== '') : ['']),
+        kpis: (initialSource.kpis && initialSource.kpis.length > 0 && initialSource.kpis.some(kpi => kpi.trim() !== '')) ? initialSource.kpis.filter(kpi => kpi.trim() !== '') : [''],
     };
   });
 
-  // Effect to sync from context (poa.objectiveHelperData) to local helperData
   useEffect(() => {
     const contextSource = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
     const newLocalStateCandidate = {
@@ -52,7 +50,7 @@ export function ObjectiveForm() {
       purposeOrExpectedResult: contextSource.purposeOrExpectedResult || '',
       targetAudience: contextSource.targetAudience || '',
       desiredImpact: contextSource.desiredImpact || '',
-      kpis: (contextSource.kpis && contextSource.kpis.length > 0 ? contextSource.kpis.filter(kpi => kpi.trim() !== '') : ['']),
+      kpis: (contextSource.kpis && contextSource.kpis.length > 0 && contextSource.kpis.some(kpi => kpi.trim() !== '')) ? contextSource.kpis.filter(kpi => kpi.trim() !== '') : [''],
     };
 
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
@@ -62,22 +60,12 @@ export function ObjectiveForm() {
   }, [poa?.objectiveHelperData]);
 
 
-  // Effect to sync from local helperData to context (poa.objectiveHelperData)
   useEffect(() => {
-    const contextEquivalent = poa?.objectiveHelperData || defaultPOAObjectiveHelperData;
-    // Normalize both kpis for comparison to ensure [''] vs [] are handled correctly if needed,
-    // though the local state and context init should keep them consistent.
-    const normalizedLocalKpis = (helperData.kpis && helperData.kpis.length > 0) ? helperData.kpis : [''];
-    const normalizedContextKpis = (contextEquivalent.kpis && contextEquivalent.kpis.length > 0) ? contextEquivalent.kpis : [''];
-
-    if (poa && (JSON.stringify({...helperData, kpis: normalizedLocalKpis}) !== JSON.stringify({...contextEquivalent, kpis: normalizedContextKpis}))) {
+    if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.objectiveHelperData || defaultPOAObjectiveHelperData))) {
       updatePoaObjectiveHelperData(helperData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [helperData, updatePoaObjectiveHelperData]);
-  // Note: We don't include `poa` directly in the dependency array of the second useEffect
-  // to prevent it from re-triggering itself immediately after `updatePoaObjectiveHelperData` updates `poa`.
-  // `updatePoaObjectiveHelperData` is stable. `helperData` is the primary trigger.
 
 
   const handleHelperInputChange = (field: keyof Omit<POAObjectiveHelperData, 'kpis'>, value: string) => {
@@ -102,7 +90,7 @@ export function ObjectiveForm() {
   const removeKpiField = (index: number) => {
     setHelperData(prev => {
       const newKpis = prev.kpis.filter((_, i) => i !== index);
-      return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] };
+      return { ...prev, kpis: newKpis.length > 0 ? newKpis : [''] }; // Ensure at least one empty string if all removed
     });
     setIsDirty(true);
   };
@@ -159,7 +147,6 @@ export function ObjectiveForm() {
 
       const result = await generateObjective(inputForAI);
       updateField("objective", result.generatedObjective);
-      // updatePoaObjectiveHelperData is already handled by the useEffect for helperData
       toast({ title: "Objetivo Generado con IA", description: "Se ha generado un nuevo objetivo utilizando las preguntas de ayuda." });
     } catch (error)
     {
@@ -184,7 +171,6 @@ export function ObjectiveForm() {
 
   const handleSave = () => {
     if (poa) {
-      // updatePoaObjectiveHelperData(helperData); // Not needed here, useEffect handles sync
       saveCurrentPOA();
     }
   };
@@ -280,14 +266,14 @@ export function ObjectiveForm() {
             </div>
 
             <div className="space-y-2 w-full">
-              <Label>Indicadores Clave de Desempeño (KPIs)</Label>
+              <Label className="block mb-1">Indicadores Clave de Desempeño (KPIs)</Label>
               {helperData.kpis.map((kpi, index) => (
                 <div key={index} className="flex items-center gap-2 w-full">
                   <Input
                     value={kpi}
                     onChange={(e) => handleKpiChange(index, e.target.value)}
                     placeholder={`KPI ${index + 1}`}
-                    className="flex-grow w-full"
+                    className="flex-grow"
                   />
                   {helperData.kpis.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" onClick={() => removeKpiField(index)} className="text-destructive shrink-0">
@@ -296,7 +282,7 @@ export function ObjectiveForm() {
                   )}
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={addKpiField} className="mt-1">
+              <Button type="button" variant="outline" size="sm" onClick={addKpiField} className="mt-2">
                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir KPI
               </Button>
             </div>
