@@ -15,7 +15,7 @@ import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react"; 
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, XCircle } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
@@ -24,41 +24,44 @@ export function ScopeForm() {
   const { poa, updateField, saveCurrentPOA, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
-  const [maxWords, setMaxWords] = useState(60); 
+  const [maxWords, setMaxWords] = useState(60);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [showHelperSection, setShowHelperSection] = useState(false);
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
-    return JSON.parse(JSON.stringify(initialSource)); 
+    return JSON.parse(JSON.stringify(initialSource));
   });
 
+  // Sync from context to local state
   useEffect(() => {
     const contextSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
     if (JSON.stringify(helperData) !== JSON.stringify(contextSource)) {
-      setHelperData(JSON.parse(JSON.stringify(contextSource))); 
+      setHelperData(JSON.parse(JSON.stringify(contextSource)));
     }
-  }, [poa?.scopeHelperData, helperData]);
+  }, [poa?.scopeHelperData, helperData]); // Kept helperData here as per original working state before attempting to remove. If issues persist, this is a candidate for removal.
 
-
+  // Sync from local state to context
   useEffect(() => {
-    if (poa && JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData)) {
-      updatePoaScopeHelperData(helperData);
+    if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
+        updatePoaScopeHelperData(helperData);
     }
+  // updatePoaScopeHelperData is memoized in context, poa might change, helperData is local.
   }, [helperData, poa, updatePoaScopeHelperData]);
 
-  const handleMainScopeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+
+  const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("scope", e.target.value);
     setScopeBeforeAi(null);
-  };
+  }, [updateField]);
 
-  const handleHelperInputChange = (field: keyof Omit<POAScopeHelperData, 'departamentosOAreas' | 'productosOServicios' | 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas'>, value: string) => {
+  const handleHelperInputChange = useCallback((field: keyof Omit<POAScopeHelperData, 'departamentosOAreas' | 'productosOServicios' | 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas'>, value: string) => {
     setHelperData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
-  };
-  
-  const handleHelperArrayStringChange = (field: 'departamentosOAreas' | 'productosOServicios', index: number, value: string) => {
+  }, [setIsDirty]);
+
+  const handleHelperArrayStringChange = useCallback((field: 'departamentosOAreas' | 'productosOServicios', index: number, value: string) => {
     setHelperData(prev => {
       const currentArray = prev[field] || [];
       const newArray = [...currentArray];
@@ -66,26 +69,26 @@ export function ScopeForm() {
       return { ...prev, [field]: newArray };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const addHelperArrayStringItem = (field: 'departamentosOAreas' | 'productosOServicios') => {
+  const addHelperArrayStringItem = useCallback((field: 'departamentosOAreas' | 'productosOServicios') => {
     setHelperData(prev => {
       const currentArray = prev[field] || [];
       return { ...prev, [field]: [...currentArray, ''] };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const removeHelperArrayStringItem = (field: 'departamentosOAreas' | 'productosOServicios', index: number) => {
+  const removeHelperArrayStringItem = useCallback((field: 'departamentosOAreas' | 'productosOServicios', index: number) => {
     setHelperData(prev => {
       const currentArray = prev[field] || [];
       const newArray = currentArray.filter((_, i) => i !== index);
       return { ...prev, [field]: newArray.length > 0 ? newArray : [''] };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const handleHelperObjectChange = <T extends POAScopeUsuarioRol | POAScopeConexionDocumental | POAScopeReferenciaNorma>(
+  const handleHelperObjectChange = useCallback(<T extends POAScopeUsuarioRol | POAScopeConexionDocumental | POAScopeReferenciaNorma>(
     field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas',
     index: number,
     propName: keyof T,
@@ -93,42 +96,43 @@ export function ScopeForm() {
   ) => {
     setHelperData(prev => {
       const currentArray = (prev[field] || []) as T[];
-      const newArray = currentArray.map((item, i) => 
+      const newArray = currentArray.map((item, i) =>
         i === index ? { ...item, [propName]: value } : item
       );
       return { ...prev, [field]: newArray };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const addHelperObjectItem = (field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas') => {
+  const addHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas') => {
     setHelperData(prev => {
       const currentArray = prev[field] || [];
       let newItem;
       if (field === 'usuariosYRoles') newItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
       else if (field === 'conexionesDocumentales') newItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else newItem = { id: crypto.randomUUID(), referencia: '', codigo: '' };
+      else newItem = { id: crypto.randomUUID(), referencia: '', codigo: '' }; // For referenciaANormas
       return { ...prev, [field]: [...currentArray, newItem] };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const removeHelperObjectItem = (field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas', index: number) => {
+  const removeHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas', index: number) => {
     setHelperData(prev => {
       const currentArray = prev[field] || [];
       const newArray = currentArray.filter((_, i) => i !== index);
       let finalArray = newArray;
       if (newArray.length === 0) {
+        // If array becomes empty, add a default placeholder item back
         if (field === 'usuariosYRoles') finalArray = [{ id: crypto.randomUUID(), usuario: '', rol: '' }];
         else if (field === 'conexionesDocumentales') finalArray = [{ id: crypto.randomUUID(), documento: '', codigo: '' }];
-        else finalArray = [{ id: crypto.randomUUID(), referencia: '', codigo: '' }];
+        else finalArray = [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]; // For referenciaANormas
       }
       return { ...prev, [field]: finalArray };
     });
     setIsDirty(true);
-  };
+  }, [setIsDirty]);
 
-  const handleAiEnhance = async () => {
+  const handleAiEnhance = useCallback(async () => {
     if (!poa?.scope) {
       toast({ title: "Texto Requerido", description: "Por favor, escribe un alcance para editarlo con IA.", variant: "destructive" });
       return;
@@ -142,11 +146,12 @@ export function ScopeForm() {
     } catch (error) {
       console.error("Error editando alcance con IA:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar el texto del alcance.", variant: "destructive" });
+      setScopeBeforeAi(null); // Reset undo state on error
     }
     setIsLoadingAiEnhance(false);
-  };
+  }, [poa, updateField, toast, maxWords]);
 
-  const handleGenerateScope = async () => {
+  const handleGenerateScope = useCallback(async () => {
     if (!poa) return;
     setScopeBeforeAi(poa.scope);
     setIsLoadingAiGenerate(true);
@@ -154,7 +159,6 @@ export function ScopeForm() {
       const inputForAI: GenerateScopeInput = {
         ...helperData,
         maxWords,
-        // Ensure arrays are passed correctly, filtering out empty/default items if necessary
         departamentosOAreas: (helperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
         productosOServicios: (helperData.productosOServicios || []).filter(p => p.trim() !== ''),
         usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
@@ -167,23 +171,24 @@ export function ScopeForm() {
     } catch (error) {
       console.error("Error generando alcance con IA:", error);
       toast({ title: "Fallo al Generar Alcance", description: "No se pudo generar el alcance.", variant: "destructive" });
+      setScopeBeforeAi(null); // Reset undo state on error
     }
     setIsLoadingAiGenerate(false);
-  };
+  }, [poa, helperData, updateField, toast, maxWords]);
 
-  const handleUndoAi = () => {
+  const handleUndoAi = useCallback(() => {
     if (scopeBeforeAi !== null && poa) {
       updateField("scope", scopeBeforeAi);
       toast({ title: "Acción Deshecha", description: "Se restauró el texto anterior del alcance." });
       setScopeBeforeAi(null);
     }
-  };
+  }, [scopeBeforeAi, poa, updateField, toast]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     if (poa) {
       saveCurrentPOA();
     }
-  };
+  }, [poa, saveCurrentPOA]);
 
   if (!poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
@@ -192,7 +197,7 @@ export function ScopeForm() {
     if (Array.isArray(val)) {
       return val.some(item => {
         if (typeof item === 'string') return item.trim() !== '';
-        if (typeof item === 'object' && item !== null && typeof (item as any).id === 'string') { // Check if it's one of our structured objects
+        if (typeof item === 'object' && item !== null && typeof (item as any).id === 'string') {
           return Object.entries(item).some(([key, v]) => key !== 'id' && typeof v === 'string' && v.trim() !== '');
         }
         return false;
@@ -200,7 +205,7 @@ export function ScopeForm() {
     }
     return typeof val === 'string' && val.trim() !== '';
   });
-  
+
   const renderArrayStringInputs = (
     fieldKey: 'departamentosOAreas' | 'productosOServicios',
     label: string,
@@ -220,7 +225,7 @@ export function ScopeForm() {
             <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem(fieldKey, index)} className="text-destructive shrink-0">
               <Trash2 className="h-4 w-4" />
             </Button>
-          ) : (helperData[fieldKey]?.length === 1 && (helperData[fieldKey]?.[0]?.trim() !== '') && // Show clear button only if one item and not empty
+          ) : (helperData[fieldKey]?.length === 1 && (helperData[fieldKey]?.[0]?.trim() !== '') &&
             <Button type="button" variant="ghost" size="icon" onClick={() => handleHelperArrayStringChange(fieldKey, index, '')} className="text-muted-foreground hover:text-destructive shrink-0">
               <XCircle className="h-4 w-4" />
             </Button>
@@ -271,7 +276,7 @@ export function ScopeForm() {
             <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem(fieldKey, index)} className="text-destructive shrink-0 self-center sm:self-end">
               <Trash2 className="h-4 w-4" />
             </Button>
-           ) : ( (helperData[fieldKey]?.length === 1 && (item[prop1Key] || item[prop2Key])) && // Show clear only if one item and not empty
+           ) : ( (helperData[fieldKey]?.length === 1 && (item[prop1Key] || item[prop2Key])) &&
             <Button type="button" variant="ghost" size="icon" onClick={() => {
                 handleHelperObjectChange(fieldKey, index, prop1Key, '');
                 handleHelperObjectChange(fieldKey, index, prop2Key, '');
@@ -286,7 +291,7 @@ export function ScopeForm() {
       </Button>
     </div>
   );
-  
+
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
@@ -320,7 +325,7 @@ export function ScopeForm() {
             className="w-full"
           />
         </div>
-        
+
         <div className="mt-3 flex justify-end items-center">
           <AiEnhanceButton
             onClick={handleAiEnhance}
@@ -369,7 +374,7 @@ export function ScopeForm() {
             </div>
           )}
         </div>
-        
+
         {showHelperSection && (
           <div className="space-y-4 w-full pl-2 border-l-2 border-primary/30">
             <div className="p-3 border rounded-md bg-muted/20">
@@ -422,7 +427,7 @@ export function ScopeForm() {
                     </div>
                 </div>
             </div>
-            
+
             <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">5. Interrelación con Otros Procesos y Normas</h4>
                 <div className="space-y-3">
@@ -430,7 +435,7 @@ export function ScopeForm() {
                     {renderObjectInputs('referenciaANormas', 'Referencia a Normativas o Estándares', 'referencia', 'Norma/Estándar', 'Ej. ISO 27001, Política de Seguridad Interna', 'codigo', 'Cláusula/Sección (Opcional)', 'Ej. Anexo A.12.1')}
                 </div>
             </div>
-            
+
             <div className="p-3 border rounded-md bg-muted/20">
                 <h4 className="text-sm font-semibold text-primary mb-2">6. Vigencia y Revisión (Opcional)</h4>
                 <div className="space-y-3">
@@ -456,4 +461,3 @@ export function ScopeForm() {
     </Card>
   );
 }
-
