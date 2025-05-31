@@ -17,7 +17,7 @@ export const poaActivitySchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
   systemNumber: z.string().min(1, "El número de sistema es requerido."),
   userNumber: z.string().optional(),
-  activityName: z.string().optional(), // Nuevo campo para el nombre de la actividad
+  activityName: z.string().optional(),
   responsible: z.string().min(1, "El responsable es requerido."),
   description: z.string().min(1, "La descripción es requerida."),
   nextActivityType: z.enum(['individual', 'decision', 'alternatives']),
@@ -57,6 +57,50 @@ export const poaObjectiveHelperDataSchema = z.object({
 });
 export type POAObjectiveHelperData = z.infer<typeof poaObjectiveHelperDataSchema>;
 
+// Schemas for Scope Helper Data
+const poaScopeUsuarioRolSchema = z.object({
+  id: z.string().uuid().default(() => crypto.randomUUID()),
+  usuario: z.string().optional(),
+  rol: z.string().optional(),
+});
+export type POAScopeUsuarioRol = z.infer<typeof poaScopeUsuarioRolSchema>;
+
+const poaScopeConexionDocumentalSchema = z.object({
+  id: z.string().uuid().default(() => crypto.randomUUID()),
+  documento: z.string().optional(),
+  codigo: z.string().optional(),
+});
+export type POAScopeConexionDocumental = z.infer<typeof poaScopeConexionDocumentalSchema>;
+
+const poaScopeReferenciaNormaSchema = z.object({
+  id: z.string().uuid().default(() => crypto.randomUUID()),
+  referencia: z.string().optional(),
+  codigo: z.string().optional(),
+});
+export type POAScopeReferenciaNorma = z.infer<typeof poaScopeReferenciaNormaSchema>;
+
+export const poaScopeHelperDataSchema = z.object({
+  // 1. Definición del Ámbito de Aplicación
+  procesosYActividades: z.string().optional(),
+  departamentosOAreas: z.array(z.string()).optional(),
+  productosOServicios: z.array(z.string()).optional(),
+  // 2. Aplicabilidad y Responsables
+  usuariosYRoles: z.array(poaScopeUsuarioRolSchema).optional(),
+  gradoDeInclusion: z.string().optional(),
+  // 3. Límites y Exclusiones
+  delimitacionPrecisa: z.string().optional(),
+  condicionesDeExclusion: z.string().optional(),
+  // 4. Condiciones y Contexto de Aplicación
+  criteriosDeActivacion: z.string().optional(),
+  contextoOperativo: z.string().optional(),
+  // 5. Interrelación con Otros Procesos y Normas
+  conexionesDocumentales: z.array(poaScopeConexionDocumentalSchema).optional(),
+  referenciaANormas: z.array(poaScopeReferenciaNormaSchema).optional(),
+  // 6. Vigencia y Revisión (opcional)
+  duracionYPeriodicidad: z.string().optional(),
+  revision: z.string().optional(),
+});
+export type POAScopeHelperData = z.infer<typeof poaScopeHelperDataSchema>;
 
 export const poaSchema = z.object({
   id: z.string(),
@@ -68,6 +112,7 @@ export const poaSchema = z.object({
   procedureDescription: z.string().optional(),
   introduction: z.string().optional(),
   scope: z.string().optional(),
+  scopeHelperData: poaScopeHelperDataSchema.optional(), // Added scope helper data
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -97,6 +142,22 @@ export const defaultPOAObjectiveHelperData: POAObjectiveHelperData = {
   kpis: [''],
 };
 
+export const defaultPOAScopeHelperData: POAScopeHelperData = {
+  procesosYActividades: '',
+  departamentosOAreas: [''],
+  productosOServicios: [''],
+  usuariosYRoles: [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
+  gradoDeInclusion: '',
+  delimitacionPrecisa: '',
+  condicionesDeExclusion: '',
+  criteriosDeActivacion: '',
+  contextoOperativo: '',
+  conexionesDocumentales: [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
+  referenciaANormas: [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
+  duracionYPeriodicidad: '',
+  revision: '',
+};
+
 export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimiento POA Sin Título'): POA {
   const now = new Date().toISOString();
   return {
@@ -108,7 +169,8 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     procedureDescription: '',
     introduction: '',
     scope: '',
-    activities: [], // Las actividades se inicializan vacías, pero se les aplicará renumberUserNumbers
+    scopeHelperData: { ...defaultPOAScopeHelperData }, // Added default scope helper data
+    activities: [],
     createdAt: now,
     updatedAt: now,
   };

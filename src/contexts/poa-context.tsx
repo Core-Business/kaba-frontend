@@ -1,12 +1,12 @@
 
 "use client";
 
-import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData } from '@/lib/schema';
-import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData } from '@/lib/schema';
+import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData } from '@/lib/schema'; // Added POAScopeHelperData
+import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema'; // Added defaultPOAScopeHelperData
 import type React from 'react';
 import { createContext, useCallback, useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
-import { getActivitiesInProceduralOrder } from '@/lib/activity-utils'; // Updated import
+import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -15,7 +15,7 @@ interface POAContextType {
   poa: POA | null;
   setPoa: React.Dispatch<React.SetStateAction<POA | null>>;
   updateHeader: (updates: Partial<POAHeader>) => void;
-  updateField: (fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData'>, value: string) => void;
+  updateField: (fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData' | 'scopeHelperData'>, value: string) => void;
   addActivity: (options?: Partial<Omit<POAActivity, 'id' | 'systemNumber' | 'nextActivityType' | 'description' | 'responsible' | 'userNumber' | 'activityName' | 'nextIndividualActivityRef' >> & { parentId?: string | null, parentBranchCondition?: string | null }) => void;
   updateActivity: (activityId: string, updates: Partial<POAActivity>) => void;
   deleteActivity: (activityId: string) => void;
@@ -27,6 +27,7 @@ interface POAContextType {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
   updateObjectiveHelperData: (data: POAObjectiveHelperData) => void;
+  updateScopeHelperData: (data: POAScopeHelperData) => void; // Added for scope
   addAlternativeBranch: (activityId: string) => void;
   removeAlternativeBranch: (activityId: string, branchId: string) => void;
   getChildActivities: (parentId: string, parentBranchCondition: string) => POAActivity[];
@@ -44,7 +45,7 @@ function renumberUserNumbers(activities: POAActivity[]): POAActivity[] {
   const userNumberMap = new Map(proceduralOrder.map((act, index) => [act.id, (index + 1).toString()]));
 
   return activities.map(act => ({
-    ...act, // Spread existing activity to create a new object instance
+    ...act,
     userNumber: userNumberMap.get(act.id) || act.userNumber || '',
   }));
 }
@@ -98,13 +99,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaToSave.id}`, JSON.stringify(poaToSave));
           updatePoaListInStorage(poaToSave);
-           setTimeout(() => { 
+           setTimeout(() => {
             toast({ title: "Procedimiento POA Guardado", description: `"${poaToSave.name}" ha sido guardado.` });
           }, 0);
           setIsDirty(false);
         } catch (error) {
           console.error("Error saving POA to localStorage:", error);
-          setTimeout(() => { 
+          setTimeout(() => {
             toast({ title: "Error al Guardar", description: "No se pudo guardar el Procedimiento POA.", variant: "destructive" });
           }, 0);
         }
@@ -137,13 +138,13 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return {
         ...currentPoa,
-        name: newName, 
+        name: newName,
         header: newHeader,
       };
     });
   }, []);
 
-  const updateField = useCallback((fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData'>, value: string) => {
+  const updateField = useCallback((fieldName: keyof Omit<POA, 'id' | 'header' | 'activities' | 'createdAt' | 'updatedAt' | 'userId' | 'name' | 'objectiveHelperData' | 'scopeHelperData'>, value: string) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       setIsDirty(true);
@@ -154,12 +155,22 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateObjectiveHelperData = useCallback((data: POAObjectiveHelperData) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      // Check if data is actually different to prevent unnecessary updates & dirty flag
       if (JSON.stringify(currentPoa.objectiveHelperData || defaultPOAObjectiveHelperData) === JSON.stringify(data)) {
         return currentPoa;
       }
       setIsDirty(true);
       return { ...currentPoa, objectiveHelperData: data };
+    });
+  }, []);
+
+  const updateScopeHelperData = useCallback((data: POAScopeHelperData) => { // Added for scope
+    setPoa(currentPoa => {
+      if (!currentPoa) return null;
+      if (JSON.stringify(currentPoa.scopeHelperData || defaultPOAScopeHelperData) === JSON.stringify(data)) {
+        return currentPoa;
+      }
+      setIsDirty(true);
+      return { ...currentPoa, scopeHelperData: data };
     });
   }, []);
 
@@ -187,7 +198,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           systemNumber = `${parentActivity.systemNumber}.${branchIndicator}${childrenOfThisBranch.length + 1}`;
         } else {
-          systemNumber = `Sub-${crypto.randomUUID().substring(0,4)}`; 
+          systemNumber = `Sub-${crypto.randomUUID().substring(0,4)}`;
         }
       } else {
         const topLevelActivities = currentPoa.activities.filter(act => !act.parentId);
@@ -197,12 +208,12 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const newActivity: POAActivity = {
         id: crypto.randomUUID(),
         systemNumber: systemNumber,
-        userNumber: '', 
+        userNumber: '',
         activityName: '',
         responsible: '',
         description: '',
         nextActivityType: 'individual',
-        nextIndividualActivityRef: '', 
+        nextIndividualActivityRef: '',
         decisionBranches: { yesLabel: '', noLabel: '' },
         alternativeBranches: [],
         parentId: parentId || null,
@@ -229,8 +240,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       setExpandedActivityIds(prev => {
         const newSet = new Set(prev);
-        newSet.add(newActivity.id); 
-        if (parentId) newSet.add(parentId); // Also ensure parent is expanded
+        newSet.add(newActivity.id);
+        if (parentId) newSet.add(parentId);
         return newSet;
       });
 
@@ -252,8 +263,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         newActivitiesArray = renumberUserNumbers(newActivitiesArray);
       }
       return {
-        ...currentPoa, 
-        activities: newActivitiesArray, 
+        ...currentPoa,
+        activities: newActivitiesArray,
       };
     });
   }, []);
@@ -304,16 +315,16 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const loadPoa = useCallback((poaData: POA) => {
     const name = poaData.name || poaData.header.title || 'Procedimiento POA Cargado';
     const loadedActivities = (poaData.activities || []).map(act => ({
-        decisionBranches: { yesLabel: '', noLabel: '', ...(act.decisionBranches || {}) }, 
+        decisionBranches: { yesLabel: '', noLabel: '', ...(act.decisionBranches || {}) },
         alternativeBranches: act.alternativeBranches || [],
         responsible: act.responsible || '',
-        userNumber: act.userNumber || '', 
+        userNumber: act.userNumber || '',
         activityName: act.activityName || '',
         nextIndividualActivityRef: (act.nextIndividualActivityRef === undefined || act.nextIndividualActivityRef === null) ? '' : act.nextIndividualActivityRef,
         parentId: act.parentId || null,
         parentBranchCondition: act.parentBranchCondition || null,
         ...act,
-        systemNumber: act.systemNumber || `Error-${act.id.substring(0,4)}`, 
+        systemNumber: act.systemNumber || `Error-${act.id.substring(0,4)}`,
         nextActivityType: act.nextActivityType || 'individual',
     }));
     const poaInstance = {
@@ -321,35 +332,37 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name: name,
         header: {
             ...poaData.header,
-            title: name 
+            title: name
         },
         activities: renumberUserNumbers(loadedActivities),
         objectiveHelperData: poaData.objectiveHelperData || {...defaultPOAObjectiveHelperData},
+        scopeHelperData: poaData.scopeHelperData || {...defaultPOAScopeHelperData}, // Added for scope
     };
     setPoa(poaInstance);
-    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id))); 
-    setIsDirty(false); 
+    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id)));
+    setIsDirty(false);
   }, []);
 
   const createNew = useCallback((id: string = crypto.randomUUID(), name: string = 'Nuevo Procedimiento POA Sin Título'): POA => {
     const newPoaInstance = createNewPOASchema(id, name);
     const initialActivities = (newPoaInstance.activities || []).map(act => ({
-        responsible: '', 
-        userNumber: '', 
+        responsible: '',
+        userNumber: '',
         activityName: '',
-        nextIndividualActivityRef: '', 
-        decisionBranches: { yesLabel: '', noLabel: '' }, 
+        nextIndividualActivityRef: '',
+        decisionBranches: { yesLabel: '', noLabel: '' },
         alternativeBranches: [],
         parentId: null,
         parentBranchCondition: null,
         ...act
     }));
-    newPoaInstance.activities = renumberUserNumbers(initialActivities); 
-    newPoaInstance.header.title = name; 
+    newPoaInstance.activities = renumberUserNumbers(initialActivities);
+    newPoaInstance.header.title = name;
     newPoaInstance.objectiveHelperData = {...defaultPOAObjectiveHelperData};
+    newPoaInstance.scopeHelperData = {...defaultPOAScopeHelperData}; // Added for scope
     setPoa(newPoaInstance);
-    setExpandedActivityIds(new Set()); 
-    setIsDirty(false); 
+    setExpandedActivityIds(new Set());
+    setIsDirty(false);
     return newPoaInstance;
   }, []);
 
@@ -369,7 +382,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return {
         ...currentPoa,
-        activities: renumberUserNumbers(updatedActivities) 
+        activities: renumberUserNumbers(updatedActivities)
       };
     });
   }, []);
@@ -401,7 +414,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }
         return act;
-      }).filter(act => !branchChildrenIdsToDelete.has(act.id)); 
+      }).filter(act => !branchChildrenIdsToDelete.has(act.id));
 
       setExpandedActivityIds(prev => {
         const newSet = new Set(prev);
@@ -448,7 +461,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return newSet;
     });
-    setIsDirty(true); 
+    setIsDirty(true);
   }, []);
 
   const expandAllActivitiesInContext = useCallback(() => {
@@ -481,6 +494,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDirty,
       setIsDirty,
       updateObjectiveHelperData,
+      updateScopeHelperData, // Added for scope
       addAlternativeBranch,
       removeAlternativeBranch,
       getChildActivities,
