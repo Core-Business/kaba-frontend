@@ -65,6 +65,14 @@ const generateActivityNameFlow = ai.defineFlow(
     name: 'generateActivityNameFlow',
     inputSchema: GenerateActivityNameInputSchema,
     outputSchema: GenerateActivityNameOutputSchema,
+    retry: {
+      maxAttempts: 3,
+      backoff: {
+        initialDelayMs: 500,
+        maxDelayMs: 5000,
+        multiplier: 2,
+      },
+    },
   },
   async (input) => {
     const {output} = await prompt(input);

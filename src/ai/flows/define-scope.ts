@@ -51,6 +51,14 @@ const defineScopeFlow = ai.defineFlow(
     name: 'defineScopeFlow',
     inputSchema: DefineScopeInputSchema,
     outputSchema: DefineScopeOutputSchema,
+    retry: {
+      maxAttempts: 3,
+      backoff: {
+        initialDelayMs: 500,
+        maxDelayMs: 5000,
+        multiplier: 2,
+      },
+    },
   },
   async input => {
     const {output} = await prompt(input);

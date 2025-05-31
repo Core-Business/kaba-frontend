@@ -66,6 +66,14 @@ const generateObjectiveFlow = ai.defineFlow(
     name: 'generateObjectiveFlow',
     inputSchema: GenerateObjectiveInputSchema,
     outputSchema: GenerateObjectiveOutputSchema,
+    retry: {
+      maxAttempts: 3,
+      backoff: {
+        initialDelayMs: 500,
+        maxDelayMs: 5000,
+        multiplier: 2,
+      },
+    },
   },
   async (input) => {
     const {output} = await generateObjectivePrompt(input);

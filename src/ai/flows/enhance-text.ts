@@ -126,6 +126,14 @@ const enhanceTextFlow = ai.defineFlow(
     name: 'enhanceTextFlow',
     inputSchema: EnhanceTextInputSchema,
     outputSchema: EnhanceTextOutputSchema,
+    retry: {
+      maxAttempts: 3,
+      backoff: {
+        initialDelayMs: 500,
+        maxDelayMs: 5000,
+        multiplier: 2,
+      },
+    },
   },
   async (input: EnhanceTextInput) => {
     // Prepare input for the prompt by setting boolean context flags
