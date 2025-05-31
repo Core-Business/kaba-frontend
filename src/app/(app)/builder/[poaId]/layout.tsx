@@ -15,20 +15,20 @@ import {
 import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ClipboardEdit, 
-  Target,       
-  ListTree,      
-  ScanSearch,   
-  BookOpenText,  
-  Printer,       
+  ClipboardEdit,
+  Target,
+  ListTree,
+  ScanSearch,
+  BookOpenText,
+  Printer,
   Home,
   ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POA as POASchemaType } from "@/lib/schema"; 
+import type { POA as POASchemaType } from "@/lib/schema";
 import { AppHeader } from "@/components/layout/app-header";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -40,7 +40,7 @@ const navItems = [
   { name: "Objetivo", href: "objective", icon: Target },
   { name: "Actividades", href: "activities", icon: ListTree },
   { name: "Alcance", href: "scope", icon: ScanSearch },
-  { name: "Introducción", href: "introduction", icon: BookOpenText }, 
+  { name: "Introducción", href: "introduction", icon: BookOpenText },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
 
@@ -48,7 +48,7 @@ type StoredPOASummary = {
   id: string;
   name: string;
   logo?: string;
-  updatedAt?: string; 
+  updatedAt?: string;
 };
 
 const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
@@ -72,45 +72,9 @@ export default function BuilderLayout({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (poaId && typeof window !== 'undefined') {
-      if (poaId === "new") {
-        if (!poa || poa.id !== "new") { 
-          const newPoaInstance = createNew('new', 'Nuevo Procedimiento POA Sin Título');
-          // BuilderLayout no debe guardar automáticamente, eso lo hace el dashboard o un botón de guardar explícito
-        }
-      } else if (!poa || poa.id !== poaId) {
-        const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
-        if (fullPoaRaw) {
-          try {
-            const parsedFullPoa: POASchemaType = JSON.parse(fullPoaRaw);
-            loadPoa(parsedFullPoa);
-          } catch (e) {
-            console.error("Error parsing full POA from localStorage:", e);
-            loadFromSummaryOrMock();
-          }
-        } else {
-          loadFromSummaryOrMock();
-        }
-      }
-    }
-  }, [poaId, loadPoa, createNew, poa]);
+  const loadFromSummaryOrMock = useCallback(() => {
+    if (typeof window === 'undefined' || !poaId) return;
 
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (isDirty) {
-        event.preventDefault();
-        event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isDirty]);
-
-  function loadFromSummaryOrMock() {
     const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
     let poaSummaryFromStorage: StoredPOASummary | undefined = undefined;
 
@@ -126,13 +90,13 @@ export default function BuilderLayout({
     let poaToLoad: POASchemaType | null = null;
 
     if (poaSummaryFromStorage) {
-      poaToLoad = { 
+      poaToLoad = {
           id: poaId,
           name: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
-          header: { 
-            title: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`, 
-            author: 'Sistema (localStorage)', 
-            version: '1.0', 
+          header: {
+            title: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
+            author: 'Sistema (localStorage)',
+            version: '1.0',
             date: new Date().toISOString().split('T')[0],
             logoUrl: poaSummaryFromStorage.logo || '',
             companyName: 'Empresa Ejemplo (desde resumen)',
@@ -142,7 +106,8 @@ export default function BuilderLayout({
             documentCode: 'POA-RES-001',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
-          introduction: poa?.introduction || '', 
+          // Ensure introduction is sourced safely if poa is not yet defined during this call
+          introduction: poa?.introduction ?? '',
           procedureDescription: 'Descripción de procedimiento/introducción cargada (desde resumen). Edita y guarda para más detalles.',
           scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
           activities: [],
@@ -159,10 +124,10 @@ export default function BuilderLayout({
         poaToLoad = {
             id: poaId,
             name: originalMockSummary.name,
-            header: { 
-              title: originalMockSummary.name, 
-              author: 'Sistema (mock original)', 
-              version: '1.0', 
+            header: {
+              title: originalMockSummary.name,
+              author: 'Sistema (mock original)',
+              version: '1.0',
               date: new Date().toISOString().split('T')[0],
               companyName: 'Empresa Ejemplo (mock)',
               departmentArea: 'Área Ejemplo (mock)',
@@ -171,7 +136,7 @@ export default function BuilderLayout({
               documentCode: 'POA-MOCK-001',
             },
             objective: 'Este es un objetivo de mock original. Edita y guarda.',
-            introduction: '', 
+            introduction: '',
             procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
             scope: 'Alcance de mock original. Edita y guarda.',
             activities: [],
@@ -184,23 +149,82 @@ export default function BuilderLayout({
         return;
       }
     }
-    
+
     if (poaToLoad) {
       loadPoa(poaToLoad);
       if (!localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`)) {
         localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaToLoad));
       }
     }
-  }
+  }, [poaId, loadPoa, router, poa?.introduction]);
+
+
+  useEffect(() => {
+    if (!poaId || typeof window === 'undefined') {
+      return;
+    }
+
+    // Case 1: Current poa in context matches the poaId from URL
+    if (poa && poa.id === poaId) {
+      return;
+    }
+
+    // Case 2: URL requests a "new" POA
+    if (poaId === "new") {
+      if (poa && poa.id === "new") {
+        return;
+      }
+      createNew('new', 'Nuevo Procedimiento POA Sin Título');
+      return; 
+    }
+
+    // Case 3: URL requests an existing POA, but it's not loaded or doesn't match
+    const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
+    if (fullPoaRaw) {
+      try {
+        const parsedFullPoa: POASchemaType = JSON.parse(fullPoaRaw);
+        if (parsedFullPoa && parsedFullPoa.id === poaId) {
+          loadPoa(parsedFullPoa);
+        } else {
+          console.warn(`ID mismatch or parse error in full POA for ${poaId}. Falling back.`);
+          loadFromSummaryOrMock();
+        }
+      } catch (e) {
+        console.error("Error parsing full POA from localStorage:", e);
+        loadFromSummaryOrMock();
+      }
+    } else {
+      loadFromSummaryOrMock();
+    }
+  }, [poaId, poa, loadPoa, createNew, loadFromSummaryOrMock]);
+
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (isDirty) {
+        event.preventDefault();
+        event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+
 
   const handleNavigationAttempt = (e: React.MouseEvent<HTMLAnchorElement> | React.MouseEvent<HTMLButtonElement>, href: string) => {
     if (isDirty) {
       e.preventDefault();
       setNextPath(href);
       setShowUnsavedDialog(true);
+    } else {
+      // If not dirty, navigate directly. Added this to prevent issues if isDirty logic changes.
+      router.push(href);
     }
   };
-  
+
   const handleDashboardNavigation = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (isDirty) {
       e.preventDefault();
@@ -216,29 +240,27 @@ export default function BuilderLayout({
     setShowUnsavedDialog(false);
     if (nextPath) {
       if (discardChanges) {
-        setIsDirty(false); 
+        setIsDirty(false);
         router.push(nextPath);
       } else {
-        saveCurrentPOA(); 
-        // Use a very short timeout to allow state to update before navigation
-        // This helps ensure isDirty is false before the next route's logic runs
-        setTimeout(() => router.push(nextPath), 50); 
+        saveCurrentPOA();
+        setTimeout(() => router.push(nextPath), 50);
       }
     }
     setNextPath(null);
   };
 
-
-  if (!poa && poaId !== "new") {
+  // Adjusted loading conditions
+  if (!poaId) { // Handles case where poaId might be initially undefined
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Cargando datos del Procedimiento POA...</p>
+        <p className="ml-4 text-lg">Cargando identificador...</p>
       </div>
     );
   }
-  
-  if (poaId === "new" && !poa) {
+
+  if (poaId === "new" && (!poa || poa.id !== "new")) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
@@ -247,10 +269,28 @@ export default function BuilderLayout({
     );
   }
 
+  if (poaId !== "new" && (!poa || poa.id !== poaId)) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner className="h-12 w-12 text-primary" />
+        <p className="ml-4 text-lg">Cargando datos del Procedimiento POA...</p>
+      </div>
+    );
+  }
+  
+  // If poa is null even after checks, it's an unexpected state or initial render before useEffect kicks in fully
+  if (!poa) {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <LoadingSpinner className="h-12 w-12 text-primary" />
+        <p className="ml-4 text-lg">Preparando editor...</p>
+      </div>
+    );
+  }
+
+
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* This is the main flex container for the builder view. It will hold Sidebar and the content panel. */}
-      {/* It gets the overall padding and gap. */}
       <div className="flex flex-1 min-h-screen bg-background p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
           <SidebarHeader className="p-4">
@@ -264,12 +304,13 @@ export default function BuilderLayout({
           <SidebarContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const currentPoaId = poa?.id && poa.id !== "new" ? poa.id : poaId;
-                const itemPath = `/builder/${currentPoaId}/${item.href}`;
-                const isActive = pathname === itemPath || 
-                                (item.href === 'header' && pathname === `/builder/${currentPoaId}`) || 
-                                (item.href === 'header' && pathname === `/builder/${currentPoaId}/header`); 
-                
+                // Use poa.id if it's loaded and valid, otherwise fallback to poaId from URL (especially for "new")
+                const currentPoaIdForLink = (poa && poa.id && poa.id !== "new") ? poa.id : poaId;
+                const itemPath = `/builder/${currentPoaIdForLink}/${item.href}`;
+                const isActive = pathname === itemPath ||
+                                (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}`) ||
+                                (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}/header`);
+
                 return (
                   <SidebarMenuItem key={item.name}>
                     <Link href={itemPath} passHref legacyBehavior>
@@ -279,7 +320,14 @@ export default function BuilderLayout({
                         className="justify-start text-sm"
                         tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
                       >
-                         <a onClick={(e) => handleNavigationAttempt(e, itemPath)}>
+                         {/* Pass href to handleNavigationAttempt to decide if navigation should proceed */}
+                         <a onClick={(e) => {
+                            if (isDirty) {
+                              handleNavigationAttempt(e, itemPath);
+                            } else {
+                              // Allow direct navigation if not dirty
+                            }
+                         }}>
                           <item.icon className="h-5 w-5" />
                           <span>{item.name}</span>
                         </a>
@@ -297,7 +345,13 @@ export default function BuilderLayout({
                     className="justify-start text-sm w-full"
                     tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
                 >
-                  <a onClick={(e) => handleNavigationAttempt(e, '/dashboard')}>
+                  <a onClick={(e) => {
+                      if (isDirty) {
+                        handleNavigationAttempt(e, '/dashboard');
+                      } else {
+                        // Allow direct navigation if not dirty
+                      }
+                  }}>
                     <Home className="h-5 w-5" />
                     <span>POA - Inicio</span>
                   </a>
@@ -306,13 +360,10 @@ export default function BuilderLayout({
           </SidebarFooter>
         </Sidebar>
 
-        {/* Content Panel: Contains AppHeader and the scrollable main content area */}
-        <div className="flex flex-col flex-1 min-w-0"> {/* This div takes remaining space */}
+        <div className="flex flex-col flex-1 min-w-0">
           <AppHeader />
-          {/* Main scrollable content area. NO PADDING HERE. */}
-          {/* It gets rounded corners and shadow to look like the grey area in the screenshot. */}
           <main className="flex-1 w-full overflow-y-auto bg-muted/40 rounded-lg shadow-md">
-            {children} {/* Card components will be rendered here, they have their own padding */}
+            {children}
           </main>
         </div>
       </div>
@@ -335,3 +386,4 @@ export default function BuilderLayout({
     </SidebarProvider>
   );
 }
+    
