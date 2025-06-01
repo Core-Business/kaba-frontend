@@ -34,8 +34,6 @@ export function ScopeForm() {
     return {
       ...defaultPOAScopeHelperData,
       ...initialSource,
-      departamentosOAreas: initialSource.departamentosOAreas && initialSource.departamentosOAreas.length > 0 ? [...initialSource.departamentosOAreas] : [''],
-      productosOServicios: initialSource.productosOServicios && initialSource.productosOServicios.length > 0 ? [...initialSource.productosOServicios] : [''],
       usuariosYRoles: initialSource.usuariosYRoles && initialSource.usuariosYRoles.length > 0 ? initialSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
       conexionesDocumentales: initialSource.conexionesDocumentales && initialSource.conexionesDocumentales.length > 0 ? initialSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
       referenciaANormas: initialSource.referenciaANormas && initialSource.referenciaANormas.length > 0 ? initialSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -44,11 +42,9 @@ export function ScopeForm() {
 
   useEffect(() => {
     const contextSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
-    const newLocalStateCandidate = {
+    const newLocalStateCandidate: POAScopeHelperData = {
         ...defaultPOAScopeHelperData,
         ...contextSource,
-        departamentosOAreas: contextSource.departamentosOAreas && contextSource.departamentosOAreas.length > 0 ? [...contextSource.departamentosOAreas] : [''],
-        productosOServicios: contextSource.productosOServicios && contextSource.productosOServicios.length > 0 ? [...contextSource.productosOServicios] : [''],
         usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
         conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
         referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -75,33 +71,6 @@ export function ScopeForm() {
 
   const handleHelperInputChange = useCallback((field: keyof POAScopeHelperData, value: string) => {
     setHelperData(prev => ({ ...prev, [field]: value }));
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const handleHelperArrayStringChange = useCallback((field: keyof POAScopeHelperData, index: number, value: string) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as string[] || []);
-      const newArray = [...currentArray];
-      newArray[index] = value;
-      return { ...prev, [field]: newArray };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const addHelperArrayStringItem = useCallback((field: keyof POAScopeHelperData) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as string[] || []);
-      return { ...prev, [field]: [...currentArray, ''] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const removeHelperArrayStringItem = useCallback((field: keyof POAScopeHelperData, index: number) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as string[] || []);
-      const newArray = currentArray.filter((_, i) => i !== index);
-      return { ...prev, [field]: newArray.length > 0 ? newArray : [''] };
-    });
     setIsDirty(true);
   }, [setIsDirty]);
 
@@ -196,8 +165,6 @@ export function ScopeForm() {
       const inputForAI: GenerateScopeInput = {
         ...helperData,
         maxWords,
-        departamentosOAreas: (helperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
-        productosOServicios: (helperData.productosOServicios || []).filter(p => p.trim() !== ''),
         usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.id && (u.usuario?.trim() !== '' || u.rol?.trim() !== '')),
         conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.id && (c.documento?.trim() !== '' || c.codigo?.trim() !== '')),
         referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.id && (r.referencia?.trim() !== '' || r.codigo?.trim() !== '')),
@@ -324,32 +291,6 @@ export function ScopeForm() {
                                 <Label htmlFor="procesosYActividades">Procesos y Actividades Clave</Label>
                                 <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
                                 <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
-                            </div>
-                            <div>
-                                <Label>Departamentos o Áreas Involucradas</Label>
-                                {(helperData.departamentosOAreas || ['']).map((item, index) => (
-                                    <div key={`depto-${index}-${item}`} className="flex items-center gap-2 mt-1">
-                                    <Input value={item} onChange={(e) => handleHelperArrayStringChange('departamentosOAreas', index, e.target.value)} placeholder={`Departamento o Área ${index + 1}`} className="flex-grow"/>
-                                    {(helperData.departamentosOAreas || []).length > 1 && (
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('departamentosOAreas', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
-                                    )}
-                                    </div>
-                                ))}
-                                <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('departamentosOAreas')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Departamento/Área</Button>
-                                <p className="text-xs text-muted-foreground mt-1">Departamentos o áreas organizativas involucradas o afectadas.</p>
-                            </div>
-                            <div>
-                                <Label>Productos o Servicios Afectados</Label>
-                                {(helperData.productosOServicios || ['']).map((item, index) => (
-                                    <div key={`prod-${index}-${item}`} className="flex items-center gap-2 mt-1">
-                                    <Input value={item} onChange={(e) => handleHelperArrayStringChange('productosOServicios', index, e.target.value)} placeholder={`Producto o Servicio ${index + 1}`} className="flex-grow"/>
-                                    {(helperData.productosOServicios || []).length > 1 && (
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('productosOServicios', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
-                                    )}
-                                    </div>
-                                ))}
-                                <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('productosOServicios')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Producto/Servicio</Button>
-                                <p className="text-xs text-muted-foreground mt-1">Productos o servicios específicos a los que se aplica el procedimiento.</p>
                             </div>
                         </div>
                     </div>
@@ -481,5 +422,3 @@ export function ScopeForm() {
     </Card>
   );
 }
-
-    

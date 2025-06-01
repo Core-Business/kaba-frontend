@@ -82,8 +82,6 @@ export type POAScopeReferenciaNorma = z.infer<typeof poaScopeReferenciaNormaSche
 export const poaScopeHelperDataSchema = z.object({
   // 1. Definición del Ámbito de Aplicación
   procesosYActividades: z.string().optional(),
-  departamentosOAreas: z.array(z.string()).optional(),
-  productosOServicios: z.array(z.string()).optional(),
   // 2. Aplicabilidad y Responsables
   usuariosYRoles: z.array(poaScopeUsuarioRolSchema).optional(),
   gradoDeInclusion: z.string().optional(),
@@ -112,7 +110,7 @@ export const poaSchema = z.object({
   procedureDescription: z.string().optional(),
   introduction: z.string().optional(),
   scope: z.string().optional(),
-  scopeHelperData: poaScopeHelperDataSchema.optional(), // Added scope helper data
+  scopeHelperData: poaScopeHelperDataSchema.optional(),
   activities: z.array(poaActivitySchema),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -144,8 +142,6 @@ export const defaultPOAObjectiveHelperData: POAObjectiveHelperData = {
 
 export const defaultPOAScopeHelperData: POAScopeHelperData = {
   procesosYActividades: '',
-  departamentosOAreas: [''],
-  productosOServicios: [''],
   usuariosYRoles: [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
   gradoDeInclusion: '',
   delimitacionPrecisa: '',
@@ -169,7 +165,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     procedureDescription: '',
     introduction: '',
     scope: '',
-    scopeHelperData: { ...defaultPOAScopeHelperData }, // Added default scope helper data
+    scopeHelperData: { ...defaultPOAScopeHelperData },
     activities: [],
     createdAt: now,
     updatedAt: now,

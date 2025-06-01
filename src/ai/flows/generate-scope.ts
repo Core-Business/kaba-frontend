@@ -16,8 +16,6 @@ import {z} from 'genkit';
 // This needs to match the structure of POAScopeHelperData from lib/schema.ts
 const GenerateScopeInputSchema = z.object({
   procesosYActividades: z.string().optional().describe('Procesos y actividades clave cubiertos por el procedimiento.'),
-  departamentosOAreas: z.array(z.string()).optional().describe('Departamentos o áreas organizativas involucradas o afectadas.'),
-  productosOServicios: z.array(z.string()).optional().describe('Productos o servicios específicos a los que se aplica el procedimiento.'),
   usuariosYRoles: z.array(z.object({ id: z.string(), usuario: z.string().optional(), rol: z.string().optional() })).optional().describe('Usuarios o roles específicos responsables o afectados.'),
   gradoDeInclusion: z.string().optional().describe('Grado de inclusión o exclusión de ciertos roles o situaciones.'),
   delimitacionPrecisa: z.string().optional().describe('Delimitación precisa del inicio y fin del procedimiento (qué marca el comienzo y el final).'),
@@ -60,12 +58,6 @@ Sé conciso y, si se especifica un máximo de palabras, ajústate a él lo más 
 Información para definir el alcance:
 {{#if procesosYActividades}}
 - Procesos y actividades clave: {{{procesosYActividades}}}
-{{/if}}
-{{#if departamentosOAreas.length}}
-- Departamentos o áreas involucradas: {{#each departamentosOAreas}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
-{{/if}}
-{{#if productosOServicios.length}}
-- Productos o servicios afectados: {{#each productosOServicios}}{{{this}}}{{#unless @last}}, {{/unless}}{{/each}}
 {{/if}}
 {{#if usuariosYRoles.length}}
 - Usuarios y roles:
@@ -113,7 +105,7 @@ Recuerda, el alcance generado debe tener un máximo aproximado de {{{maxWords}}}
 
 Definición del Alcance (directa, concisa, en español, integrando la información):
 `,
-  retry: { // Added retry configuration
+  retry: {
     maxAttempts: 3,
     backoff: {
       initialDelayMs: 500,
@@ -128,7 +120,7 @@ const generateScopeFlow = ai.defineFlow(
     name: 'generateScopeFlow',
     inputSchema: GenerateScopeInputSchema,
     outputSchema: GenerateScopeOutputSchema,
-    retry: { // Added retry configuration
+    retry: {
       maxAttempts: 3,
       backoff: {
         initialDelayMs: 500,
