@@ -303,6 +303,11 @@ export function ScopeForm() {
                             <Input id="productosClave" value={helperData.productosClave || ""} onChange={(e) => handleHelperInputChange('productosClave', e.target.value)} className="w-full mt-1" placeholder="Menciona productos específicos si aplica."/>
                             <p className="text-xs text-muted-foreground mt-1">Productos clave relacionados o afectados por el procedimiento.</p>
                         </div>
+                        <div>
+                            <Label htmlFor="direccionGerencia">Dirección - Gerencia</Label>
+                            <Input id="direccionGerencia" value={helperData.direccionGerencia || ""} onChange={(e) => handleHelperInputChange('direccionGerencia', e.target.value)} className="w-full mt-1" placeholder="Ej., Dirección de Operaciones, Gerencia de TI"/>
+                            <p className="text-xs text-muted-foreground mt-1">Dirección o gerencia específica a la que aplica o que está involucrada.</p>
+                        </div>
                     </div>
                 </div>
 
