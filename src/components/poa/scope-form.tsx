@@ -298,15 +298,15 @@ export function ScopeForm() {
                             <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
                             <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
                         </div>
-                        <div>
+                         <div>
                             <Label htmlFor="productosClave">Productos</Label>
                             <Input id="productosClave" value={helperData.productosClave || ""} onChange={(e) => handleHelperInputChange('productosClave', e.target.value)} className="w-full mt-1" placeholder="Menciona productos específicos si aplica."/>
                             <p className="text-xs text-muted-foreground mt-1">Productos clave relacionados o afectados por el procedimiento.</p>
                         </div>
                         <div>
-                            <Label htmlFor="direccionGerencia">Dirección - Gerencia</Label>
-                            <Input id="direccionGerencia" value={helperData.direccionGerencia || ""} onChange={(e) => handleHelperInputChange('direccionGerencia', e.target.value)} className="w-full mt-1" placeholder="Ej., Dirección de Operaciones, Gerencia de TI"/>
-                            <p className="text-xs text-muted-foreground mt-1">Dirección o gerencia específica a la que aplica o que está involucrada.</p>
+                            <Label htmlFor="direccionGerencia">Dirección - Gerencia - Departamento - Área</Label>
+                            <Input id="direccionGerencia" value={helperData.direccionGerencia || ""} onChange={(e) => handleHelperInputChange('direccionGerencia', e.target.value)} className="w-full mt-1" placeholder="Ej., Dirección de Operaciones, Gerencia de TI, Departamento de Ventas"/>
+                            <p className="text-xs text-muted-foreground mt-1">Unidades de negocio específicas a la que aplica o que está involucrada.</p>
                         </div>
                     </div>
                 </div>
@@ -430,3 +430,4 @@ export function ScopeForm() {
     </Card>
   );
 }
+

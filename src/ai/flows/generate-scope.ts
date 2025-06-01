@@ -15,7 +15,7 @@ import {z} from 'genkit';
 const GenerateScopeInputSchema = z.object({
   procesosYActividades: z.string().optional().describe('Procesos y actividades clave cubiertos por el procedimiento.'),
   productosClave: z.string().optional().describe('Productos clave relacionados o afectados por el procedimiento.'),
-  direccionGerencia: z.string().optional().describe('Dirección o gerencia específica a la que aplica o que está involucrada en el procedimiento.'), // New field
+  direccionGerencia: z.string().optional().describe('Unidades de negocio específicas a la que aplica o que está involucrada en el procedimiento.'),
   usuariosYRoles: z.array(z.object({ id: z.string(), usuario: z.string().optional(), rol: z.string().optional() })).optional().describe('Usuarios o roles específicos responsables o afectados.'),
   gradoDeInclusion: z.string().optional().describe('Grado de inclusión o exclusión de ciertos roles o situaciones.'),
   delimitacionPrecisa: z.string().optional().describe('Delimitación precisa del inicio y fin del procedimiento (qué marca el comienzo y el final).'),
@@ -64,7 +64,7 @@ Información para definir el alcance:
 - Productos clave: {{{productosClave}}}
 {{/if}}
 {{#if direccionGerencia}}
-- Dirección/Gerencia involucrada: {{{direccionGerencia}}}
+- Unidades de negocio involucradas: {{{direccionGerencia}}}
 {{/if}}
 {{#if usuariosYRoles.length}}
 - Usuarios y roles:
@@ -141,3 +141,4 @@ const generateScopeFlow = ai.defineFlow(
     return output!;
   }
 );
+
