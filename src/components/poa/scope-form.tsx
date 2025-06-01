@@ -35,6 +35,8 @@ export function ScopeForm() {
     return {
       ...defaultPOAScopeHelperData,
       ...initialSource,
+      productosClave: initialSource.productosClave || '',
+      direccionGerencia: initialSource.direccionGerencia || '',
       usuariosYRoles: initialSource.usuariosYRoles && initialSource.usuariosYRoles.length > 0 ? initialSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
       conexionesDocumentales: initialSource.conexionesDocumentales && initialSource.conexionesDocumentales.length > 0 ? initialSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
       referenciaANormas: initialSource.referenciaANormas && initialSource.referenciaANormas.length > 0 ? initialSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -47,6 +49,8 @@ export function ScopeForm() {
     const newLocalStateCandidate: POAScopeHelperData = {
         ...defaultPOAScopeHelperData,
         ...contextSource,
+        productosClave: contextSource.productosClave || '',
+        direccionGerencia: contextSource.direccionGerencia || '',
         usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
         conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
         referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -273,7 +277,7 @@ export function ScopeForm() {
             <div className="flex items-center gap-2 mb-4"> 
               <Button onClick={handleGenerateScope} disabled={isLoadingAiGenerate || !canGenerateFromHelperNow}>
                 {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
-                {isLoadingAiGenerate ? "Generando..." : "Generar Alcance con Campos de Ayuda (IA)"}
+                {isLoadingAiGenerate ? "Generando..." : "Generar Alcance"}
               </Button>
               {scopeBeforeAi !== null && !isLoadingAiEnhance && (
                 <Button
@@ -430,4 +434,5 @@ export function ScopeForm() {
     </Card>
   );
 }
+
 
