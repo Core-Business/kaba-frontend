@@ -9,7 +9,7 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Added Checkbox
+import { Switch } from "@/components/ui/switch"; // Changed from Checkbox
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
@@ -28,7 +28,7 @@ export function ScopeForm() {
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
-  const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true); // State for checkbox
+  const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true); // State for checkbox/switch
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -54,7 +54,7 @@ export function ScopeForm() {
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
         setHelperData(newLocalStateCandidate);
     }
-  }, [poa?.scopeHelperData]); // Simplified dependency
+  }, [poa?.scopeHelperData, helperData]);
 
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
@@ -254,10 +254,10 @@ export function ScopeForm() {
         <hr className="my-4" />
         
         <div className="flex items-center space-x-2 mb-3">
-          <Checkbox
+          <Switch
             id="toggle-scope-helper-section"
             checked={isHelpSectionVisible}
-            onCheckedChange={(checked) => setIsHelpSectionVisible(Boolean(checked))}
+            onCheckedChange={setIsHelpSectionVisible}
             aria-controls="scope-helper-content"
           />
           <Label htmlFor="toggle-scope-helper-section" className="text-md font-semibold text-primary flex items-center cursor-pointer">
@@ -287,9 +287,7 @@ export function ScopeForm() {
               )}
             </div>
 
-            {/* Contenido de la Ayuda para el Alcance */}
             <div className="space-y-4">
-                {/* Sub-sección 1: Definición del Ámbito de Aplicación */}
                 <div>
                     <h4 className="font-semibold text-sm text-primary mb-2">1. Definición del Ámbito de Aplicación:</h4>
                     <div className="pl-4 space-y-3">
@@ -301,7 +299,6 @@ export function ScopeForm() {
                     </div>
                 </div>
 
-                {/* Sub-sección 2: Aplicabilidad y Responsables */}
                 <div>
                     <h4 className="font-semibold text-sm mt-3 text-primary mb-2">2. Aplicabilidad y Responsables:</h4>
                     <div className="pl-4 space-y-3">
@@ -327,7 +324,6 @@ export function ScopeForm() {
                     </div>
                 </div>
 
-                {/* Sub-sección 3: Límites y Exclusiones */}
                 <div>
                     <h4 className="font-semibold text-sm mt-3 text-primary mb-2">3. Límites y Exclusiones:</h4>
                     <div className="pl-4 space-y-3">
@@ -344,7 +340,6 @@ export function ScopeForm() {
                     </div>
                 </div>
                 
-                {/* Sub-sección 4: Condiciones y Contexto de Aplicación */}
                 <div>
                     <h4 className="font-semibold text-sm mt-3 text-primary mb-2">4. Condiciones y Contexto de Aplicación:</h4>
                     <div className="pl-4 space-y-3">
@@ -361,7 +356,6 @@ export function ScopeForm() {
                     </div>
                 </div>
 
-                {/* Sub-sección 5: Interrelación con Otros Procesos y Normas */}
                 <div>
                     <h4 className="font-semibold text-sm mt-3 text-primary mb-2">5. Interrelación con Otros Procesos y Normas:</h4>
                     <div className="pl-4 space-y-3">
@@ -396,7 +390,6 @@ export function ScopeForm() {
                     </div>
                 </div>
 
-                {/* Sub-sección 6: Vigencia y Revisión (opcional) */}
                 <div>
                     <h4 className="font-semibold text-sm mt-3 text-primary mb-2">6. Vigencia y Revisión (opcional):</h4>
                     <div className="pl-4 space-y-3">
