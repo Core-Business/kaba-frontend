@@ -62,7 +62,7 @@ export function ScopeForm() {
       updatePoaScopeHelperData(helperData);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [helperData, poa?.id, updatePoaScopeHelperData]);
+  }, [helperData, poa?.id]);
 
 
   const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -298,7 +298,11 @@ export function ScopeForm() {
                             <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
                             <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
                         </div>
-                         {/* Áreas o Departamentos y Productos o Servicios eliminados */}
+                        <div>
+                            <Label htmlFor="productosClave">Productos</Label>
+                            <Input id="productosClave" value={helperData.productosClave || ""} onChange={(e) => handleHelperInputChange('productosClave', e.target.value)} className="w-full mt-1" placeholder="Menciona productos específicos si aplica."/>
+                            <p className="text-xs text-muted-foreground mt-1">Productos clave relacionados o afectados por el procedimiento.</p>
+                        </div>
                     </div>
                 </div>
 

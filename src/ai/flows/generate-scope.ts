@@ -14,8 +14,7 @@ import {z} from 'genkit';
 
 const GenerateScopeInputSchema = z.object({
   procesosYActividades: z.string().optional().describe('Procesos y actividades clave cubiertos por el procedimiento.'),
-  // areasDepartamentosClave removed
-  // productosServiciosRelevantes removed
+  productosClave: z.string().optional().describe('Productos clave relacionados o afectados por el procedimiento.'),
   usuariosYRoles: z.array(z.object({ id: z.string(), usuario: z.string().optional(), rol: z.string().optional() })).optional().describe('Usuarios o roles específicos responsables o afectados.'),
   gradoDeInclusion: z.string().optional().describe('Grado de inclusión o exclusión de ciertos roles o situaciones.'),
   delimitacionPrecisa: z.string().optional().describe('Delimitación precisa del inicio y fin del procedimiento (qué marca el comienzo y el final).'),
@@ -59,6 +58,9 @@ Sé conciso y, si se especifica un máximo de palabras, ajústate a él lo más 
 Información para definir el alcance:
 {{#if procesosYActividades}}
 - Procesos y actividades clave: {{{procesosYActividades}}}
+{{/if}}
+{{#if productosClave}}
+- Productos clave: {{{productosClave}}}
 {{/if}}
 {{#if usuariosYRoles.length}}
 - Usuarios y roles:
