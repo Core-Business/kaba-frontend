@@ -9,7 +9,7 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-// import { Switch } from "@/components/ui/switch"; // Switch removed
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"; // Added Accordion imports
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
@@ -28,7 +28,6 @@ export function ScopeForm() {
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
-  // const [showHelperSection, setShowHelperSection] = useState(false); // State removed
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -37,9 +36,9 @@ export function ScopeForm() {
       ...initialSource,
       departamentosOAreas: initialSource.departamentosOAreas && initialSource.departamentosOAreas.length > 0 ? [...initialSource.departamentosOAreas] : [''],
       productosOServicios: initialSource.productosOServicios && initialSource.productosOServicios.length > 0 ? [...initialSource.productosOServicios] : [''],
-      usuariosYRoles: initialSource.usuariosYRoles && initialSource.usuariosYRoles.length > 0 ? initialSource.usuariosYRoles.map(item => ({...item})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
-      conexionesDocumentales: initialSource.conexionesDocumentales && initialSource.conexionesDocumentales.length > 0 ? initialSource.conexionesDocumentales.map(item => ({...item})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
-      referenciaANormas: initialSource.referenciaANormas && initialSource.referenciaANormas.length > 0 ? initialSource.referenciaANormas.map(item => ({...item})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
+      usuariosYRoles: initialSource.usuariosYRoles && initialSource.usuariosYRoles.length > 0 ? initialSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
+      conexionesDocumentales: initialSource.conexionesDocumentales && initialSource.conexionesDocumentales.length > 0 ? initialSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
+      referenciaANormas: initialSource.referenciaANormas && initialSource.referenciaANormas.length > 0 ? initialSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
     };
   });
 
@@ -50,14 +49,14 @@ export function ScopeForm() {
         ...contextSource,
         departamentosOAreas: contextSource.departamentosOAreas && contextSource.departamentosOAreas.length > 0 ? [...contextSource.departamentosOAreas] : [''],
         productosOServicios: contextSource.productosOServicios && contextSource.productosOServicios.length > 0 ? [...contextSource.productosOServicios] : [''],
-        usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
-        conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
-        referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
+        usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
+        conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
+        referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
     };
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
         setHelperData(newLocalStateCandidate);
     }
-  }, [poa?.scopeHelperData]); // Simplified dependency
+  }, [poa?.scopeHelperData, helperData]);
 
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
@@ -153,7 +152,7 @@ export function ScopeForm() {
 
 
   const handleAiEnhance = useCallback(async () => {
-    if (!poa?.scope) { // Check if scope text exists
+    if (!poa?.scope) {
       toast({ title: "Texto Requerido", description: "Por favor, escribe un alcance para editarlo con IA.", variant: "destructive" });
       return;
     }
@@ -164,8 +163,6 @@ export function ScopeForm() {
             text: poa.scope,
             context: "scope",
             maxWords: maxWords,
-            // If helperData is always available, you might still want to pass it here
-            // generalDescription: helperData.procesosYActividades, 
         };
       const result = await enhanceText(enhanceInput);
       updateField("scope", result.enhancedText);
@@ -176,11 +173,10 @@ export function ScopeForm() {
       setScopeBeforeAi(null);
     }
     setIsLoadingAiEnhance(false);
-  }, [poa, updateField, toast, maxWords, helperData]); // Added helperData if still used by enhance
+  }, [poa, updateField, toast, maxWords]);
 
   const handleGenerateScope = useCallback(async () => {
     if (!poa) return;
-    // Check if any helper data field has meaningful content
     const canGenerateFromHelper = Object.values(helperData).some(val => 
         Array.isArray(val) ? 
         val.some(item => typeof item === 'string' ? item.trim() !== '' : (item.usuario?.trim() !== '' || item.rol?.trim() !== '' || item.documento?.trim() !== '' || item.codigo?.trim() !== '' || item.referencia?.trim() !== '')) 
@@ -188,7 +184,7 @@ export function ScopeForm() {
     );
 
     if (!canGenerateFromHelper) {
-        toast({ title: "Información Insuficiente", description: "Por favor, completa al menos un campo en la sección de ayuda para generar el alcance con IA.", variant: "destructive" });
+        toast({ title: "Información Insuficiente", description: "Por favor, completa al menos un campo en la sección de ayuda para generar el alcance con IA.", variant: "destructive", duration: 5000 });
         return;
     }
 
@@ -200,9 +196,9 @@ export function ScopeForm() {
         maxWords,
         departamentosOAreas: (helperData.departamentosOAreas || []).filter(d => d.trim() !== ''),
         productosOServicios: (helperData.productosOServicios || []).filter(p => p.trim() !== ''),
-        usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.usuario?.trim() !== '' || u.rol?.trim() !== ''),
-        conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.documento?.trim() !== '' || c.codigo?.trim() !== ''),
-        referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.referencia?.trim() !== '' || r.codigo?.trim() !== ''),
+        usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.id && (u.usuario?.trim() !== '' || u.rol?.trim() !== '')),
+        conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.id && (c.documento?.trim() !== '' || c.codigo?.trim() !== '')),
+        referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.id && (r.referencia?.trim() !== '' || r.codigo?.trim() !== '')),
       };
       const result = await generateScope(inputForAI);
       updateField("scope", result.generatedScope);
@@ -288,188 +284,190 @@ export function ScopeForm() {
 
         <hr className="my-4" />
 
-        {/* Helper section is now always visible */}
-        <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-2">
-                {/* Switch removed */}
-                <Label htmlFor="toggle-scope-helper-section" className="text-md font-semibold text-primary flex items-center">
-                <Lightbulb className="mr-2 h-5 w-5" />
-                Ayuda para Redactar el Alcance
-                </Label>
-            </div>
-            <div className="flex items-center gap-2"> {/* This div will always be rendered */}
-            <Button onClick={handleGenerateScope} disabled={isLoadingAiGenerate || !canGenerateFromHelperNow}>
-                {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
-                {isLoadingAiGenerate ? "Generando..." : "Generar Alcance con IA"}
-            </Button>
-            {scopeBeforeAi !== null && !isLoadingAiEnhance && (
-                <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleUndoAi}
-                disabled={isLoadingAiGenerate}
-                title="Deshacer última operación de IA"
-                >
-                <Undo2 className="h-4 w-4" />
-                </Button>
-            )}
-            </div>
-        </div>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="scope-helper">
+            <AccordionTrigger>
+              <div className="flex items-center space-x-2">
+                <Lightbulb className="mr-2 h-5 w-5 text-primary" />
+                <span className="text-md font-semibold text-primary">Ayuda para Redactar el Alcance</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 w-full pt-3 pl-2 border-l-2 border-primary/30">
+                {/* Botón Generar con IA movido aquí DENTRO del AccordionContent */}
+                <div className="flex items-center gap-2 mb-4"> 
+                  <Button onClick={handleGenerateScope} disabled={isLoadingAiGenerate || !canGenerateFromHelperNow}>
+                    {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
+                    {isLoadingAiGenerate ? "Generando..." : "Generar Alcance con Campos de Ayuda (IA)"}
+                  </Button>
+                  {scopeBeforeAi !== null && !isLoadingAiEnhance && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleUndoAi}
+                      disabled={isLoadingAiGenerate}
+                      title="Deshacer última operación de IA"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
 
-        {/* Helper section content is now always visible */}
-        <div className="space-y-4 w-full pl-2 border-l-2 border-primary/30">
-            
-            {/* Sub-sección 1: Definición del Ámbito de Aplicación */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">1. Definición del Ámbito de Aplicación:</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label htmlFor="procesosYActividades">Procesos y Actividades Clave</Label>
-                        <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
-                        <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
-                    </div>
-                    <div>
-                        <Label>Departamentos o Áreas Involucradas</Label>
-                        {(helperData.departamentosOAreas || ['']).map((item, index) => (
-                            <div key={index} className="flex items-center gap-2 mt-1">
-                            <Input value={item} onChange={(e) => handleHelperArrayStringChange('departamentosOAreas', index, e.target.value)} placeholder={`Departamento o Área ${index + 1}`} className="flex-grow"/>
-                            {(helperData.departamentosOAreas || []).length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('departamentosOAreas', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
-                            )}
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('departamentosOAreas')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Departamento/Área</Button>
-                        <p className="text-xs text-muted-foreground mt-1">Departamentos o áreas organizativas involucradas o afectadas.</p>
-                    </div>
-                    <div>
-                        <Label>Productos o Servicios Afectados</Label>
-                        {(helperData.productosOServicios || ['']).map((item, index) => (
-                            <div key={index} className="flex items-center gap-2 mt-1">
-                            <Input value={item} onChange={(e) => handleHelperArrayStringChange('productosOServicios', index, e.target.value)} placeholder={`Producto o Servicio ${index + 1}`} className="flex-grow"/>
-                            {(helperData.productosOServicios || []).length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('productosOServicios', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
-                            )}
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('productosOServicios')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Producto/Servicio</Button>
-                        <p className="text-xs text-muted-foreground mt-1">Productos o servicios específicos a los que se aplica el procedimiento.</p>
+                {/* Sub-sección 1: Definición del Ámbito de Aplicación */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm">1. Definición del Ámbito de Aplicación:</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label htmlFor="procesosYActividades">Procesos y Actividades Clave</Label>
+                            <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
+                            <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
+                        </div>
+                        <div>
+                            <Label>Departamentos o Áreas Involucradas</Label>
+                            {(helperData.departamentosOAreas || ['']).map((item, index) => (
+                                <div key={`depto-${index}`} className="flex items-center gap-2 mt-1">
+                                <Input value={item} onChange={(e) => handleHelperArrayStringChange('departamentosOAreas', index, e.target.value)} placeholder={`Departamento o Área ${index + 1}`} className="flex-grow"/>
+                                {(helperData.departamentosOAreas || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('departamentosOAreas', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('departamentosOAreas')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Departamento/Área</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Departamentos o áreas organizativas involucradas o afectadas.</p>
+                        </div>
+                        <div>
+                            <Label>Productos o Servicios Afectados</Label>
+                            {(helperData.productosOServicios || ['']).map((item, index) => (
+                                <div key={`prod-${index}`} className="flex items-center gap-2 mt-1">
+                                <Input value={item} onChange={(e) => handleHelperArrayStringChange('productosOServicios', index, e.target.value)} placeholder={`Producto o Servicio ${index + 1}`} className="flex-grow"/>
+                                {(helperData.productosOServicios || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperArrayStringItem('productosOServicios', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperArrayStringItem('productosOServicios')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Producto/Servicio</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Productos o servicios específicos a los que se aplica el procedimiento.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Sub-sección 2: Aplicabilidad y Responsables */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">2. Aplicabilidad y Responsables:</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label>Usuarios y Roles</Label>
-                        {(helperData.usuariosYRoles || [{ id: crypto.randomUUID(), usuario: '', rol: '' }]).map((item, index) => (
-                            <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                            <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario', e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
-                            <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol', e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
-                            {(helperData.usuariosYRoles || []).length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('usuariosYRoles', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
-                            )}
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('usuariosYRoles')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Usuario/Rol</Button>
-                        <p className="text-xs text-muted-foreground mt-1">Usuarios o roles específicos responsables o afectados.</p>
-                    </div>
-                    <div>
-                        <Label htmlFor="gradoDeInclusion">Grado de Inclusión/Exclusión</Label>
-                        <Textarea id="gradoDeInclusion" value={helperData.gradoDeInclusion || ""} onChange={(e) => handleHelperInputChange('gradoDeInclusion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica si se aplica de manera global o solo a determinadas áreas y las condiciones."/>
-                        <p className="text-xs text-muted-foreground mt-1">Grado de inclusión o exclusión de ciertos roles o situaciones.</p>
+                {/* Sub-sección 2: Aplicabilidad y Responsables */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm mt-3">2. Aplicabilidad y Responsables:</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label>Usuarios y Roles</Label>
+                            {(helperData.usuariosYRoles || [{ id: crypto.randomUUID(), usuario: '', rol: '' }]).map((item, index) => (
+                                <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
+                                <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario', e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol', e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
+                                {(helperData.usuariosYRoles || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('usuariosYRoles', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('usuariosYRoles')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Usuario/Rol</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Usuarios o roles específicos responsables o afectados.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="gradoDeInclusion">Grado de Inclusión/Exclusión</Label>
+                            <Textarea id="gradoDeInclusion" value={helperData.gradoDeInclusion || ""} onChange={(e) => handleHelperInputChange('gradoDeInclusion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica si se aplica de manera global o solo a determinadas áreas y las condiciones."/>
+                            <p className="text-xs text-muted-foreground mt-1">Grado de inclusión o exclusión de ciertos roles o situaciones.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Sub-sección 3: Límites y Exclusiones */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">3. Límites y Exclusiones:</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label htmlFor="delimitacionPrecisa">Delimitación Precisa del Inicio y Fin</Label>
-                        <Textarea id="delimitacionPrecisa" value={helperData.delimitacionPrecisa || ""} onChange={(e) => handleHelperInputChange('delimitacionPrecisa', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Qué marca el comienzo y el final del procedimiento."/>
-                        <p className="text-xs text-muted-foreground mt-1">Delimitación precisa del inicio y fin del procedimiento.</p>
-                    </div>
-                    <div>
-                        <Label htmlFor="condicionesDeExclusion">Condiciones de Exclusión Explícitas</Label>
-                        <Textarea id="condicionesDeExclusion" value={helperData.condicionesDeExclusion || ""} onChange={(e) => handleHelperInputChange('condicionesDeExclusion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Menciona cualquier excepción o situación donde no aplica."/>
-                        <p className="text-xs text-muted-foreground mt-1">Condiciones o escenarios específicos bajo los cuales el procedimiento NO aplica.</p>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Sub-sección 4: Condiciones y Contexto de Aplicación */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">4. Condiciones y Contexto de Aplicación:</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label htmlFor="criteriosDeActivacion">Criterios de Activación</Label>
-                        <Textarea id="criteriosDeActivacion" value={helperData.criteriosDeActivacion || ""} onChange={(e) => handleHelperInputChange('criteriosDeActivacion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Establece bajo qué circunstancias o condiciones se aplica."/>
-                        <p className="text-xs text-muted-foreground mt-1">Criterios, eventos o condiciones que activan la aplicación del procedimiento.</p>
-                    </div>
-                    <div>
-                        <Label htmlFor="contextoOperativo">Contexto Operativo</Label>
-                        <Textarea id="contextoOperativo" value={helperData.contextoOperativo || ""} onChange={(e) => handleHelperInputChange('contextoOperativo', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Describe el entorno o situación relevante (sistemas, herramientas, etc.)."/>
-                        <p className="text-xs text-muted-foreground mt-1">Contexto operativo, como sistemas, herramientas, software o entornos físicos específicos.</p>
+                {/* Sub-sección 3: Límites y Exclusiones */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm mt-3">3. Límites y Exclusiones:</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label htmlFor="delimitacionPrecisa">Delimitación Precisa del Inicio y Fin</Label>
+                            <Textarea id="delimitacionPrecisa" value={helperData.delimitacionPrecisa || ""} onChange={(e) => handleHelperInputChange('delimitacionPrecisa', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Qué marca el comienzo y el final del procedimiento."/>
+                            <p className="text-xs text-muted-foreground mt-1">Delimitación precisa del inicio y fin del procedimiento.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="condicionesDeExclusion">Condiciones de Exclusión Explícitas</Label>
+                            <Textarea id="condicionesDeExclusion" value={helperData.condicionesDeExclusion || ""} onChange={(e) => handleHelperInputChange('condicionesDeExclusion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Menciona cualquier excepción o situación donde no aplica."/>
+                            <p className="text-xs text-muted-foreground mt-1">Condiciones o escenarios específicos bajo los cuales el procedimiento NO aplica.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+                
+                {/* Sub-sección 4: Condiciones y Contexto de Aplicación */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm mt-3">4. Condiciones y Contexto de Aplicación:</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label htmlFor="criteriosDeActivacion">Criterios de Activación</Label>
+                            <Textarea id="criteriosDeActivacion" value={helperData.criteriosDeActivacion || ""} onChange={(e) => handleHelperInputChange('criteriosDeActivacion', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Establece bajo qué circunstancias o condiciones se aplica."/>
+                            <p className="text-xs text-muted-foreground mt-1">Criterios, eventos o condiciones que activan la aplicación del procedimiento.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="contextoOperativo">Contexto Operativo</Label>
+                            <Textarea id="contextoOperativo" value={helperData.contextoOperativo || ""} onChange={(e) => handleHelperInputChange('contextoOperativo', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Describe el entorno o situación relevante (sistemas, herramientas, etc.)."/>
+                            <p className="text-xs text-muted-foreground mt-1">Contexto operativo, como sistemas, herramientas, software o entornos físicos específicos.</p>
+                        </div>
+                    </div>
+                </div>
 
-            {/* Sub-sección 5: Interrelación con Otros Procesos y Normas */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">5. Interrelación con Otros Procesos y Normas:</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label>Documentos, POAs, Guías o Manuales Relacionados</Label>
-                        {(helperData.conexionesDocumentales || [{ id: crypto.randomUUID(), documento: '', codigo: '' }]).map((item, index) => (
-                            <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                            <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento', e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
-                            <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo', e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
-                            {(helperData.conexionesDocumentales || []).length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('conexionesDocumentales', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
-                            )}
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('conexionesDocumentales')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Conexión</Button>
-                        <p className="text-xs text-muted-foreground mt-1">Otros documentos, POAs, guías o manuales relacionados o referenciados.</p>
-                    </div>
-                    <div>
-                        <Label>Normativas, Estándares o Políticas Aplicables</Label>
-                        {(helperData.referenciaANormas || [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]).map((item, index) => (
-                            <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                            <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia', e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
-                            <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo', e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
-                            {(helperData.referenciaANormas || []).length > 1 && (
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('referenciaANormas', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
-                            )}
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('referenciaANormas')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Norma</Button>
-                        <p className="text-xs text-muted-foreground mt-1">Normativas, estándares, políticas internas o regulaciones externas que el procedimiento debe cumplir.</p>
+                {/* Sub-sección 5: Interrelación con Otros Procesos y Normas */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm mt-3">5. Interrelación con Otros Procesos y Normas:</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label>Documentos, POAs, Guías o Manuales Relacionados</Label>
+                            {(helperData.conexionesDocumentales || [{ id: crypto.randomUUID(), documento: '', codigo: '' }]).map((item, index) => (
+                                <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
+                                <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento', e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo', e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
+                                {(helperData.conexionesDocumentales || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('conexionesDocumentales', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('conexionesDocumentales')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Conexión</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Otros documentos, POAs, guías o manuales relacionados o referenciados.</p>
+                        </div>
+                        <div>
+                            <Label>Normativas, Estándares o Políticas Aplicables</Label>
+                            {(helperData.referenciaANormas || [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]).map((item, index) => (
+                                <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
+                                <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia', e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo', e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
+                                {(helperData.referenciaANormas || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('referenciaANormas', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperObjectItem('referenciaANormas')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Norma</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Normativas, estándares, políticas internas o regulaciones externas que el procedimiento debe cumplir.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Sub-sección 6: Vigencia y Revisión (opcional) */}
-            <div className="space-y-3">
-                <h4 className="font-semibold text-sm mt-3">6. Vigencia y Revisión (opcional):</h4>
-                <div className="pl-4 space-y-3">
-                    <div>
-                        <Label htmlFor="duracionYPeriodicidad">Duración de Aplicabilidad y Periodicidad</Label>
-                        <Textarea id="duracionYPeriodicidad" value={helperData.duracionYPeriodicidad || ""} onChange={(e) => handleHelperInputChange('duracionYPeriodicidad', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Establece el período de validez, fechas de inicio/fin, o plazos de revisión."/>
-                        <p className="text-xs text-muted-foreground mt-1">Duración de la aplicabilidad del procedimiento o periodicidad de su aplicación.</p>
-                    </div>
-                    <div>
-                        <Label htmlFor="revisionHelper">Frecuencia o Condiciones para Revisión del Alcance</Label>
-                        <Textarea id="revisionHelper" value={helperData.revision || ""} onChange={(e) => handleHelperInputChange('revision', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Condiciones para la revisión y actualización del alcance del procedimiento."/>
-                        <p className="text-xs text-muted-foreground mt-1">Frecuencia o condiciones para la revisión y actualización del alcance.</p>
+                {/* Sub-sección 6: Vigencia y Revisión (opcional) */}
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm mt-3">6. Vigencia y Revisión (opcional):</h4>
+                    <div className="pl-4 space-y-3">
+                        <div>
+                            <Label htmlFor="duracionYPeriodicidad">Duración de Aplicabilidad y Periodicidad</Label>
+                            <Textarea id="duracionYPeriodicidad" value={helperData.duracionYPeriodicidad || ""} onChange={(e) => handleHelperInputChange('duracionYPeriodicidad', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Establece el período de validez, fechas de inicio/fin, o plazos de revisión."/>
+                            <p className="text-xs text-muted-foreground mt-1">Duración de la aplicabilidad del procedimiento o periodicidad de su aplicación.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="revisionHelper">Frecuencia o Condiciones para Revisión del Alcance</Label>
+                            <Textarea id="revisionHelper" value={helperData.revision || ""} onChange={(e) => handleHelperInputChange('revision', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Condiciones para la revisión y actualización del alcance del procedimiento."/>
+                            <p className="text-xs text-muted-foreground mt-1">Frecuencia o condiciones para la revisión y actualización del alcance.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
       </CardContent>
       <CardFooter className="flex justify-start border-t pt-4">
         <Button onClick={handleSave}>
@@ -480,4 +478,3 @@ export function ScopeForm() {
     </Card>
   );
 }
-
