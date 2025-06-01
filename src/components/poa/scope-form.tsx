@@ -9,7 +9,7 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Changed from Switch
+import { Checkbox } from "@/components/ui/checkbox"; // Changed from Switch to Checkbox
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
@@ -421,3 +421,4 @@ export function ScopeForm() {
   );
 }
 
+    
