@@ -114,7 +114,6 @@ export default function BuilderLayout({
           updatedAt: poaSummaryFromStorage.updatedAt || new Date().toISOString(),
       };
     } else if (storedPoasRaw && !poaSummaryFromStorage) {
-      console.warn(`Procedimiento POA ID: ${poaId} no encontrado en lista de localStorage. Pudo haber sido borrado. Redirigiendo al panel.`);
       router.push('/dashboard');
       return;
     } else if (!storedPoasRaw) {
@@ -143,7 +142,6 @@ export default function BuilderLayout({
             updatedAt: new Date().toISOString(),
         };
       } else {
-        console.warn(`Procedimiento POA ID: ${poaId} no es un mock original y localStorage está vacío. Redirigiendo.`);
         router.push('/dashboard');
         return;
       }
@@ -182,11 +180,9 @@ export default function BuilderLayout({
         if (parsedFullPoa && parsedFullPoa.id === poaId) {
           loadPoa(parsedFullPoa);
         } else {
-          console.warn(`ID mismatch or parse error in full POA for ${poaId}. Falling back.`);
           loadFromSummaryOrMock();
         }
       } catch (e) {
-        console.error("Error parsing full POA from localStorage:", e);
         loadFromSummaryOrMock();
       }
     } else {
@@ -213,16 +209,13 @@ export default function BuilderLayout({
     setShowUnsavedDialog(false);
     if (nextPath) {
       if (discardChanges) {
-        setIsDirty(false); // Ensure isDirty is false before navigating
+        setIsDirty(false); 
         router.push(nextPath);
       } else {
-        saveCurrentPOA(); // This will set isDirty to false on success
-        // Wait for save to complete (and isDirty to be set to false)
-        // A short timeout can help, but ideally, saveCurrentPOA would return a promise
-        // or a callback would be used.
-        setTimeout(() => {
-            router.push(nextPath)
-        }, 100); // Small delay to allow state update from save
+        saveCurrentPOA(); 
+        // saveCurrentPOA calls setIsDirty(false) internally
+        // Assuming state updates from saveCurrentPOA are processed before router.push completes its work
+        router.push(nextPath);
       }
     }
     setNextPath(null);
