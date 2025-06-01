@@ -88,8 +88,8 @@ export type POAScopeReferenciaNorma = z.infer<typeof poaScopeReferenciaNormaSche
 export const poaScopeHelperDataSchema = z.object({
   // 1. Definición del Ámbito de Aplicación
   procesosYActividades: z.string().optional(),
-  areasDepartamentosClave: z.array(poaScopeItemSchema).optional(), // Nuevo campo
-  productosServiciosRelevantes: z.array(poaScopeItemSchema).optional(), // Nuevo campo
+  // areasDepartamentosClave: z.array(poaScopeItemSchema).optional(), // Removed
+  // productosServiciosRelevantes: z.array(poaScopeItemSchema).optional(), // Removed
   // 2. Aplicabilidad y Responsables
   usuariosYRoles: z.array(poaScopeUsuarioRolSchema).optional(),
   gradoDeInclusion: z.string().optional(),
@@ -150,8 +150,8 @@ export const defaultPOAObjectiveHelperData: POAObjectiveHelperData = {
 
 export const defaultPOAScopeHelperData: POAScopeHelperData = {
   procesosYActividades: '',
-  areasDepartamentosClave: [{ id: crypto.randomUUID(), nombre: '' }], // Nuevo campo
-  productosServiciosRelevantes: [{ id: crypto.randomUUID(), nombre: '' }], // Nuevo campo
+  // areasDepartamentosClave: [{ id: crypto.randomUUID(), nombre: '' }], // Removed
+  // productosServiciosRelevantes: [{ id: crypto.randomUUID(), nombre: '' }], // Removed
   usuariosYRoles: [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
   gradoDeInclusion: '',
   delimitacionPrecisa: '',

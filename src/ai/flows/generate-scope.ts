@@ -11,12 +11,11 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { POAScopeItem } from '@/lib/schema'; // Import POAScopeItem
 
 const GenerateScopeInputSchema = z.object({
   procesosYActividades: z.string().optional().describe('Procesos y actividades clave cubiertos por el procedimiento.'),
-  areasDepartamentosClave: z.array(z.object({ id: z.string(), nombre: z.string().optional() })).optional().describe('Áreas o departamentos clave involucrados en el procedimiento.'),
-  productosServiciosRelevantes: z.array(z.object({ id: z.string(), nombre: z.string().optional() })).optional().describe('Productos o servicios relevantes afectados o cubiertos por el procedimiento.'),
+  // areasDepartamentosClave removed
+  // productosServiciosRelevantes removed
   usuariosYRoles: z.array(z.object({ id: z.string(), usuario: z.string().optional(), rol: z.string().optional() })).optional().describe('Usuarios o roles específicos responsables o afectados.'),
   gradoDeInclusion: z.string().optional().describe('Grado de inclusión o exclusión de ciertos roles o situaciones.'),
   delimitacionPrecisa: z.string().optional().describe('Delimitación precisa del inicio y fin del procedimiento (qué marca el comienzo y el final).'),
@@ -30,10 +29,7 @@ const GenerateScopeInputSchema = z.object({
   maxWords: z.number().optional().describe('El número máximo de palabras para el alcance generado. Debe ser conciso y directo.')
 });
 
-export type GenerateScopeInput = z.infer<typeof GenerateScopeInputSchema> & {
-    areasDepartamentosClave?: POAScopeItem[];
-    productosServiciosRelevantes?: POAScopeItem[];
-};
+export type GenerateScopeInput = z.infer<typeof GenerateScopeInputSchema>;
 
 
 const GenerateScopeOutputSchema = z.object({
@@ -63,18 +59,6 @@ Sé conciso y, si se especifica un máximo de palabras, ajústate a él lo más 
 Información para definir el alcance:
 {{#if procesosYActividades}}
 - Procesos y actividades clave: {{{procesosYActividades}}}
-{{/if}}
-{{#if areasDepartamentosClave.length}}
-- Áreas o Departamentos clave involucrados:
-  {{#each areasDepartamentosClave}}
-  - {{{this.nombre}}}
-  {{/each}}
-{{/if}}
-{{#if productosServiciosRelevantes.length}}
-- Productos o Servicios relevantes afectados:
-  {{#each productosServiciosRelevantes}}
-  - {{{this.nombre}}}
-  {{/each}}
 {{/if}}
 {{#if usuariosYRoles.length}}
 - Usuarios y roles:
