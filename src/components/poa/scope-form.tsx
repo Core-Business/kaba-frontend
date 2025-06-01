@@ -9,7 +9,7 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch"; // Changed from Checkbox
+import { Checkbox } from "@/components/ui/checkbox"; // Changed from Switch
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
@@ -28,7 +28,7 @@ export function ScopeForm() {
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
-  const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true); // State for checkbox/switch
+  const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true); 
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -54,13 +54,15 @@ export function ScopeForm() {
     if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
         setHelperData(newLocalStateCandidate);
     }
-  }, [poa?.scopeHelperData, helperData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [poa?.scopeHelperData]);
 
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
       updatePoaScopeHelperData(helperData);
     }
-  }, [helperData, poa, updatePoaScopeHelperData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [helperData, poa?.id, updatePoaScopeHelperData]);
 
 
   const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -254,10 +256,10 @@ export function ScopeForm() {
         <hr className="my-4" />
         
         <div className="flex items-center space-x-2 mb-3">
-          <Switch
+           <Checkbox
             id="toggle-scope-helper-section"
             checked={isHelpSectionVisible}
-            onCheckedChange={setIsHelpSectionVisible}
+            onCheckedChange={(checked) => setIsHelpSectionVisible(Boolean(checked))}
             aria-controls="scope-helper-content"
           />
           <Label htmlFor="toggle-scope-helper-section" className="text-md font-semibold text-primary flex items-center cursor-pointer">
@@ -418,3 +420,4 @@ export function ScopeForm() {
     </Card>
   );
 }
+
