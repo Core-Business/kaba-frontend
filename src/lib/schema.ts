@@ -58,6 +58,12 @@ export const poaObjectiveHelperDataSchema = z.object({
 export type POAObjectiveHelperData = z.infer<typeof poaObjectiveHelperDataSchema>;
 
 // Schemas for Scope Helper Data
+const poaScopeItemSchema = z.object({
+  id: z.string().uuid().default(() => crypto.randomUUID()),
+  nombre: z.string().optional(),
+});
+export type POAScopeItem = z.infer<typeof poaScopeItemSchema>;
+
 const poaScopeUsuarioRolSchema = z.object({
   id: z.string().uuid().default(() => crypto.randomUUID()),
   usuario: z.string().optional(),
@@ -82,6 +88,8 @@ export type POAScopeReferenciaNorma = z.infer<typeof poaScopeReferenciaNormaSche
 export const poaScopeHelperDataSchema = z.object({
   // 1. Definición del Ámbito de Aplicación
   procesosYActividades: z.string().optional(),
+  areasDepartamentosClave: z.array(poaScopeItemSchema).optional(), // Nuevo campo
+  productosServiciosRelevantes: z.array(poaScopeItemSchema).optional(), // Nuevo campo
   // 2. Aplicabilidad y Responsables
   usuariosYRoles: z.array(poaScopeUsuarioRolSchema).optional(),
   gradoDeInclusion: z.string().optional(),
@@ -142,6 +150,8 @@ export const defaultPOAObjectiveHelperData: POAObjectiveHelperData = {
 
 export const defaultPOAScopeHelperData: POAScopeHelperData = {
   procesosYActividades: '',
+  areasDepartamentosClave: [{ id: crypto.randomUUID(), nombre: '' }], // Nuevo campo
+  productosServiciosRelevantes: [{ id: crypto.randomUUID(), nombre: '' }], // Nuevo campo
   usuariosYRoles: [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
   gradoDeInclusion: '',
   delimitacionPrecisa: '',

@@ -9,7 +9,7 @@ import { SectionTitle, AiEnhanceButton } from "./common-form-elements";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Changed from Switch to Checkbox
+import { Checkbox } from "@/components/ui/checkbox";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
@@ -17,7 +17,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
+import type { POAScopeHelperData, POAScopeItem, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
 
 
@@ -35,6 +35,8 @@ export function ScopeForm() {
     return {
       ...defaultPOAScopeHelperData,
       ...initialSource,
+      areasDepartamentosClave: initialSource.areasDepartamentosClave && initialSource.areasDepartamentosClave.length > 0 ? initialSource.areasDepartamentosClave.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), nombre: '' }],
+      productosServiciosRelevantes: initialSource.productosServiciosRelevantes && initialSource.productosServiciosRelevantes.length > 0 ? initialSource.productosServiciosRelevantes.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), nombre: '' }],
       usuariosYRoles: initialSource.usuariosYRoles && initialSource.usuariosYRoles.length > 0 ? initialSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
       conexionesDocumentales: initialSource.conexionesDocumentales && initialSource.conexionesDocumentales.length > 0 ? initialSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
       referenciaANormas: initialSource.referenciaANormas && initialSource.referenciaANormas.length > 0 ? initialSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -47,6 +49,8 @@ export function ScopeForm() {
     const newLocalStateCandidate: POAScopeHelperData = {
         ...defaultPOAScopeHelperData,
         ...contextSource,
+        areasDepartamentosClave: contextSource.areasDepartamentosClave && contextSource.areasDepartamentosClave.length > 0 ? contextSource.areasDepartamentosClave.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), nombre: '' }],
+        productosServiciosRelevantes: contextSource.productosServiciosRelevantes && contextSource.productosServiciosRelevantes.length > 0 ? contextSource.productosServiciosRelevantes.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), nombre: '' }],
         usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
         conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
         referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
@@ -71,10 +75,48 @@ export function ScopeForm() {
     setIsDirty(true);
   }, [updateField, setIsDirty]);
 
-  const handleHelperInputChange = useCallback((field: keyof Omit<POAScopeHelperData, 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas'>, value: string) => {
+  const handleHelperInputChange = useCallback((field: keyof Omit<POAScopeHelperData, 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas' | 'areasDepartamentosClave' | 'productosServiciosRelevantes'>, value: string) => {
     setHelperData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
   }, [setIsDirty]);
+
+  const handleHelperSimpleListChange = useCallback(
+    (
+      listName: 'areasDepartamentosClave' | 'productosServiciosRelevantes',
+      index: number,
+      value: string
+    ) => {
+      setHelperData(prev => {
+        const currentList = (prev[listName] as POAScopeItem[] || []);
+        const newList = currentList.map((item, i) =>
+          i === index ? { ...item, nombre: value } : item
+        );
+        return { ...prev, [listName]: newList };
+      });
+      setIsDirty(true);
+    },
+    [setIsDirty]
+  );
+
+  const addHelperSimpleListItem = useCallback((listName: 'areasDepartamentosClave' | 'productosServiciosRelevantes') => {
+    setHelperData(prev => {
+      const currentList = (prev[listName] as POAScopeItem[] || []);
+      const newItem: POAScopeItem = { id: crypto.randomUUID(), nombre: '' };
+      return { ...prev, [listName]: [...currentList, newItem] };
+    });
+    setIsDirty(true);
+  }, [setIsDirty]);
+
+  const removeHelperSimpleListItem = useCallback((listName: 'areasDepartamentosClave' | 'productosServiciosRelevantes', index: number) => {
+    setHelperData(prev => {
+      const currentList = (prev[listName] as POAScopeItem[] || []);
+      const newList = currentList.filter((_, i) => i !== index);
+      const defaultItem: POAScopeItem = { id: crypto.randomUUID(), nombre: '' };
+      return { ...prev, [listName]: newList.length > 0 ? newList : [defaultItem] };
+    });
+    setIsDirty(true);
+  }, [setIsDirty]);
+
 
   const handleHelperObjectChange = useCallback(
     <T extends POAScopeUsuarioRol | POAScopeConexionDocumental | POAScopeReferenciaNorma>(
@@ -167,6 +209,8 @@ export function ScopeForm() {
       const inputForAI: GenerateScopeInput = {
         ...helperData,
         maxWords,
+        areasDepartamentosClave: (helperData.areasDepartamentosClave || []).filter(item => item.id && item.nombre?.trim() !== ''),
+        productosServiciosRelevantes: (helperData.productosServiciosRelevantes || []).filter(item => item.id && item.nombre?.trim() !== ''),
         usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.id && (u.usuario?.trim() !== '' || u.rol?.trim() !== '')),
         conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.id && (c.documento?.trim() !== '' || c.codigo?.trim() !== '')),
         referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.id && (r.referencia?.trim() !== '' || r.codigo?.trim() !== '')),
@@ -298,6 +342,32 @@ export function ScopeForm() {
                             <Textarea id="procesosYActividades" value={helperData.procesosYActividades || ""} onChange={(e) => handleHelperInputChange('procesosYActividades', e.target.value)} rows={2} className="w-full min-h-[40px] mt-1" placeholder="Especifica claramente las actividades, procesos o funciones que abarca el procedimiento."/>
                             <p className="text-xs text-muted-foreground mt-1">Cubre el procedimiento.</p>
                         </div>
+                        <div>
+                            <Label>Áreas o Departamentos Clave Involucrados</Label>
+                            {(helperData.areasDepartamentosClave || [{ id: crypto.randomUUID(), nombre: '' }]).map((item, index) => (
+                                <div key={item.id} className="flex items-center gap-2 mt-1">
+                                <Input value={item.nombre || ""} onChange={(e) => handleHelperSimpleListChange('areasDepartamentosClave', index, e.target.value)} placeholder="Nombre del área o departamento" className="flex-grow"/>
+                                {(helperData.areasDepartamentosClave || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperSimpleListItem('areasDepartamentosClave', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperSimpleListItem('areasDepartamentosClave')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Área/Departamento</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Lista de áreas o departamentos impactados o participantes.</p>
+                        </div>
+                        <div>
+                            <Label>Productos o Servicios Relevantes Afectados</Label>
+                            {(helperData.productosServiciosRelevantes || [{ id: crypto.randomUUID(), nombre: '' }]).map((item, index) => (
+                                <div key={item.id} className="flex items-center gap-2 mt-1">
+                                <Input value={item.nombre || ""} onChange={(e) => handleHelperSimpleListChange('productosServiciosRelevantes', index, e.target.value)} placeholder="Nombre del producto o servicio" className="flex-grow"/>
+                                {(helperData.productosServiciosRelevantes || []).length > 1 && (
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperSimpleListItem('productosServiciosRelevantes', index)} className="text-destructive shrink-0"><Trash2 className="h-4 w-4" /></Button>
+                                )}
+                                </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" onClick={() => addHelperSimpleListItem('productosServiciosRelevantes')} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" />Añadir Producto/Servicio</Button>
+                            <p className="text-xs text-muted-foreground mt-1">Lista de productos o servicios que son el foco o son afectados por el procedimiento.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -420,5 +490,3 @@ export function ScopeForm() {
     </Card>
   );
 }
-
-    
