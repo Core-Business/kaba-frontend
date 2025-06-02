@@ -127,10 +127,10 @@ const enhanceTextFlow = ai.defineFlow(
     inputSchema: EnhanceTextInputSchema,
     outputSchema: EnhanceTextOutputSchema,
     retry: {
-      maxAttempts: 3,
+      maxAttempts: 5, // Aumentado de 3 a 5
       backoff: {
-        initialDelayMs: 500,
-        maxDelayMs: 5000,
+        initialDelayMs: 1000, // Aumentado de 500ms a 1000ms (1 segundo)
+        maxDelayMs: 10000, // Aumentado de 5000ms a 10000ms (10 segundos)
         multiplier: 2,
       },
     },
