@@ -271,7 +271,7 @@ export function ActivityItem({
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            <div className="flex items-baseline gap-1 mb-1">
+            <div className="flex items-center gap-2 mb-1"> {/* Changed items-baseline to items-center and gap-1 to gap-2 */}
                 <span className="text-base font-semibold text-primary mr-1">No.</span>
                 <Input
                     id={`activity-userNumber-${activity.id}`}
@@ -291,6 +291,16 @@ export function ActivityItem({
                         className="w-full text-sm h-8 font-medium"
                     />
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon" 
+                  onClick={() => onDelete(activity.id)}
+                  className="text-destructive hover:bg-destructive/10 h-7 w-7" 
+                  title="Eliminar actividad"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
                  <AiEnhanceButton
                     onClick={handleGenerateName}
                     isLoading={isGeneratingName}
@@ -512,14 +522,17 @@ export function ActivityItem({
                 </Button>
               </div>
             )}
-             <div className="flex justify-end mt-1 mb-0.5">
+             <div className="flex justify-between items-center mt-1 mb-0.5 pt-1.5 border-t"> {/* Added border-t and padding-top */}
                 <span className="text-xs text-muted-foreground">
-                    (Sistema: {activity.systemNumber})
+                    Sistema: {activity.systemNumber}
                 </span>
+                {/* The delete button was here, it has been moved up */}
             </div>
           </>
         )}
         
+        {/* The old position of the delete button, now removed from here if it was expanded */}
+        {/*
         <div className="flex justify-end items-center pt-1.5 border-t mt-0.5"> 
           <Button
             type="button"
@@ -531,11 +544,8 @@ export function ActivityItem({
             <Trash2 className="mr-1 h-3.5 w-3.5" /> Eliminar
           </Button>
         </div>
+        */}
       </CardContent>
     </Card>
   );
 }
-
-    
-
-    
