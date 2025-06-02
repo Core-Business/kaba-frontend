@@ -395,13 +395,6 @@ export function ActivityItem({
                 )}
               </>
             )}
-            {!isExpanded && (
-                 <div className="flex items-center justify-between mt-1">
-                    <p className="text-sm font-medium truncate">
-                       {activity.activityName || activity.description || "Actividad sin nombre/descripción"}
-                    </p>
-                </div>
-            )}
           </div>
         </div>
 
