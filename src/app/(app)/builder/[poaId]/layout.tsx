@@ -106,7 +106,7 @@ export default function BuilderLayout({
             documentCode: 'POA-RES-001',
           },
           objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
-          introduction: poa?.introduction ?? '',
+          introduction: '', // Initialize as empty, not from current poa state
           procedureDescription: 'Descripción de procedimiento/introducción cargada (desde resumen). Edita y guarda para más detalles.',
           scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
           activities: [],
@@ -114,9 +114,11 @@ export default function BuilderLayout({
           updatedAt: poaSummaryFromStorage.updatedAt || new Date().toISOString(),
       };
     } else if (storedPoasRaw && !poaSummaryFromStorage) {
+      // POA list exists, but this ID is not in it. Redirect.
       router.push('/dashboard');
       return;
     } else if (!storedPoasRaw) {
+      // No POA list found, try to load from original mocks
       const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
       if (originalMockSummary) {
         poaToLoad = {
@@ -134,7 +136,7 @@ export default function BuilderLayout({
               documentCode: 'POA-MOCK-001',
             },
             objective: 'Este es un objetivo de mock original. Edita y guarda.',
-            introduction: '',
+            introduction: '', // Initialize as empty for mock
             procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
             scope: 'Alcance de mock original. Edita y guarda.',
             activities: [],
@@ -142,6 +144,7 @@ export default function BuilderLayout({
             updatedAt: new Date().toISOString(),
         };
       } else {
+        // No list in localStorage, and not found in original mocks either. Redirect.
         router.push('/dashboard');
         return;
       }
@@ -149,11 +152,12 @@ export default function BuilderLayout({
 
     if (poaToLoad) {
       loadPoa(poaToLoad);
+      // Only set localStorage if it doesn't exist, to avoid overwriting newer data with summary/mock data
       if (!localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`)) {
         localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaToLoad));
       }
     }
-  }, [poaId, loadPoa, router, poa?.introduction]);
+  }, [poaId, loadPoa, router]); // Removed poa?.introduction from dependencies
 
 
   useEffect(() => {
@@ -170,7 +174,7 @@ export default function BuilderLayout({
         return;
       }
       createNew('new', 'Nuevo Procedimiento POA Sin Título');
-      return; 
+      return;
     }
 
     const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
@@ -180,12 +184,16 @@ export default function BuilderLayout({
         if (parsedFullPoa && parsedFullPoa.id === poaId) {
           loadPoa(parsedFullPoa);
         } else {
+          // Full POA from storage is invalid or doesn't match ID, try summary/mock
           loadFromSummaryOrMock();
         }
       } catch (e) {
+        // Error parsing, try summary/mock
+        console.error("Error parsing full POA from localStorage:", e);
         loadFromSummaryOrMock();
       }
     } else {
+      // No full POA found, try summary/mock
       loadFromSummaryOrMock();
     }
   }, [poaId, poa, loadPoa, createNew, loadFromSummaryOrMock, router]);
@@ -209,18 +217,16 @@ export default function BuilderLayout({
     setShowUnsavedDialog(false);
     if (nextPath) {
       if (discardChanges) {
-        setIsDirty(false); 
+        setIsDirty(false);
         router.push(nextPath);
       } else {
-        saveCurrentPOA(); 
-        // saveCurrentPOA calls setIsDirty(false) internally
-        // Assuming state updates from saveCurrentPOA are processed before router.push completes its work
+        saveCurrentPOA();
         router.push(nextPath);
       }
     }
     setNextPath(null);
   };
-  
+
   const handleDashboardNavigationClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       if (isDirty) {
           e.preventDefault();
@@ -258,7 +264,7 @@ export default function BuilderLayout({
       </div>
     );
   }
-  
+
   if (!poa) {
      return (
       <div className="flex h-screen items-center justify-center">
@@ -302,7 +308,7 @@ export default function BuilderLayout({
                         href={itemPath}
                         onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
                           if (isDirty) {
-                            e.preventDefault(); 
+                            e.preventDefault();
                             setNextPath(itemPath);
                             setShowUnsavedDialog(true);
                           }
@@ -369,3 +375,5 @@ export default function BuilderLayout({
     
 
       
+
+    
