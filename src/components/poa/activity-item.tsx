@@ -11,7 +11,7 @@ import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Spa
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateActivityName } from "@/ai/flows/generate-activity-name";
-import { useState } from "react";
+import React, { useState, useEffect, useRef } from "react"; // Added useRef
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePOA } from "@/hooks/use-poa";
@@ -30,7 +30,8 @@ interface ActivityItemProps {
   isSubActivity?: boolean;
 }
 
-export function ActivityItem({
+export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
+  ({
   activity,
   onUpdate,
   onDelete,
@@ -40,7 +41,7 @@ export function ActivityItem({
   onDrop,
   isDragging,
   isSubActivity = false,
-}: ActivityItemProps) {
+}, ref) => { // `ref` here is for drag-n-drop from ActivitiesForm
   const [isLoadingAiEnhanceDesc, setIsLoadingAiEnhanceDesc] = useState(false);
   const [isLoadingAiExpandDesc, setIsLoadingAiExpandDesc] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
@@ -54,10 +55,31 @@ export function ActivityItem({
     getChildActivities,
     expandedActivityIds,
     toggleActivityExpansion,
-    poa, 
+    poa,
+    scrollToActivityId, // Added for scrolling
+    setScrollToActivityId, // Added for scrolling
   } = usePOA(); 
   
   const isExpanded = expandedActivityIds.has(activity.id);
+  const itemScrollRef = useRef<HTMLDivElement>(null); // Internal ref for scrolling logic
+
+  useEffect(() => {
+    if (activity.id === scrollToActivityId && itemScrollRef.current) {
+      itemScrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setScrollToActivityId(null); // Reset after scrolling
+    }
+  }, [activity.id, scrollToActivityId, setScrollToActivityId]);
+
+  // Combine forwarded ref (for DND) and internal ref (for scrolling)
+  const handleCardRef = (instance: HTMLDivElement | null) => {
+    (itemScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = instance;
+    if (typeof ref === 'function') {
+      ref(instance);
+    } else if (ref) {
+      ref.current = instance;
+    }
+  };
+
 
   const yesChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'yes') : [];
   const noChildren = activity.nextActivityType === 'decision' ? getChildActivities(activity.id, 'no') : [];
@@ -254,6 +276,7 @@ export function ActivityItem({
 
   return (
     <Card
+      ref={handleCardRef} // Use combined ref handler
       className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'} ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}`}
       draggable={!!onDragStart && !isSubActivity}
       onDragStart={(e) => !isSubActivity && index !== undefined && onDragStart?.(e, index)}
@@ -271,7 +294,7 @@ export function ActivityItem({
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
-            <div className="flex items-center gap-2 mb-1"> {/* Changed items-baseline to items-center and gap-1 to gap-2 */}
+            <div className="flex items-center gap-2 mb-1">
                 <span className="text-base font-semibold text-primary mr-1">No.</span>
                 <Input
                     id={`activity-userNumber-${activity.id}`}
@@ -522,30 +545,17 @@ export function ActivityItem({
                 </Button>
               </div>
             )}
-             <div className="flex justify-between items-center mt-1 mb-0.5 pt-1.5 border-t"> {/* Added border-t and padding-top */}
+             <div className="flex justify-between items-center mt-1 mb-0.5 pt-1.5 border-t">
                 <span className="text-xs text-muted-foreground">
                     Sistema: {activity.systemNumber}
                 </span>
-                {/* The delete button was here, it has been moved up */}
             </div>
           </>
         )}
         
-        {/* The old position of the delete button, now removed from here if it was expanded */}
-        {/*
-        <div className="flex justify-end items-center pt-1.5 border-t mt-0.5"> 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(activity.id)}
-            className="text-destructive hover:bg-destructive/10 text-xs h-7 px-1.5 py-0.5"
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" /> Eliminar
-          </Button>
-        </div>
-        */}
       </CardContent>
     </Card>
   );
-}
+});
+ActivityItem.displayName = 'ActivityItem';
+

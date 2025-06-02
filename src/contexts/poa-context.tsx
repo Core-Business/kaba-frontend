@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData } from '@/lib/schema'; // Added POAScopeHelperData
-import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema'; // Added defaultPOAScopeHelperData
+import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData } from '@/lib/schema';
+import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema';
 import type React from 'react';
 import { createContext, useCallback, useState, useEffect } from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -27,7 +27,7 @@ interface POAContextType {
   isDirty: boolean;
   setIsDirty: (dirty: boolean) => void;
   updateObjectiveHelperData: (data: POAObjectiveHelperData) => void;
-  updateScopeHelperData: (data: POAScopeHelperData) => void; // Added for scope
+  updateScopeHelperData: (data: POAScopeHelperData) => void;
   addAlternativeBranch: (activityId: string) => void;
   removeAlternativeBranch: (activityId: string, branchId: string) => void;
   getChildActivities: (parentId: string, parentBranchCondition: string) => POAActivity[];
@@ -35,6 +35,8 @@ interface POAContextType {
   toggleActivityExpansion: (activityId: string) => void;
   expandAllActivitiesInContext: () => void;
   collapseAllActivitiesInContext: () => void;
+  scrollToActivityId: string | null;
+  setScrollToActivityId: (id: string | null) => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
@@ -56,6 +58,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDirty, setIsDirty] = useState(false);
   const { toast } = useToast();
   const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set());
+  const [scrollToActivityId, setScrollToActivityId] = useState<string | null>(null);
 
   const updatePoaListInStorage = (poaToUpdate: POA) => {
     if (typeof window !== 'undefined') {
@@ -163,7 +166,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
-  const updateScopeHelperData = useCallback((data: POAScopeHelperData) => { // Added for scope
+  const updateScopeHelperData = useCallback((data: POAScopeHelperData) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
       if (JSON.stringify(currentPoa.scopeHelperData || defaultPOAScopeHelperData) === JSON.stringify(data)) {
@@ -244,6 +247,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (parentId) newSet.add(parentId);
         return newSet;
       });
+      
+      setScrollToActivityId(newActivity.id);
 
       return {
         ...currentPoa,
@@ -307,7 +312,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!currentPoa) return null;
       setIsDirty(true);
       const renumbered = renumberUserNumbers(activities);
-      setExpandedActivityIds(new Set(renumbered.map(act => act.id)));
+      // Do not automatically expand all activities here to preserve user's current view
       return { ...currentPoa, activities: renumbered };
     });
   }, []);
@@ -336,10 +341,10 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
         activities: renumberUserNumbers(loadedActivities),
         objectiveHelperData: poaData.objectiveHelperData || {...defaultPOAObjectiveHelperData},
-        scopeHelperData: poaData.scopeHelperData || {...defaultPOAScopeHelperData}, // Added for scope
+        scopeHelperData: poaData.scopeHelperData || {...defaultPOAScopeHelperData},
     };
     setPoa(poaInstance);
-    setExpandedActivityIds(new Set(poaInstance.activities.map(act => act.id)));
+    setExpandedActivityIds(new Set()); // Collapse all activities on load
     setIsDirty(false);
   }, []);
 
@@ -359,9 +364,9 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     newPoaInstance.activities = renumberUserNumbers(initialActivities);
     newPoaInstance.header.title = name;
     newPoaInstance.objectiveHelperData = {...defaultPOAObjectiveHelperData};
-    newPoaInstance.scopeHelperData = {...defaultPOAScopeHelperData}; // Added for scope
+    newPoaInstance.scopeHelperData = {...defaultPOAScopeHelperData};
     setPoa(newPoaInstance);
-    setExpandedActivityIds(new Set());
+    setExpandedActivityIds(new Set()); // Collapse all activities on creation
     setIsDirty(false);
     return newPoaInstance;
   }, []);
@@ -494,7 +499,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDirty,
       setIsDirty,
       updateObjectiveHelperData,
-      updateScopeHelperData, // Added for scope
+      updateScopeHelperData,
       addAlternativeBranch,
       removeAlternativeBranch,
       getChildActivities,
@@ -502,6 +507,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toggleActivityExpansion,
       expandAllActivitiesInContext,
       collapseAllActivitiesInContext,
+      scrollToActivityId,
+      setScrollToActivityId,
     }}>
       {children}
     </POAContext.Provider>
