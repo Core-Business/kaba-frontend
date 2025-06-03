@@ -159,7 +159,13 @@ export function HeaderForm() {
           <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
         </div>
 
-        <div className="mt-3"> 
+        <div className="mt-3 pt-3 border-t border-border">
+          <h3 className="text-lg font-medium text-primary mb-2">Aprobaciones</h3>
+          {/* Aquí se pueden agregar campos para aprobaciones en el futuro si es necesario */}
+          <p className="text-sm text-muted-foreground">Espacio para la sección de aprobaciones del documento.</p>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-border"> 
           <Label htmlFor="logo-upload">Logo de la Compañía (máx ${MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
@@ -211,3 +217,5 @@ export function HeaderForm() {
     </Card>
   );
 }
+
+    
