@@ -160,7 +160,7 @@ export function HeaderForm() {
         </div>
 
         <div className="mt-3"> 
-          <Label htmlFor="logo-upload">Logo de la Compañía (máx {MAX_FILE_SIZE_KB}KB)</Label>
+          <Label htmlFor="logo-upload">Logo de la Compañía (máx ${MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
               <div className="relative group">
@@ -208,7 +208,6 @@ export function HeaderForm() {
           Guardar Encabezado
         </Button>
       </CardFooter>
-      {/* Test comment */}
     </Card>
   );
 }
