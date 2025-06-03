@@ -119,10 +119,6 @@ export function HeaderForm() {
             <Input id="departmentArea" name="departmentArea" value={poa.header.departmentArea || ""} onChange={handleInputChange} placeholder="Ej., Marketing, Operaciones" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="author">Nombre del Autor</Label>
-            <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
-          </div>
-          <div>
             <Label htmlFor="documentCode">Código del Documento (Opcional)</Label>
             <Input id="documentCode" name="documentCode" value={poa.header.documentCode || ""} onChange={handleInputChange} placeholder="Ej., RH-PROC-001" className="mt-1 w-full" />
           </div>
@@ -161,8 +157,14 @@ export function HeaderForm() {
 
         <div className="mt-3 pt-3 border-t border-border">
           <h3 className="text-lg font-medium text-primary mb-2">Aprobaciones</h3>
-          {/* Aquí se pueden agregar campos para aprobaciones en el futuro si es necesario */}
-          <p className="text-sm text-muted-foreground">Espacio para la sección de aprobaciones del documento.</p>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="author">Nombre del Autor</Label>
+              <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
+            </div>
+            {/* Aquí se pueden agregar más campos para aprobaciones en el futuro si es necesario */}
+            <p className="text-sm text-muted-foreground">Espacio para más detalles de aprobación.</p>
+          </div>
         </div>
 
         <div className="mt-3 pt-3 border-t border-border"> 
@@ -217,5 +219,3 @@ export function HeaderForm() {
     </Card>
   );
 }
-
-    
