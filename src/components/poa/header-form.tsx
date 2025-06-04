@@ -21,6 +21,7 @@ const POA_STATUSES: POAStatusType[] = ['Borrador', 'Vigente', 'Revisión', 'Obso
 
 
 export function HeaderForm() {
+  // Another test comment for platform diagnosis
   const { poa, updateHeader, updatePoaName, saveCurrentPOA } = usePOA();
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -219,3 +220,5 @@ export function HeaderForm() {
     </Card>
   );
 }
+
+    
