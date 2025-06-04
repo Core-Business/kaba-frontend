@@ -1,6 +1,7 @@
 
 "use client";
 
+// Another test comment for platform diagnosis
 import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -164,7 +165,7 @@ export function HeaderForm() {
               <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
             </div>
             {/* Aquí se pueden agregar más campos para aprobaciones en el futuro si es necesario */}
-            <p className="text-sm text-muted-foreground">Espacio para más detalles de aprobación.</p>
+            <p className="text-sm text-muted-foreground">Define aquí los responsables de la aprobación del documento.</p>
           </div>
         </div>
 
@@ -220,5 +221,3 @@ export function HeaderForm() {
     </Card>
   );
 }
-
-    
