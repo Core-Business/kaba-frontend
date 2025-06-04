@@ -164,7 +164,6 @@ export function HeaderForm() {
               <Label htmlFor="author">Nombre del Autor</Label>
               <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
             </div>
-            {/* Aquí se pueden agregar más campos para aprobaciones en el futuro si es necesario */}
             <p className="text-sm text-muted-foreground">Define aquí los responsables de la aprobación del documento.</p>
           </div>
         </div>
