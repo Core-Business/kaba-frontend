@@ -8,5 +8,3 @@ import '@/ai/flows/enhance-text.ts';
 import '@/ai/flows/generate-objective.ts';
 import '@/ai/flows/generate-activity-name.ts';
 import '@/ai/flows/generate-scope.ts'; // Ensure this line is present and correct
-import '@/ai/flows/generate-moodboard-content.ts';
-
