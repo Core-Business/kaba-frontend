@@ -3,6 +3,8 @@
 
 // Another test comment for platform diagnosis
 import { usePOA } from "@/hooks/use-poa";
+import { usePOABackend } from "@/hooks/use-poa-backend";
+import { useProcedures } from "@/hooks/use-procedures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +16,8 @@ import type React from "react";
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { POAStatusType } from "@/lib/schema"; 
+import type { POAStatusType } from "@/lib/schema";
+import { useParams } from "next/navigation"; 
 
 const MAX_FILE_SIZE_KB = 100; // 100KB
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
@@ -23,7 +26,32 @@ const POA_STATUSES: POAStatusType[] = ['Borrador', 'Vigente', 'Revisión', 'Obso
 
 export function HeaderForm() {
   // Another test comment for platform diagnosis
-  const { poa, updateHeader, updatePoaName, saveCurrentPOA } = usePOA();
+  const params = useParams();
+  const poaId = params.poaId as string;
+  
+  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
+  const procedureId = (() => {
+    if (!poaId || poaId === 'new') return null;
+    
+    if (poaId.startsWith('proc-')) {
+      // Formato: proc-{procedureId}-{timestamp}
+      const withoutPrefix = poaId.replace('proc-', '');
+      const parts = withoutPrefix.split('-');
+      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+    } else {
+      // Formato directo: {procedureId}
+      return poaId;
+    }
+  })();
+  
+  console.log('HeaderForm - poaId:', poaId, 'procedureId:', procedureId);
+  
+  // Usar solo usePOABackend para evitar conflictos
+  const { poa, saveToBackend, isLoading } = usePOABackend(procedureId);
+  const { updateHeader, updatePoaName } = usePOA();
+  const { update: updateProcedure, get: getProcedure } = useProcedures();
+  const updateProcedureMutation = updateProcedure();
+  const procedureQuery = getProcedure(procedureId || '');
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -83,13 +111,77 @@ export function HeaderForm() {
      toast({ title: "Logo Eliminado", description: "El logo ha sido borrado." });
   };
 
-  const handleSave = () => {
-    if (poa) {
-      saveCurrentPOA();
+  const handleSave = async () => {
+    if (!poa || !procedureId) {
+      toast({
+        title: "Error",
+        description: "No hay datos para guardar o falta el ID del procedimiento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('Guardando encabezado con procedureId:', procedureId);
+      
+      // 1. Guardar POA en el backend
+      await saveToBackend();
+      
+      // 2. Actualizar también el procedimiento base para sincronizar el nombre en el dashboard
+      if (poa.name) {
+        console.log('Actualizando nombre del procedimiento:', poa.name);
+        console.log('Datos a enviar:', { id: procedureId, payload: { title: poa.name } });
+        
+        try {
+          // Primero verificar que el procedimiento existe y tenemos permisos
+          console.log('🔍 Verificando procedimiento antes de actualizar...');
+          console.log('🔍 ProcedureId:', procedureId);
+          console.log('🔍 ProcedureId length:', procedureId?.length);
+          console.log('🔍 ProcedureId type:', typeof procedureId);
+          
+          if (procedureQuery.data) {
+            console.log('✅ Procedimiento encontrado:', procedureQuery.data);
+            console.log('🔍 Detalles del procedimiento:', {
+              id: procedureQuery.data.id,
+              title: procedureQuery.data.title,
+              userId: procedureQuery.data.userId,
+              status: procedureQuery.data.status
+            });
+          } else {
+            console.warn('⚠️ No se pudo obtener información del procedimiento');
+          }
+          
+          await updateProcedureMutation.mutateAsync({
+            id: procedureId,
+            payload: {
+              title: poa.name, // Sincronizar el nombre del POA con el título del procedimiento
+            }
+          });
+          console.log('✅ Procedimiento actualizado exitosamente');
+        } catch (procedureError) {
+          console.error('❌ Error completo actualizando procedimiento:', procedureError);
+          console.warn('⚠️ No se pudo sincronizar el nombre del procedimiento (no crítico)');
+          console.log('ℹ️ El POA se guardó correctamente. El dashboard se actualizará en el próximo refresh.');
+          // No mostrar toast de error ya que el POA se guardó correctamente
+          // La sincronización fallará pero no es crítica para la funcionalidad
+        }
+      }
+      
+      toast({
+        title: "Encabezado Guardado",
+        description: "Los cambios han sido guardados exitosamente en el servidor. El dashboard se sincronizará automáticamente.",
+      });
+    } catch (error) {
+      console.error('Error al guardar encabezado:', error);
+      toast({
+        title: "Error al Guardar",
+        description: `No se pudieron guardar los cambios: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
     }
   };
 
-  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (isLoading || !poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg w-full">

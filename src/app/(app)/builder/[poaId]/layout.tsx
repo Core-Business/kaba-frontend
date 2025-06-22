@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
+import { usePOABackend } from "@/hooks/use-poa-backend";
 import { useEffect, useState, useCallback } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POA as POASchemaType } from "@/lib/schema";
@@ -66,137 +67,54 @@ export default function BuilderLayout({
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
-  const { poa, loadPoa, createNew, isDirty, setIsDirty, saveCurrentPOA } = usePOA();
+  
   const poaId = params.poaId as string;
+  
+  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
+  const procedureId = (() => {
+    if (!poaId || poaId === 'new') return null;
+    
+    if (poaId.startsWith('proc-')) {
+      // Formato: proc-{procedureId}-{timestamp}
+      const withoutPrefix = poaId.replace('proc-', '');
+      const parts = withoutPrefix.split('-');
+      // Si hay al menos 2 partes, el último es timestamp, el resto es procedureId
+      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+    } else {
+      // Formato directo: {procedureId}
+      return poaId;
+    }
+  })();
+  
+  // Usar el hook del backend en lugar del localStorage
+  const { 
+    poa, 
+    isDirty, 
+    isLoading: isLoadingBackend,
+    saveToBackend 
+  } = usePOABackend(procedureId);
+  
+  // Mantener el hook local como fallback
+  const { loadPoa, createNew, setIsDirty, saveCurrentPOA } = usePOA();
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
 
-  const loadFromSummaryOrMock = useCallback(() => {
-    if (typeof window === 'undefined' || !poaId) return;
-
-    const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
-    let poaSummaryFromStorage: StoredPOASummary | undefined = undefined;
-
-    if (storedPoasRaw) {
-      try {
-        const storedPoas: StoredPOASummary[] = JSON.parse(storedPoasRaw);
-        poaSummaryFromStorage = storedPoas.find(p => p.id === poaId);
-      } catch (e) {
-        console.error("Error parsing POAs summary from localStorage:", e);
-      }
-    }
-
-    let poaToLoad: POASchemaType | null = null;
-
-    if (poaSummaryFromStorage) {
-      poaToLoad = {
-          id: poaId,
-          name: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
-          header: {
-            title: poaSummaryFromStorage.name || `Procedimiento POA Cargado ${poaId.substring(0,6)}`,
-            author: 'Sistema (localStorage)',
-            version: '1.0',
-            date: new Date().toISOString().split('T')[0],
-            logoUrl: poaSummaryFromStorage.logo || '',
-            companyName: 'Empresa Ejemplo (desde resumen)',
-            departmentArea: 'Área Ejemplo (desde resumen)',
-            status: 'Borrador',
-            fileLocation: 'Ubicación Ejemplo (desde resumen)',
-            documentCode: 'POA-RES-001',
-          },
-          objective: 'Objetivo cargado (desde resumen). Edita y guarda para más detalles.',
-          introduction: '', // Initialize as empty, not from current poa state
-          procedureDescription: 'Descripción de procedimiento/introducción cargada (desde resumen). Edita y guarda para más detalles.',
-          scope: 'Alcance cargado (desde resumen). Edita y guarda para más detalles.',
-          activities: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: poaSummaryFromStorage.updatedAt || new Date().toISOString(),
-      };
-    } else if (storedPoasRaw && !poaSummaryFromStorage) {
-      // POA list exists, but this ID is not in it. Redirect.
-      router.push('/dashboard');
-      return;
-    } else if (!storedPoasRaw) {
-      // No POA list found, try to load from original mocks
-      const originalMockSummary = ORIGINAL_MOCK_POAS_SUMMARIES.find(p => p.id === poaId);
-      if (originalMockSummary) {
-        poaToLoad = {
-            id: poaId,
-            name: originalMockSummary.name,
-            header: {
-              title: originalMockSummary.name,
-              author: 'Sistema (mock original)',
-              version: '1.0',
-              date: new Date().toISOString().split('T')[0],
-              companyName: 'Empresa Ejemplo (mock)',
-              departmentArea: 'Área Ejemplo (mock)',
-              status: 'Borrador',
-              fileLocation: 'Ubicación Ejemplo (mock)',
-              documentCode: 'POA-MOCK-001',
-            },
-            objective: 'Este es un objetivo de mock original. Edita y guarda.',
-            introduction: '', // Initialize as empty for mock
-            procedureDescription: 'Descripción de mock original que servirá de introducción. Edita y guarda.',
-            scope: 'Alcance de mock original. Edita y guarda.',
-            activities: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-      } else {
-        // No list in localStorage, and not found in original mocks either. Redirect.
-        router.push('/dashboard');
-        return;
-      }
-    }
-
-    if (poaToLoad) {
-      loadPoa(poaToLoad);
-      // Only set localStorage if it doesn't exist, to avoid overwriting newer data with summary/mock data
-      if (!localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`)) {
-        localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaToLoad));
-      }
-    }
-  }, [poaId, loadPoa, router]); // Removed poa?.introduction from dependencies
-
-
+  // El hook usePOABackend maneja toda la lógica de carga/guardado
+  // Solo necesitamos manejar casos especiales como "new"
   useEffect(() => {
-    if (!poaId || typeof window === 'undefined') {
-      return;
-    }
-
-    if (poa && poa.id === poaId) {
-      return;
-    }
-
     if (poaId === "new") {
-      if (poa && poa.id === "new") {
-        return;
-      }
       createNew('new', 'Nuevo Procedimiento POA Sin Título');
       return;
     }
-
-    const fullPoaRaw = localStorage.getItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`);
-    if (fullPoaRaw) {
-      try {
-        const parsedFullPoa: POASchemaType = JSON.parse(fullPoaRaw);
-        if (parsedFullPoa && parsedFullPoa.id === poaId) {
-          loadPoa(parsedFullPoa);
-        } else {
-          // Full POA from storage is invalid or doesn't match ID, try summary/mock
-          loadFromSummaryOrMock();
-        }
-      } catch (e) {
-        // Error parsing, try summary/mock
-        console.error("Error parsing full POA from localStorage:", e);
-        loadFromSummaryOrMock();
-      }
-    } else {
-      // No full POA found, try summary/mock
-      loadFromSummaryOrMock();
+    
+    if (!procedureId && poaId !== 'new') {
+      console.error('No se pudo extraer procedureId de:', poaId);
+      console.error('Redirigiendo al dashboard...');
+      router.push('/dashboard');
+      return;
     }
-  }, [poaId, poa, loadPoa, createNew, loadFromSummaryOrMock, router]);
+  }, [poaId, procedureId, createNew, router]);
 
 
   useEffect(() => {
@@ -256,20 +174,14 @@ export default function BuilderLayout({
     );
   }
 
-  if (poaId !== "new" && (!poa || poa.id !== poaId)) {
+  // Mostrar loading mientras se carga desde el backend
+  if (poaId !== "new" && (isLoadingBackend || !poa)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Cargando datos del Procedimiento POA...</p>
-      </div>
-    );
-  }
-
-  if (!poa) {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        <LoadingSpinner className="h-12 w-12 text-primary" />
-        <p className="ml-4 text-lg">Preparando editor...</p>
+        <p className="ml-4 text-lg">
+          {isLoadingBackend ? 'Cargando desde el servidor...' : 'Preparando editor...'}
+        </p>
       </div>
     );
   }
@@ -290,7 +202,8 @@ export default function BuilderLayout({
           <SidebarContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const currentPoaIdForLink = (poa && poa.id && poa.id !== "new") ? poa.id : poaId;
+                // Siempre usar el poaId original de la URL para mantener consistencia
+                const currentPoaIdForLink = poaId;
                 const itemPath = `/builder/${currentPoaIdForLink}/${item.href}`;
                 const isActive = pathname === itemPath ||
                                 (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}`) ||

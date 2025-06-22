@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'POA Builder',
+      title: 'KABA Services',
   description: 'Plan of Action Builder Application',
 };
 

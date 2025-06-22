@@ -1,5 +1,5 @@
-import { ObjectiveForm } from "@/components/poa/objective-form";
+import { ObjectiveFormEnhanced } from "@/components/poa/objective-form-enhanced";
 
 export default function ObjectivePage() {
-  return <ObjectiveForm />;
+  return <ObjectiveFormEnhanced />;
 }

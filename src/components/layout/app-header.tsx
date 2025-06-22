@@ -71,7 +71,7 @@ export function AppHeader() {
     leftContent = (
       <Link href="/dashboard" className="flex items-center space-x-2">
         <Building className="h-7 w-7 text-primary" />
-        <span className="text-xl font-bold text-primary">POA Builder</span>
+                  <span className="text-xl font-bold text-primary">KABA Services</span>
       </Link>
     );
   }

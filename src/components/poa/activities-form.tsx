@@ -2,6 +2,7 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
+import { usePOABackend } from "@/hooks/use-poa-backend";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
@@ -11,18 +12,39 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import type { POAActivity } from "@/lib/schema";
 import { useToast } from "@/hooks/use-toast";
-import { getActivitiesInProceduralOrder } from '@/lib/activity-utils'; // Import afrer moving the function
+import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
+import { useParams } from "next/navigation";
 
 export function ActivitiesForm() {
-  const { poa, addActivity, updateActivity, deleteActivity, setActivities, saveCurrentPOA } = usePOA();
+  // Extraer procedureId igual que en HeaderForm
+  const params = useParams();
+  const poaId = params.poaId as string;
+  
+  const procedureId = (() => {
+    if (!poaId || poaId === 'new') return null;
+    
+    if (poaId.startsWith('proc-')) {
+      const withoutPrefix = poaId.replace('proc-', '');
+      const parts = withoutPrefix.split('-');
+      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+    } else {
+      return poaId;
+    }
+  })();
+  
+  console.log('ActivitiesForm - poaId:', poaId, 'procedureId:', procedureId);
+  
+  // Usar usePOABackend para obtener datos del backend, usePOA para operaciones locales
+  const { poa: poaBackend, saveToBackend, isLoading } = usePOABackend(procedureId);
+  const { addActivity, updateActivity, deleteActivity, setActivities } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const topLevelActivities = poa?.activities.filter(act => !act.parentId) || [];
+  const topLevelActivities = poaBackend?.activities.filter((act: POAActivity) => !act.parentId) || [];
 
   useEffect(() => {
-    if (poa && poa.activities.length > 0) {
-        const needsMigration = poa.activities.some(act =>
+    if (poaBackend && poaBackend.activities.length > 0) {
+        const needsMigration = poaBackend.activities.some((act: POAActivity) =>
             (act.nextActivityType === 'decision' && act.decisionBranches === undefined) ||
             (act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined) ||
             act.responsible === undefined ||
@@ -31,29 +53,31 @@ export function ActivitiesForm() {
         );
 
         if (needsMigration) {
-            const migratedActivities = poa.activities.map(act => ({
-                userNumber: '',
-                responsible: '',
-                decisionBranches: { yesLabel: '', noLabel: '' }, 
-                alternativeBranches: [],
-                parentId: null,
-                parentBranchCondition: null,
-                nextIndividualActivityRef: '',
+            const migratedActivities = poaBackend.activities.map((act: POAActivity) => ({
                 ...act,
-                ...(act.nextActivityType === 'decision' && act.decisionBranches === undefined && { decisionBranches: { yesLabel: '', noLabel: '' } }), 
-                ...(act.nextActivityType === 'alternatives' && act.alternativeBranches === undefined && { alternativeBranches: [{id: crypto.randomUUID(), label: 'Alternativa 1'}] }),
+                userNumber: act.userNumber || '',
+                responsible: act.responsible || '',
+                decisionBranches: act.nextActivityType === 'decision' && !act.decisionBranches 
+                  ? { yesLabel: '', noLabel: '' } 
+                  : act.decisionBranches,
+                alternativeBranches: act.nextActivityType === 'alternatives' && !act.alternativeBranches 
+                  ? [{id: crypto.randomUUID(), label: 'Alternativa 1'}] 
+                  : act.alternativeBranches,
+                parentId: act.parentId ?? null,
+                parentBranchCondition: act.parentBranchCondition ?? null,
+                nextIndividualActivityRef: act.nextIndividualActivityRef || '',
             }));
             setActivities(migratedActivities);
         }
     }
-  }, [poa, setActivities]);
+  }, [poaBackend, setActivities]);
 
 
-  if (!poa) return <div className="flex justify-center items-center h-64"><p>Cargando datos del Procedimiento POA...</p></div>;
+  if (isLoading || !poaBackend) return <div className="flex justify-center items-center h-64"><p>Cargando datos del Procedimiento POA...</p></div>;
 
   const handleAddTopLevelActivity = () => {
-    if (poa && poa.activities.length > 0) {
-      const orderedActivities = getActivitiesInProceduralOrder(poa.activities);
+    if (poaBackend && poaBackend.activities.length > 0) {
+      const orderedActivities = getActivitiesInProceduralOrder(poaBackend.activities);
       if (orderedActivities.length > 0) {
         const lastActivityInFlow = orderedActivities[orderedActivities.length - 1];
         if (!lastActivityInFlow.responsible || !lastActivityInFlow.description) {
@@ -87,10 +111,10 @@ export function ActivitiesForm() {
       return;
     }
 
-    const currentTopLevelActivities = poa.activities.filter(act => !act.parentId);
+    const currentTopLevelActivities = poaBackend.activities.filter((act: POAActivity) => !act.parentId);
     const draggedItemId = currentTopLevelActivities[draggedItemIndex].id;
 
-    const reorderedAllActivities = [...poa.activities];
+    const reorderedAllActivities = [...poaBackend.activities];
     const actualDraggedItemIndexInAll = reorderedAllActivities.findIndex(act => act.id === draggedItemId);
     const draggedItem = reorderedAllActivities.splice(actualDraggedItemIndexInAll, 1)[0];
 
@@ -115,9 +139,30 @@ export function ActivitiesForm() {
     setDraggedItemIndex(null);
   };
 
-  const handleSave = () => {
-    if (poa) {
-      saveCurrentPOA();
+  const handleSave = async () => {
+    if (!poaBackend || !procedureId) {
+      toast({
+        title: "Error",
+        description: "No hay datos para guardar o falta el ID del procedimiento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('Guardando actividades con procedureId:', procedureId);
+      await saveToBackend();
+      toast({
+        title: "Actividades Guardadas",
+        description: "Las actividades han sido guardadas exitosamente en el servidor.",
+      });
+    } catch (error) {
+      console.error('Error al guardar actividades:', error);
+      toast({
+        title: "Error al Guardar",
+        description: `No se pudieron guardar las actividades: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
     }
   };
 

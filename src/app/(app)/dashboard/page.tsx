@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,104 +6,182 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { PlusCircle, Edit3, FileText, Trash2, LayoutGrid, List } from "lucide-react";
+import { PlusCircle, Edit3, FileText, Trash2, LayoutGrid, List, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePOA } from "@/hooks/use-poa";
-import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useProcedures } from "@/hooks/use-procedures";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { FormattedDateClient } from "@/components/shared/formatted-date";
 import { AppHeader } from "@/components/layout/app-header";
 
-const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
-const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
-
-// initialMockPoas is removed as per requirement
-
-type DisplayedPOA = {
-  id: string;
-  name: string;
-  updatedAt: string;
-  logo?: string;
-};
-
 export default function DashboardPage() {
   const router = useRouter();
-  const { createNew } = usePOA();
-  const [displayedPoas, setDisplayedPoas] = useState<DisplayedPOA[]>([]);
   const { toast } = useToast();
   const [isCreateDialogVisible, setIsCreateDialogVisible] = useState(false);
-  const [newPoaNameInput, setNewPoaNameInput] = useState("");
+  const [newProcedureNameInput, setNewProcedureNameInput] = useState("");
+  const [newProcedureDescriptionInput, setNewProcedureDescriptionInput] = useState("");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
-      if (storedPoasRaw) {
-        try {
-          const parsedPoas: DisplayedPOA[] = JSON.parse(storedPoasRaw);
-          setDisplayedPoas(parsedPoas);
-        } catch (error) {
-          console.error("Error parsing POAs from localStorage", error);
-          setDisplayedPoas([]); // Initialize as empty if error
-          localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify([]));
-        }
-      } else {
-        setDisplayedPoas([]); // Initialize as empty for new users or empty localStorage
-        localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify([]));
+  // Función para abrir un procedimiento como POA
+  const handleOpenProcedure = (procedure: any) => {
+    // Generar un ID único para el POA basado en el procedimiento
+    const poaId = `proc-${procedure.id}-${Date.now()}`;
+    
+    // Crear los datos del POA basado en el procedimiento
+    const poaData = {
+      id: poaId,
+      name: procedure.title,
+      header: {
+        title: procedure.title,
+        author: 'Sistema',
+        version: procedure.version?.toString() || '1.0',
+        date: new Date().toISOString().split('T')[0],
+        logoUrl: '',
+        companyName: 'Tu Empresa',
+        departmentArea: 'Área de Procedimientos',
+        status: procedure.status || 'Borrador',
+        fileLocation: 'Sistema',
+        documentCode: procedure.code || `POA-${Date.now()}`,
+      },
+      objective: 'Objetivo basado en el procedimiento. Edita según sea necesario.',
+      introduction: '',
+      procedureDescription: procedure.description || 'Descripción del procedimiento.',
+      scope: 'Alcance del procedimiento. Edita según sea necesario.',
+      activities: [],
+      createdAt: procedure.createdAt || new Date().toISOString(),
+      updatedAt: procedure.updatedAt || new Date().toISOString(),
+      objectiveHelperData: {
+        generalObjective: '',
+        specificObjectives: [''],
+        scope: '',
+        beneficiaries: '',
+        resources: '',
+        timeline: '',
+        successIndicators: '',
+        risks: '',
+        dependencies: ''
+      },
+      scopeHelperData: {
+        inScope: [''],
+        outOfScope: [''],
+        assumptions: [''],
+        constraints: [''],
+        deliverables: [''],
+        stakeholders: [''],
+        boundaries: ''
+      }
+    };
+
+    // Guardar el POA en localStorage
+    const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
+    const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
+    
+    // Guardar el POA completo
+    localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${poaId}`, JSON.stringify(poaData));
+    
+    // Actualizar la lista de POAs
+    const storedPoasRaw = localStorage.getItem(LOCAL_STORAGE_POA_LIST_KEY);
+    let poasList: any[] = [];
+    if (storedPoasRaw) {
+      try {
+        poasList = JSON.parse(storedPoasRaw);
+      } catch (e) {
+        console.error("Error parsing POA list:", e);
       }
     }
-  }, []);
+    
+    poasList.push({
+      id: poaId,
+      name: procedure.title,
+      updatedAt: new Date().toISOString(),
+      logo: "https://placehold.co/40x40.png"
+    });
+    
+    localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(poasList));
+    
+    // Redirigir al builder
+    router.push(`/builder/${poaId}/header`);
+    
+    toast({
+      title: "POA Creado",
+      description: `Se ha creado un POA basado en "${procedure.title}".`,
+    });
+  };
 
-  const handleConfirmCreateNewPOA = () => {
-    if (!newPoaNameInput.trim()) {
+  // Usar hooks de la API
+  const { list, create, remove } = useProcedures();
+  const proceduresQuery = list();
+  const createProcedureMutation = create();
+  const deleteProcedureMutation = remove();
+
+  const handleConfirmCreateNewProcedure = async () => {
+    if (!newProcedureNameInput.trim()) {
       toast({
         title: "Nombre Requerido",
-        description: "Por favor, ingresa un nombre para el Procedimiento POA.",
+        description: "Por favor, ingresa un nombre para el procedimiento.",
         variant: "destructive",
       });
       return;
     }
 
-    const newPoaId = crypto.randomUUID();
-    const newPoaName = newPoaNameInput.trim();
-
-    const newPoaInstance = createNew(newPoaId, newPoaName);
-
-    const newPoaEntry: DisplayedPOA = {
-      id: newPoaId,
-      name: newPoaName,
-      updatedAt: new Date().toISOString(),
-      logo: newPoaInstance.header.logoUrl || "https://placehold.co/40x40.png"
-    };
-
-    const updatedPoasList = [...displayedPoas, newPoaEntry];
-    setDisplayedPoas(updatedPoasList);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(updatedPoasList));
-      localStorage.setItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${newPoaId}`, JSON.stringify(newPoaInstance));
-    }
-
-    router.push(`/builder/${newPoaId}/header`);
-    setIsCreateDialogVisible(false);
-    setNewPoaNameInput("");
-  };
-
-  const handleDeletePOA = (idToDelete: string) => {
-    if (window.confirm("¿Estás seguro de que quieres borrar este Procedimiento POA? Esta acción no se puede deshacer.")) {
-      setDisplayedPoas(prevPoas => {
-        const updatedPoas = prevPoas.filter(p => p.id !== idToDelete);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(LOCAL_STORAGE_POA_LIST_KEY, JSON.stringify(updatedPoas));
-          localStorage.removeItem(`${LOCAL_STORAGE_POA_DETAIL_PREFIX}${idToDelete}`);
-        }
-        return updatedPoas;
+    try {
+      const newProcedure = await createProcedureMutation.mutateAsync({
+        title: newProcedureNameInput.trim(),
+        description: newProcedureDescriptionInput.trim() || undefined,
+        code: `PROC-${Date.now()}`, // Generar un código único
+        version: 1,
+        status: 'draft',
       });
-      toast({ title: "Procedimiento POA Borrado", description: "El Procedimiento POA ha sido eliminado." });
+
+              toast({
+          title: "Procedimiento Creado",
+          description: `El procedimiento "${newProcedure.title}" ha sido creado exitosamente.`,
+        });
+
+      // Redirigir al builder del procedimiento usando el formato consistente
+      const poaId = `proc-${newProcedure.id}-${Date.now()}`;
+      router.push(`/builder/${poaId}/header`);
+      setIsCreateDialogVisible(false);
+      setNewProcedureNameInput("");
+      setNewProcedureDescriptionInput("");
+    } catch (error) {
+      console.error('Error creating procedure:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo crear el procedimiento.",
+        variant: "destructive",
+      });
     }
   };
+
+  const handleDeleteProcedure = async (idToDelete: string) => {
+    if (window.confirm("¿Estás seguro de que quieres borrar este procedimiento? Esta acción no se puede deshacer.")) {
+      try {
+        console.log('Starting deletion for ID:', idToDelete);
+        await deleteProcedureMutation.mutateAsync(idToDelete);
+        
+        // Forzar una actualización inmediata de la lista
+        await proceduresQuery.refetch();
+        
+        toast({ 
+          title: "Procedimiento Eliminado", 
+          description: "El procedimiento ha sido eliminado exitosamente." 
+        });
+        
+        console.log('Deletion completed and UI updated');
+      } catch (error) {
+        console.error('Error deleting procedure:', error);
+        toast({ 
+          title: "Error", 
+          description: "No se pudo eliminar el procedimiento.",
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
+  const procedures = Array.isArray(proceduresQuery.data) ? proceduresQuery.data : [];
 
   return (
     <>
@@ -112,15 +189,25 @@ export default function DashboardPage() {
       <div className="container mx-auto py-8 px-4 md:px-6 flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">POA - Inicio</h1>
-            <p className="text-muted-foreground">Gestiona tus Procedimientos POA existentes o crea uno nuevo.</p>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Gestiona tus procedimientos existentes o crea uno nuevo.</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')} title="Vista de Cuadrícula">
+              <Button 
+                variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                size="icon" 
+                onClick={() => setViewMode('grid')} 
+                title="Vista de Cuadrícula"
+              >
                 <LayoutGrid className="h-5 w-5" />
               </Button>
-              <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')} title="Vista de Lista">
+              <Button 
+                variant={viewMode === 'list' ? 'default' : 'outline'} 
+                size="icon" 
+                onClick={() => setViewMode('list')} 
+                title="Vista de Lista"
+              >
                 <List className="h-5 w-5" />
               </Button>
             </div>
@@ -128,88 +215,100 @@ export default function DashboardPage() {
               <DialogTrigger asChild>
                 <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
                   <PlusCircle className="mr-2 h-5 w-5" />
-                  Crear Nuevo Procedimiento POA
+                  Crear Nuevo Procedimiento
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                  <DialogTitle>Nuevo Procedimiento POA</DialogTitle>
+                  <DialogTitle>Nuevo Procedimiento</DialogTitle>
                   <DialogDescription>
-                    Ingresa un nombre para tu nuevo Procedimiento POA. Este nombre se usará para identificarlo.
+                    Crea un nuevo procedimiento que podrás usar para generar POAs.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="poaName" className="text-right col-span-1">
-                      Nombre del Procedimiento (POA)
-                    </Label>
+                  <div className="grid gap-2">
+                    <Label htmlFor="procedureName">Nombre del Procedimiento</Label>
                     <Input
-                      id="poaName"
-                      value={newPoaNameInput}
-                      onChange={(e) => setNewPoaNameInput(e.target.value)}
-                      className="col-span-3"
-                      placeholder="Ej., Despliegue de Software Q4"
+                      id="procedureName"
+                      value={newProcedureNameInput}
+                      onChange={(e) => setNewProcedureNameInput(e.target.value)}
+                      placeholder="Ej., Despliegue de Software"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="procedureDescription">Descripción (opcional)</Label>
+                    <Input
+                      id="procedureDescription"
+                      value={newProcedureDescriptionInput}
+                      onChange={(e) => setNewProcedureDescriptionInput(e.target.value)}
+                      placeholder="Ej., Procedimiento para desplegar aplicaciones"
                     />
                   </div>
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
+                    <Button variant="outline" onClick={() => {
+                      setNewProcedureNameInput("");
+                      setNewProcedureDescriptionInput("");
+                    }}>
+                      Cancelar
+                    </Button>
                   </DialogClose>
-                  <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear Procedimiento POA</Button>
+                  <Button 
+                    type="submit" 
+                    onClick={handleConfirmCreateNewProcedure}
+                    disabled={createProcedureMutation.isPending}
+                  >
+                    {createProcedureMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Crear Procedimiento
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
         </div>
 
-        {displayedPoas.length === 0 ? (
+        {proceduresQuery.isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Cargando procedimientos...</span>
+          </div>
+        ) : proceduresQuery.error ? (
+          <Card className="text-center py-12 shadow-lg">
+            <CardHeader>
+              <div className="mx-auto bg-destructive/10 p-3 rounded-full w-fit">
+                <AlertCircle className="h-10 w-10 text-destructive" />
+              </div>
+              <CardTitle className="mt-4 text-2xl">Error al cargar procedimientos</CardTitle>
+              <CardDescription className="mt-2 text-lg">
+                No se pudieron cargar los procedimientos. Verifica tu conexión a internet.
+              </CardDescription>
+            </CardHeader>
+            <CardFooter className="justify-center">
+              <Button onClick={() => proceduresQuery.refetch()}>
+                Reintentar
+              </Button>
+            </CardFooter>
+          </Card>
+        ) : procedures.length === 0 ? (
           <Card className="text-center py-12 shadow-lg">
             <CardHeader>
               <div className="mx-auto bg-secondary p-3 rounded-full w-fit">
                 <FileText className="h-10 w-10 text-muted-foreground" />
               </div>
-              <CardTitle className="mt-4 text-2xl">Aún no hay Procedimientos POA</CardTitle>
+              <CardTitle className="mt-4 text-2xl">Aún no hay procedimientos</CardTitle>
               <CardDescription className="mt-2 text-lg">
-                Comienza creando tu primer Procedimiento POA.
+                Comienza creando tu primer procedimiento.
               </CardDescription>
             </CardHeader>
             <CardFooter className="justify-center">
-              <Dialog open={isCreateDialogVisible} onOpenChange={(open) => { if (!open) setNewPoaNameInput(""); setIsCreateDialogVisible(open);}}>
+              <Dialog open={isCreateDialogVisible} onOpenChange={setIsCreateDialogVisible}>
                 <DialogTrigger asChild>
-                  <Button size="lg" onClick={() => { setIsCreateDialogVisible(true); setNewPoaNameInput("");}}>
+                  <Button size="lg" onClick={() => setIsCreateDialogVisible(true)}>
                     <PlusCircle className="mr-2 h-5 w-5" />
-                    Crea Tu Primer Procedimiento POA
+                    Crear Tu Primer Procedimiento
                   </Button>
                 </DialogTrigger>
-                 <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Nuevo Procedimiento POA</DialogTitle>
-                    <DialogDescription>
-                      Ingresa un nombre para tu nuevo Procedimiento POA. Este nombre se usará para identificarlo.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="poaNameModalEmpty" className="text-right col-span-1">
-                        Nombre del Procedimiento (POA)
-                      </Label>
-                      <Input
-                        id="poaNameModalEmpty"
-                        value={newPoaNameInput}
-                        onChange={(e) => setNewPoaNameInput(e.target.value)}
-                        className="col-span-3"
-                        placeholder="Ej., Despliegue de Software Q4"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline" onClick={() => setNewPoaNameInput("")}>Cancelar</Button>
-                    </DialogClose>
-                    <Button type="submit" onClick={handleConfirmCreateNewPOA}>Crear Procedimiento POA</Button>
-                  </DialogFooter>
-                </DialogContent>
               </Dialog>
             </CardFooter>
           </Card>
@@ -217,40 +316,43 @@ export default function DashboardPage() {
           <>
             {viewMode === 'grid' && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {displayedPoas.map((poa) => (
-                  <Card key={poa.id} className="flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-                      <div className="flex-shrink-0">
-                        <Image
-                          src={poa.logo || "https://placehold.co/40x40.png"}
-                          alt={`${poa.name} logo`}
-                          width={40}
-                          height={40}
-                          className="rounded-md aspect-square object-cover"
-                          data-ai-hint="document logo"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{poa.name}</CardTitle>
-                        <CardDescription>Última actualización: <FormattedDateClient dateString={poa.updatedAt} /></CardDescription>
-                      </div>
+                {procedures.map((procedure) => (
+                  <Card key={procedure.id} className="flex flex-col shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{procedure.title}</CardTitle>
+                      <CardDescription>
+                        {procedure.description || 'Sin descripción'}
+                      </CardDescription>
+                      {procedure.updatedAt && (
+                        <CardDescription className="text-xs">
+                          Actualizado: <FormattedDateClient dateString={procedure.updatedAt} />
+                        </CardDescription>
+                      )}
                     </CardHeader>
                     <CardContent className="flex-grow">
+                      {/* Aquí se podría mostrar más información del procedimiento */}
                     </CardContent>
-                    <CardFooter className="flex flex-col items-stretch">
-                      <Link href={`/builder/${poa.id}/header`} passHref legacyBehavior>
-                        <Button variant="outline" className="w-full">
-                          <Edit3 className="mr-2 h-4 w-4" />
-                          Editar Procedimiento POA
-                        </Button>
-                      </Link>
+                    <CardFooter className="flex flex-col items-stretch gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => handleOpenProcedure(procedure)}
+                      >
+                        <Edit3 className="mr-2 h-4 w-4" />
+                        Abrir Procedimiento
+                      </Button>
                       <Button
                         variant="destructive"
-                        className="w-full mt-2"
-                        onClick={() => handleDeletePOA(poa.id)}
+                        className="w-full"
+                        onClick={() => handleDeleteProcedure(procedure.id!)}
+                        disabled={deleteProcedureMutation.isPending}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Borrar Procedimiento POA
+                        {deleteProcedureMutation.isPending ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-2 h-4 w-4" />
+                        )}
+                        Eliminar
                       </Button>
                     </CardFooter>
                   </Card>
@@ -264,44 +366,48 @@ export default function DashboardPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[60px] p-3">Logo</TableHead>
                         <TableHead className="p-3">Nombre</TableHead>
+                        <TableHead className="p-3">Descripción</TableHead>
                         <TableHead className="p-3">Última Actualización</TableHead>
                         <TableHead className="text-right p-3">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {displayedPoas.map((poa) => (
-                        <TableRow key={poa.id}>
+                      {procedures.map((procedure) => (
+                        <TableRow key={procedure.id}>
+                          <TableCell className="font-medium p-3">{procedure.title}</TableCell>
                           <TableCell className="p-3">
-                            <Image
-                              src={poa.logo || "https://placehold.co/32x32.png"}
-                              alt={`${poa.name} logo`}
-                              width={32}
-                              height={32}
-                              className="rounded-sm aspect-square object-cover"
-                              data-ai-hint="document logo"
-                            />
+                            {procedure.description || 'Sin descripción'}
                           </TableCell>
-                          <TableCell className="font-medium p-3">{poa.name}</TableCell>
                           <TableCell className="p-3">
-                            <FormattedDateClient dateString={poa.updatedAt} />
+                            {procedure.updatedAt ? (
+                              <FormattedDateClient dateString={procedure.updatedAt} />
+                            ) : (
+                              'N/A'
+                            )}
                           </TableCell>
                           <TableCell className="text-right p-3">
                             <div className="flex gap-2 justify-end">
-                              <Link href={`/builder/${poa.id}/header`} passHref legacyBehavior>
-                                <Button variant="outline" size="sm">
-                                  <Edit3 className="mr-1 h-3.5 w-3.5" />
-                                  Editar
-                                </Button>
-                              </Link>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleOpenProcedure(procedure)}
+                              >
+                                <Edit3 className="mr-1 h-3.5 w-3.5" />
+                                Abrir
+                              </Button>
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={() => handleDeletePOA(poa.id)}
+                                onClick={() => handleDeleteProcedure(procedure.id!)}
+                                disabled={deleteProcedureMutation.isPending}
                               >
-                                <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                Borrar
+                                {deleteProcedureMutation.isPending ? (
+                                  <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                )}
+                                Eliminar
                               </Button>
                             </div>
                           </TableCell>
@@ -317,4 +423,4 @@ export default function DashboardPage() {
       </div>
     </>
   );
-}
+} 

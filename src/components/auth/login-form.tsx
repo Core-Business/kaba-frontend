@@ -15,10 +15,13 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Building } from "lucide-react"; // Business-themed icon
+import { Building } from "lucide-react";
+import { AuthAPI } from "@/api/auth";
+import { useToast } from "@/hooks/use-toast";
 
 export function LoginForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -28,20 +31,33 @@ export function LoginForm() {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // TODO: Implement actual Firebase login
-    // For now, always succeed and redirect to dashboard
-    // if (email === "user@example.com" && password === "password") {
-    //   router.push("/dashboard");
-    // } else {
-    //   // Simulate login failure
-    //   // setError("Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.");
-    //   // For demo, let's allow any login to proceed
-    //    router.push("/dashboard");
-    // }
-    router.push("/dashboard");
-    setIsLoading(false);
+    
+    try {
+      const response = await AuthAPI.login(email, password);
+      
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: `Bienvenido, ${response.user?.email || email}`,
+      });
+      
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          "Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.";
+      
+      setError(errorMessage);
+      
+      toast({
+        title: "Error de inicio de sesión",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,7 +66,7 @@ export function LoginForm() {
         <div className="flex justify-center mb-4">
             <Building className="h-10 w-10 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Iniciar Sesión en POA Builder</CardTitle>
+                    <CardTitle className="text-2xl font-bold">Iniciar Sesión en KABA Services</CardTitle>
         <CardDescription>
           Ingresa tu correo electrónico para acceder a tu cuenta
         </CardDescription>
