@@ -55,6 +55,19 @@ export const AuthAPI = {
     }
   },
 
+  async logoutFromServer() {
+    try {
+      const token = this.getToken();
+      if (token) {
+        await api.post("/auth/logout");
+      }
+    } catch (error) {
+      console.error('Error during server logout:', error);
+    } finally {
+      this.logout(); // Siempre limpiar el storage local
+    }
+  },
+
   getToken(): string | null {
     return localStorage.getItem("accessToken");
   },

@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +15,43 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Settings, LifeBuoy } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { UsersAPI } from "@/api/users";
+import { AuthAPI } from "@/api/auth";
+
+interface UserInfo {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
 
 export function UserNav() {
   const router = useRouter();
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  const handleLogout = () => {
-    // TODO: Implement actual Firebase logout
-    router.push("/login");
+  useEffect(() => {
+    loadUserInfo();
+  }, []);
+
+  const loadUserInfo = async () => {
+    try {
+      const user = await UsersAPI.getCurrentUser();
+      setUserInfo(user);
+    } catch (error) {
+      console.error('Error loading user info:', error);
+      // Si no se puede cargar la info del usuario, mantener null
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AuthAPI.logoutFromServer();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // En caso de error, hacer logout local de todos modos
+      AuthAPI.logout();
+    }
   };
 
   return (
@@ -29,26 +60,30 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
             <AvatarImage src="https://placehold.co/100x100.png" alt="User avatar" data-ai-hint="user avatar" />
-            <AvatarFallback>U</AvatarFallback>
+            <AvatarFallback>
+              {userInfo ? `${userInfo.firstName.charAt(0)}${userInfo.lastName.charAt(0)}` : "U"}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Nombre de Usuario</p>
+            <p className="text-sm font-medium leading-none">
+              {userInfo ? `${userInfo.firstName} ${userInfo.lastName}` : "Nombre de Usuario"}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
-              usuario@ejemplo.com
+              {userInfo?.email || "usuario@ejemplo.com"}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
             <User className="mr-2 h-4 w-4" />
             <span>Perfil</span>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Configuración</span>
           </DropdownMenuItem>

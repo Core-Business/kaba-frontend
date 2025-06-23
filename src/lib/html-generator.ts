@@ -19,10 +19,11 @@ export function generatePOAHTML(poa: POA): string {
     : '';
 
   const activitiesHtml = poa.activities.map(activity => {
-    const typeDisplay = translateActivityType(activity.type);
+    const typeDisplay = translateActivityType(activity.nextActivityType);
+    const activityNumber = activity.userNumber || activity.systemNumber || '';
     return `
-    <div class="activity-item" style="margin-bottom: 15px; padding-left: ${activity.number.includes('.') ? '20px' : '0px'};">
-      <h4 style="font-size: 1.1em; margin-bottom: 5px;">Actividad ${activity.number}${typeDisplay ? `: (${typeDisplay})` : ''}</h4>
+    <div class="activity-item" style="margin-bottom: 15px; padding-left: ${activityNumber.includes('.') ? '20px' : '0px'};">
+      <h4 style="font-size: 1.1em; margin-bottom: 5px;">Actividad ${activityNumber}${typeDisplay ? `: (${typeDisplay})` : ''}</h4>
       <p style="margin-bottom: 5px;">${activity.description.replace(/\n/g, '<br>')}</p>
     </div>
   `}).join('');
