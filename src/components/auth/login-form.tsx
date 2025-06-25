@@ -9,11 +9,13 @@ import { useState, type FormEvent } from "react";
 import { Building } from "lucide-react";
 import { AuthAPI } from "@/api/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 
 export function LoginForm() {
   const router = useRouter();
   const { toast } = useToast();
+  const { setAuth, refreshContexts } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +28,12 @@ export function LoginForm() {
     
     try {
       const response = await AuthAPI.login(email, password);
+      
+      // Establecer auth en contexto (persistirá automáticamente en localStorage)
+      setAuth(response.accessToken, response.user, response.workspace);
+      
+      // Refrescar contextos disponibles después del login
+      await refreshContexts();
       
       toast({
         title: "Inicio de sesión exitoso",
