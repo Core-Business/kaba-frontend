@@ -14,7 +14,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint:architecture": "eslint . --config .eslintrc.architecture.js --ext .ts,.tsx --no-eslintrc",
+    "typecheck": "tsc --noEmit",
+    "validate:architecture": "npm run lint:architecture && npm run check:backend-files",
+    "check:backend-files": "node scripts/check-architecture.js",
+    "pre-commit": "npm run validate:architecture && npm run typecheck && npm run lint"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
