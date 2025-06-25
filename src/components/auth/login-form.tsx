@@ -32,8 +32,8 @@ export function LoginForm() {
       // Establecer auth en contexto (persistirá automáticamente en localStorage)
       setAuth(response.accessToken, response.user, response.workspace);
       
-      // Refrescar contextos disponibles después del login
-      await refreshContexts();
+      // Refrescar contextos disponibles después del login (en background, no bloquear)
+      refreshContexts().catch(err => console.warn('Error refreshing contexts:', err));
       
       toast({
         title: "Inicio de sesión exitoso",
