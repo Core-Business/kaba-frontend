@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { FormattedDateClient } from "@/components/shared/formatted-date";
 import Link from "next/link";
+import { AuthAPI } from "@/api/auth";
 
 // Tipos para las métricas
 interface DashboardMetrics {
@@ -152,6 +153,16 @@ function TopBar({ onSearch, onCreateNew }: { onSearch: (query: string) => void; 
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await AuthAPI.logoutFromServer();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // En caso de error, forzar logout local
+      AuthAPI.logout();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center space-x-4 flex-1">
@@ -201,7 +212,7 @@ function TopBar({ onSearch, onCreateNew }: { onSearch: (query: string) => void; 
               <CreditCard className="mr-2 h-4 w-4" />
               <span>Administrar suscripción</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Cerrar sesión</span>
             </DropdownMenuItem>

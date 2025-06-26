@@ -27,6 +27,7 @@ interface AuthContextType {
   setWorkspace: (workspace: WorkspaceCtx) => void;
   setAvailableWorkspaces: (workspaces: any[]) => void;
   setAuth: (token: string, user: User, workspace: WorkspaceCtx) => void;
+  refreshToken: (newToken: string) => void;
   clearAuth: () => void;
   refreshContexts: () => Promise<void>;
 }
@@ -137,6 +138,13 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     setAvailableWorkspacesState(workspaces);
   };
 
+  // Función para refrescar solo el token (preservando workspace)
+  const refreshToken = (newToken: string) => {
+    setToken(newToken);
+    // Solo actualizar el token, preservar workspace y user
+    localStorage.setItem(STORAGE_KEYS.TOKEN, newToken);
+  };
+
   // Función para limpiar autenticación
   const clearAuth = () => {
     setToken(null);
@@ -162,6 +170,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     setWorkspace,
     setAvailableWorkspaces,
     setAuth,
+    refreshToken,
     clearAuth,
     refreshContexts
   };

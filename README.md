@@ -68,6 +68,45 @@ npm run dev
 - Estados de carga y error
 - Vista grid/lista
 
+## ⚙️ Frontend Multi-Tenant (Fase 1)
+
+### 🔧 Headers Automáticos
+Todas las peticiones HTTP incluyen **tres headers obligatorios**:
+```http
+Authorization: Bearer <jwt_token>
+X-Organization-Id: <organization_uuid>
+X-Workspace-Id: <workspace_uuid>
+```
+
+### 🗂️ localStorage Keys
+```typescript
+// Claves utilizadas por el sistema
+"kaba.token"        // JWT token con contexto org/workspace
+"kaba.user"         // Datos del usuario autenticado
+"kaba.lastWorkspace" // Último workspace seleccionado
+```
+
+### 🔄 Flujo Multi-Tenant
+1. **Login** → Obtiene JWT contextual + workspace data
+2. **Persistencia** → Guarda en localStorage automáticamente
+3. **Interceptor** → Añade headers automáticamente en cada request
+4. **Contextos** → Llama `GET /auth/contexts` para obtener workspaces disponibles
+
+### ⚠️ Manejo de Errores
+| Código | Acción | Descripción |
+|--------|--------|-------------|
+| `401` | Logout automático | Token expirado/inválido |
+| `403` | Redirect `/workspace-revoked` | Sin permisos de workspace |
+| `429` | Toast informativo | Rate limit excedido en switch |
+
+### 🔌 API Integration
+```typescript
+// Hook para obtener contextos disponibles
+import { useContexts } from '@/hooks/useContexts';
+
+const { data: contexts, isLoading } = useContexts();
+```
+
 ## 📱 Funcionalidades
 
 ### Autenticación
@@ -114,6 +153,10 @@ const {
 - ✅ Auto-save cada 2 segundos para POAs
 - ✅ Manejo de errores con toast notifications
 - ✅ Estados de loading en todas las operaciones
+- ✅ **Headers contextuales** se envían automáticamente
+- ✅ **Error 403** redirige a `/workspace-revoked`
+- ✅ **Error 429** muestra toast de rate limit
+- ✅ **Workspace context** persiste entre sesiones
 
 ## 🔧 Arquitectura de Integración
 
@@ -127,7 +170,7 @@ const {
 ├─ React Query                      ├─ MongoDB
 ├─ Axios Client                     ├─ JWT Auth
 ├─ Context API                      ├─ Swagger API
-└─ Auto-save                        └─ Validations
+└─ Auto-save                        └─ Multi-Tenant
 ```
 
 ## 🛠️ Scripts Disponibles
@@ -157,6 +200,7 @@ El frontend está **100% integrado** con el backend NestJS:
 - ✅ Dashboard completamente funcional
 - ✅ Formulario de objetivos con integración backend
 - ✅ Funcionalidades de IA completamente configuradas y operativas
+- ✅ **Sistema multi-tenant** integrado con contexto automático
 
 ## 🤖 Funcionalidades de IA Integradas
 
