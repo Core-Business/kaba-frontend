@@ -25,7 +25,7 @@ export interface ChangePasswordRequest {
 
 export const UsersAPI = {
   async getCurrentUser(): Promise<User> {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("kaba.token");
     if (!token) {
       throw new Error("No authentication token found");
     }
@@ -49,7 +49,7 @@ export const UsersAPI = {
   },
 
   async updateCurrentUser(updateData: UpdateUserRequest): Promise<User> {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("kaba.token");
     if (!token) {
       throw new Error("No authentication token found");
     }
@@ -62,7 +62,7 @@ export const UsersAPI = {
   },
 
   async changePassword(passwordData: ChangePasswordRequest): Promise<void> {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("kaba.token");
     if (!token) {
       throw new Error("No authentication token found");
     }

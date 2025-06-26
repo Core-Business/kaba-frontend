@@ -1,0 +1,33 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Validando arquitectura frontend..."
+
+# Ejecutar validación de arquitectura
+npm run validate:architecture
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ COMMIT BLOQUEADO: Se encontraron archivos de backend en frontend"
+  echo ""
+  echo "🔧 Soluciones:"
+  echo "1. Mover archivos .entity.ts al backend (kaba-backend/src/modules/)"
+  echo "2. Mover archivos .schema.ts al backend (kaba-backend/src/procedures/schemas/)"
+  echo "3. Mover guards/interceptors al backend (kaba-backend/src/common/)"
+  echo "4. Crear interfaces TypeScript en frontend (/src/types/) si necesitas tipos"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Arquitectura frontend correcta"
+echo "🔍 Ejecutando lint y typecheck..."
+
+# Ejecutar lint y typecheck
+npm run lint && npm run typecheck
+
+if [ $? -ne 0 ]; then
+  echo "❌ COMMIT BLOQUEADO: Errores de lint o TypeScript"
+  exit 1
+fi
+
+echo "✅ Todas las validaciones pasaron - Commit permitido" 

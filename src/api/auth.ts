@@ -7,11 +7,45 @@ export interface LoginResponse {
     email: string;
     name?: string;
   };
+  workspace: {
+    orgId: string;
+    wsId: string;
+    wsName: string;
+    role: 'WORKSPACE_ADMIN' | 'EDITOR' | 'VIEWER';
+  };
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface UserContextsResponse {
+  userId: string;
+  currentOrganization: string;
+  currentWorkspace: string;
+  currentRole: string;
+  availableContexts: {
+    id: string;
+    name: string;
+    workspaces: {
+      id: string;
+      name: string;
+      role: string;
+      isActive: boolean;
+    }[];
+  }[];
+}
+
+export interface SwitchWorkspaceRequest {
+  workspaceId: string;
+}
+
+export interface SwitchWorkspaceResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
 }
 
 export const AuthAPI = {
@@ -27,10 +61,10 @@ export const AuthAPI = {
       throw new Error("Token de acceso no recibido del servidor");
     }
     
-    localStorage.setItem("accessToken", authData.accessToken);
-    
-    // Decodificar el JWT para obtener información del usuario
+    // Decodificar el JWT para obtener información del usuario y contexto
     let userInfo = { id: 'unknown', email: email, name: undefined };
+    let workspaceInfo = { orgId: '', wsId: '', wsName: '', role: 'VIEWER' as const };
+    
     try {
       const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));
       userInfo = {
@@ -38,18 +72,57 @@ export const AuthAPI = {
         email: payload.email || email,
         name: payload.name
       };
+      
+      // Extraer contexto del JWT
+      if (payload.org && payload.ws && payload.role) {
+        workspaceInfo = {
+          orgId: payload.org,
+          wsId: payload.ws,
+          wsName: 'Default Workspace', // Será actualizado por getContexts
+          role: payload.role
+        };
+      }
     } catch (error) {
       console.warn('No se pudo decodificar el JWT:', error);
     }
     
     return {
       accessToken: authData.accessToken,
-      user: userInfo
+      user: userInfo,
+      workspace: workspaceInfo
     };
   },
 
+  async getContexts(): Promise<UserContextsResponse> {
+    const response = await api.get("/auth/contexts");
+    return response.data;
+  },
+
+  async switchWorkspace(workspaceId: string): Promise<SwitchWorkspaceResponse> {
+    const response = await api.post("/auth/switch-workspace", {
+      workspaceId
+    });
+    return response.data;
+  },
+
+  async getUserPermissions() {
+    const response = await api.get("/auth/permissions");
+    return response.data;
+  },
+
+  async checkPermissions(action: string, resource: string, resourceId?: string) {
+    const response = await api.post("/auth/check-permissions", {
+      action,
+      resource,
+      resourceId
+    });
+    return response.data;
+  },
+
   logout() {
-    localStorage.removeItem("accessToken");
+    localStorage.removeItem("kaba.token");
+    localStorage.removeItem("kaba.user");
+    localStorage.removeItem("kaba.lastWorkspace");
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
     }
@@ -69,7 +142,7 @@ export const AuthAPI = {
   },
 
   getToken(): string | null {
-    return localStorage.getItem("accessToken");
+    return localStorage.getItem("kaba.token");
   },
 
   isAuthenticated(): boolean {

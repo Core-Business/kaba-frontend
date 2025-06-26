@@ -17,6 +17,7 @@ import { LogOut, User, Settings, LifeBuoy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UsersAPI } from "@/api/users";
 import { AuthAPI } from "@/api/auth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UserInfo {
   id: string;
@@ -28,16 +29,28 @@ interface UserInfo {
 
 export function UserNav() {
   const router = useRouter();
+  const { user, clearAuth } = useAuth();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
-    loadUserInfo();
-  }, []);
+    if (user) {
+      // Si tenemos user del contexto, usarlo directamente
+      setUserInfo({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        role: 'user'
+      });
+    } else {
+      loadUserInfo();
+    }
+  }, [user]);
 
   const loadUserInfo = async () => {
     try {
-      const user = await UsersAPI.getCurrentUser();
-      setUserInfo(user);
+      const userData = await UsersAPI.getCurrentUser();
+      setUserInfo(userData);
     } catch (error) {
       console.error('Error loading user info:', error);
       // Si no se puede cargar la info del usuario, mantener null
@@ -49,8 +62,8 @@ export function UserNav() {
       await AuthAPI.logoutFromServer();
     } catch (error) {
       console.error('Error during logout:', error);
-      // En caso de error, hacer logout local de todos modos
-      AuthAPI.logout();
+      // En caso de error, usar clearAuth del contexto
+      clearAuth();
     }
   };
 
