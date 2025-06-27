@@ -1,6 +1,4 @@
-
 import { POAProvider } from "@/contexts/poa-context";
-// AppHeader is removed from here, will be added by specific page layouts (Dashboard, Builder)
 
 export default function AppLayout({
   children,
@@ -9,9 +7,8 @@ export default function AppLayout({
 }) {
   return (
     <POAProvider>
-      <div className="relative flex min-h-screen flex-col">
-        {/* AppHeader is no longer globally rendered here */}
-        <main className="flex-1 flex flex-col">{children}</main> {/* Ensure main can flex its content */}
+      <div className="min-h-screen bg-slate-50">
+        <main className="flex-1">{children}</main>
       </div>
     </POAProvider>
   );

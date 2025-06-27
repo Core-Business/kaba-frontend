@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -23,6 +22,7 @@ import {
   Printer,
   Home,
   ChevronLeft,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
@@ -41,6 +41,7 @@ const navItems = [
   { name: "Objetivo", href: "objective", icon: Target },
   { name: "Actividades", href: "activities", icon: ListTree },
   { name: "Alcance", href: "scope", icon: ScanSearch },
+  { name: "Responsabilidades", href: "responsibilities", icon: Users },
   { name: "Introducción", href: "introduction", icon: BookOpenText },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];

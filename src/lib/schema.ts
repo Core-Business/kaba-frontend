@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const poaActivityDecisionBranchesSchema = z.object({
@@ -102,6 +101,19 @@ export const poaScopeHelperDataSchema = z.object({
 });
 export type POAScopeHelperData = z.infer<typeof poaScopeHelperDataSchema>;
 
+export const poaResponsibleSchema = z.object({
+  id: z.string(),
+  responsibleName: z.string(),
+  type: z.enum(['automatic', 'manual']),
+  activitiesCount: z.number(),
+  summary: z.string(),
+  role: z.string().optional(),
+  activityIds: z.array(z.string()).optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type POAResponsible = z.infer<typeof poaResponsibleSchema>;
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -114,6 +126,8 @@ export const poaSchema = z.object({
   scope: z.string().optional(),
   scopeHelperData: poaScopeHelperDataSchema.optional(),
   activities: z.array(poaActivitySchema),
+  responsibilities: z.array(poaResponsibleSchema),
+  procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
@@ -171,7 +185,11 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     scope: '',
     scopeHelperData: { ...defaultPOAScopeHelperData },
     activities: [],
+    responsibilities: [],
+    procedureId: '',
     createdAt: now,
     updatedAt: now,
   };
 }
+
+export type ProcedureStatus = z.infer<typeof poaStatusType>;
