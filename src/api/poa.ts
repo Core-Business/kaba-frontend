@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { POA } from "@/lib/schema";
+import type { POA, POAResponsible } from "@/lib/schema";
 
 export interface CreatePOARequest {
   name: string;
@@ -13,6 +13,23 @@ export interface CreatePOARequest {
 }
 
 export interface UpdatePOARequest extends Partial<CreatePOARequest> {}
+
+// Nuevos tipos para Responsabilidades
+export interface GenerateResponsibilitiesRequest {
+  regenerate?: boolean;
+}
+
+export interface CreateManualResponsibleRequest {
+  responsibleName: string;
+  role: string;
+  summary: string;
+}
+
+export interface UpdateResponsibleRequest {
+  responsibleName?: string;
+  role?: string;
+  summary?: string;
+}
 
 // Función para transformar POA del frontend al formato del backend
 function transformPOAForBackend(poa: POA): UpdatePOARequest {
@@ -80,5 +97,39 @@ export const POAAPI = {
   async generateDocument(procedureId: string): Promise<{ html: string }> {
     const response = await api.post(`/procedures/${procedureId}/poa/generate-document`);
     return response.data?.data;
+  },
+
+  // --- Métodos para Responsabilidades ---
+
+  async generateResponsibilities(
+    procedureId: string,
+    req: GenerateResponsibilitiesRequest = {}
+  ): Promise<POAResponsible[]> {
+    const response = await api.post(`/procedures/${procedureId}/poa/responsibilities/generate`, req);
+    return response.data?.data || []; // El backend devuelve { statusCode, message, data: array }
+  },
+
+  async addManualResponsible(
+    procedureId: string,
+    req: CreateManualResponsibleRequest
+  ): Promise<POAResponsible> {
+    const response = await api.post(`/procedures/${procedureId}/poa/responsibilities/manual`, req);
+    return response.data?.data;
+  },
+
+  async updateResponsible(
+    procedureId: string,
+    responsibleId: string,
+    req: UpdateResponsibleRequest
+  ): Promise<POAResponsible> {
+    const response = await api.patch(`/procedures/${procedureId}/poa/responsibilities/${responsibleId}`, req);
+    return response.data?.data;
+  },
+
+  async deleteResponsible(
+    procedureId: string,
+    responsibleId: string
+  ): Promise<void> {
+    await api.delete(`/procedures/${procedureId}/poa/responsibilities/${responsibleId}`);
   },
 }; 
