@@ -384,3 +384,40 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
 }
 
 export type ProcedureStatus = z.infer<typeof poaStatusType>;
+
+// =====================================
+// ESQUEMAS PARA ANEXOS (POA ATTACHMENTS)
+// =====================================
+
+export const poaAttachmentSchema = z.object({
+  id: z.string(),
+  fileName: z.string(),
+  originalName: z.string().min(1, "El nombre del archivo es requerido"),
+  mimeType: z.string(),
+  size: z.number().positive("El tamaño debe ser positivo"),
+  url: z.string().url("URL inválida"),
+  poaId: z.string(),
+  procedureId: z.string(),
+  description: z.string()
+    .max(500, "La descripción no puede exceder 500 caracteres")
+    .optional(),
+  uploadedBy: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const createAttachmentSchema = z.object({
+  description: z.string()
+    .max(500, "La descripción no puede exceder 500 caracteres")
+    .optional(),
+});
+
+export const updateAttachmentSchema = z.object({
+  description: z.string()
+    .min(1, "La descripción es requerida")
+    .max(500, "La descripción no puede exceder 500 caracteres"),
+});
+
+export type POAAttachment = z.infer<typeof poaAttachmentSchema>;
+export type CreateAttachment = z.infer<typeof createAttachmentSchema>;
+export type UpdateAttachment = z.infer<typeof updateAttachmentSchema>;

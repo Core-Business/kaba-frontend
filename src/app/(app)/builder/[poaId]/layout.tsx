@@ -28,6 +28,7 @@ import {
   CheckCircle,
   FileEdit,
   FileText,
+  Paperclip,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
@@ -53,6 +54,7 @@ const navItems = [
   { name: "Aprobaciones", href: "approvals", icon: CheckCircle },
   { name: "Control de Cambios", href: "change-control", icon: FileEdit },
   { name: "Registros", href: "records", icon: FileText },
+  { name: "Anexos", href: "attachments", icon: Paperclip },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
 

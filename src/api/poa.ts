@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { POA, POAResponsible, POADefinition, POAReference } from "@/lib/schema";
+import type { POA, POAResponsible, POADefinition, POAReference, POAAttachment } from "@/lib/schema";
 
 export interface CreatePOARequest {
   name: string;
@@ -243,6 +243,80 @@ export const POAAPI = {
     updateAll: async (procedureId: string, data: any) => {
       const response = await api.patch(`/procedures/${procedureId}/poa/records`, data);
       return response.data?.data;
+    },
+  },
+
+  // =====================================
+  // ENDPOINTS DE ANEXOS
+  // =====================================
+
+  attachments: {
+    // Obtener todos los anexos del POA
+    getAll: async (procedureId: string, poaId: string): Promise<POAAttachment[]> => {
+      const response = await api.get(`/procedures/${procedureId}/poa/attachments?poaId=${poaId}`);
+      return response.data?.data || [];
+    },
+
+    // Subir nuevo anexo
+    upload: async (
+      procedureId: string, 
+      poaId: string,
+      file: File, 
+      description?: string
+    ): Promise<POAAttachment> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (description) {
+        formData.append('description', description);
+      }
+
+      const response = await api.post(
+        `/procedures/${procedureId}/poa/attachments/upload?poaId=${poaId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+      return response.data?.data;
+    },
+
+    // Obtener URL de descarga
+    getDownloadUrl: async (
+      procedureId: string, 
+      poaId: string,
+      attachmentId: string
+    ): Promise<string> => {
+      const response = await api.get(
+        `/procedures/${procedureId}/poa/attachments/${attachmentId}/download?poaId=${poaId}`
+      );
+      return response.data?.downloadUrl;
+    },
+
+    // Actualizar descripción
+    updateDescription: async (
+      procedureId: string, 
+      poaId: string,
+      attachmentId: string, 
+      description: string
+    ): Promise<POAAttachment> => {
+      const response = await api.patch(
+        `/procedures/${procedureId}/poa/attachments/${attachmentId}?poaId=${poaId}`,
+        { description }
+      );
+      return response.data?.data;
+    },
+
+    // Eliminar anexo
+    remove: async (
+      procedureId: string, 
+      poaId: string,
+      attachmentId: string
+    ): Promise<void> => {
+      await api.delete(
+        `/procedures/${procedureId}/poa/attachments/${attachmentId}?poaId=${poaId}`
+      );
     },
   },
 }; 
