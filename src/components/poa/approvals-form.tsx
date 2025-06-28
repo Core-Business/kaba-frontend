@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { usePOA } from '@/hooks/use-poa';
 import { useApprovals } from '@/hooks/use-approvals';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { SectionTitle } from './common-form-elements';
 import { ApprovalSection } from './approval-section';
 import { ApprovalPersonDialog } from './approval-person-dialog';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useToast } from '@/hooks/use-toast';
+import { Save } from 'lucide-react';
 import type { POAApprovalPerson, ApprovalType } from '@/lib/schema';
 
 interface ApprovalPersonFormData {
@@ -34,13 +37,14 @@ const approvalSections = [
 ];
 
 export function ApprovalsForm() {
-  const { poa } = usePOA();
+  const { poa, saveCurrentPOA } = usePOA();
   const {
     isLoading,
     addApprovalPerson,
     updateApprovalPerson,
     deleteApprovalPerson,
   } = useApprovals();
+  const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPerson, setEditingPerson] = useState<POAApprovalPerson | null>(null);
@@ -99,6 +103,32 @@ export function ApprovalsForm() {
     }
   };
 
+  const handleSave = async () => {
+    if (!poa) {
+      toast({
+        title: "Error",
+        description: "No hay datos para guardar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await saveCurrentPOA();
+      toast({
+        title: "Aprobaciones Guardadas",
+        description: "Las aprobaciones han sido guardadas exitosamente.",
+      });
+    } catch (error) {
+      console.error('Error al guardar aprobaciones:', error);
+      toast({
+        title: "Error al Guardar",
+        description: `No se pudieron guardar las aprobaciones: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Card className="shadow-lg w-full">
@@ -141,6 +171,13 @@ export function ApprovalsForm() {
             </div>
           )}
         </CardContent>
+        
+        <CardFooter className="flex justify-start border-t pt-4">
+          <Button onClick={handleSave}>
+            <Save className="mr-2 h-4 w-4" />
+            Guardar Aprobaciones
+          </Button>
+        </CardFooter>
       </Card>
 
       {/* Diálogo para agregar/editar personas */}

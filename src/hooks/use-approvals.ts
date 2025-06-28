@@ -16,7 +16,7 @@ export function useApprovals() {
   const [isLoading, setIsLoading] = useState(false);
   const params = useParams();
   const { toast } = useToast();
-  const { poa, setIsDirty } = usePOA();
+  const { poa, setPoa, setIsDirty } = usePOA();
   
   const procedureId = typeof params.poaId === 'string' ? params.poaId : '';
 
@@ -41,6 +41,12 @@ export function useApprovals() {
         `/procedures/${procedureId}/poa/approvals/${type}`,
         personData
       );
+
+      // Actualizar estado local con la respuesta del backend
+      const updatedPOA = response.data?.data;
+      if (updatedPOA) {
+        setPoa(updatedPOA);
+      }
 
       setIsDirty(true);
       toast({
@@ -73,6 +79,12 @@ export function useApprovals() {
         personData
       );
 
+      // Actualizar estado local con la respuesta del backend
+      const updatedPOA = response.data?.data;
+      if (updatedPOA) {
+        setPoa(updatedPOA);
+      }
+
       setIsDirty(true);
       toast({
         title: 'Persona actualizada',
@@ -102,6 +114,12 @@ export function useApprovals() {
         `/procedures/${procedureId}/poa/approvals/${type}/${personId}`
       );
 
+      // Actualizar estado local con la respuesta del backend
+      const updatedPOA = response.data?.data;
+      if (updatedPOA) {
+        setPoa(updatedPOA);
+      }
+
       setIsDirty(true);
       toast({
         title: 'Persona eliminada',
@@ -128,6 +146,12 @@ export function useApprovals() {
         `/procedures/${procedureId}/poa/approvals`,
         approvals
       );
+
+      // Actualizar estado local con la respuesta del backend
+      const updatedPOA = response.data?.data;
+      if (updatedPOA) {
+        setPoa(updatedPOA);
+      }
 
       setIsDirty(true);
       toast({
