@@ -13,7 +13,12 @@ const navItemsForTitle = [
   { name: "Objetivo", href: "objective" },
   { name: "Actividades", href: "activities" },
   { name: "Alcance", href: "scope" },
-  { name: "Introducción", href: "introduction" }, 
+  { name: "Responsabilidades", href: "responsibilities" },
+  { name: "Definiciones", href: "definitions" },
+  { name: "Referencias", href: "references" },
+  { name: "Introducción", href: "introduction" },
+  { name: "Aprobaciones", href: "approvals" },
+  { name: "Control de Cambios", href: "change-control" },
   { name: "Vista Previa", href: "document" },
 ];
 
