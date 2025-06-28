@@ -128,6 +128,26 @@ export const poaReferenceSchema = z.object({
 });
 export type POAReference = z.infer<typeof poaReferenceSchema>;
 
+// Esquemas para aprobaciones (MVP)
+export const poaApprovalPersonSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "El nombre es requerido.").max(255, "El nombre no puede exceder 255 caracteres."),
+  position: z.string().min(1, "El cargo es requerido.").max(255, "El cargo no puede exceder 255 caracteres."),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export type POAApprovalPerson = z.infer<typeof poaApprovalPersonSchema>;
+
+export const poaApprovalsSchema = z.object({
+  elaborated: z.array(poaApprovalPersonSchema).default([]),
+  reviewed: z.array(poaApprovalPersonSchema).default([]),
+  authorized: z.array(poaApprovalPersonSchema).default([]),
+});
+export type POAApprovals = z.infer<typeof poaApprovalsSchema>;
+
+// Tipo para tipos de aprobación
+export type ApprovalType = 'elaborated' | 'reviewed' | 'authorized';
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -143,6 +163,7 @@ export const poaSchema = z.object({
   responsibilities: z.array(poaResponsibleSchema),
   definitions: z.array(poaDefinitionSchema),
   references: z.array(poaReferenceSchema),
+  approvals: poaApprovalsSchema.optional(),
   procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -188,6 +209,12 @@ export const defaultPOAScopeHelperData: POAScopeHelperData = {
   revision: '',
 };
 
+export const defaultPOAApprovals: POAApprovals = {
+  elaborated: [],
+  reviewed: [],
+  authorized: [],
+};
+
 export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimiento POA Sin Título'): POA {
   const now = new Date().toISOString();
   return {
@@ -204,6 +231,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     responsibilities: [],
     definitions: [],
     references: [],
+    approvals: { ...defaultPOAApprovals },
     procedureId: '',
     createdAt: now,
     updatedAt: now,

@@ -25,6 +25,7 @@ import {
   Users,
   BookOpen,
   ExternalLink,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
@@ -47,6 +48,7 @@ const navItems = [
   { name: "Definiciones", href: "definitions", icon: BookOpen },
   { name: "Referencias", href: "references", icon: ExternalLink },
   { name: "Introducción", href: "introduction", icon: BookOpenText },
+  { name: "Aprobaciones", href: "approvals", icon: CheckCircle },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
 
