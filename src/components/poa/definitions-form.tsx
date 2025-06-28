@@ -32,6 +32,19 @@ export function DefinitionsForm() {
   const definitions = poa?.definitions || [];
   const updateDefinitionsMutation = updateDefinitionsAPI();
 
+  // Función helper para crear la definición limpia
+  const createCleanDefinition = (def: EditingDefinition | POADefinition): POADefinition => {
+    return {
+      term: def.term.trim(),
+      definition: def.definition.trim(),
+    };
+  };
+
+  // Función para limpiar todas las definiciones (remover _id, id, etc.)
+  const cleanAllDefinitions = (defs: (POADefinition | EditingDefinition)[]): POADefinition[] => {
+    return defs.map(def => createCleanDefinition(def));
+  };
+
   // Forzar re-render cuando la IA actualice la definición
   useEffect(() => {
     console.log("🔄 useEffect - editingDefinition cambió:", editingDefinition);
@@ -107,20 +120,14 @@ export function DefinitionsForm() {
     
     if (editingDefinition.isNew) {
       // Agregar nueva definición
-      newDefinitions = [...definitions, {
-        term: editingDefinition.term.trim(),
-        definition: editingDefinition.definition.trim(),
-      }];
+      const allDefs = [...definitions, editingDefinition];
+      newDefinitions = cleanAllDefinitions(allDefs);
     } else {
       // Actualizar definición existente
-      newDefinitions = definitions.map((def, index) => 
-        index === editingIndex 
-          ? {
-              term: editingDefinition.term.trim(),
-              definition: editingDefinition.definition.trim(),
-            }
-          : def
+      const allDefs = definitions.map((def, index) => 
+        index === editingIndex ? editingDefinition : def
       );
+      newDefinitions = cleanAllDefinitions(allDefs);
     }
 
     try {
@@ -155,7 +162,8 @@ export function DefinitionsForm() {
     if (!poa) return;
 
     const definitionToDelete = definitions[index];
-    const newDefinitions = definitions.filter((_, i) => i !== index);
+    const filteredDefinitions = definitions.filter((_, i) => i !== index);
+    const newDefinitions = cleanAllDefinitions(filteredDefinitions);
 
     try {
       // Actualizar en el backend

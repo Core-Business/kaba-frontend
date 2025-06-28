@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition } from '@/lib/schema';
+import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition, POAReference } from '@/lib/schema';
 import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema';
 import type React from 'react';
 import { createContext, useCallback, useState, useEffect } from 'react';
@@ -38,6 +38,7 @@ interface POAContextType {
   scrollToActivityId: string | null;
   setScrollToActivityId: (id: string | null) => void;
   updateDefinitions: (definitions: POADefinition[]) => void;
+  updateReferences: (references: POAReference[]) => void;
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
@@ -490,6 +491,14 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
+  const updateReferences = useCallback((references: POAReference[]) => {
+    setPoa(currentPoa => {
+      if (!currentPoa) return null;
+      setIsDirty(true);
+      return { ...currentPoa, references };
+    });
+  }, []);
+
   return (
     <POAContext.Provider value={{
       poa,
@@ -518,6 +527,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       scrollToActivityId,
       setScrollToActivityId,
       updateDefinitions,
+      updateReferences,
     }}>
       {children}
     </POAContext.Provider>

@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { POA, POAResponsible, POADefinition } from "@/lib/schema";
+import type { POA, POAResponsible, POADefinition, POAReference } from "@/lib/schema";
 
 export interface CreatePOARequest {
   name: string;
@@ -33,6 +33,10 @@ export interface UpdateResponsibleRequest {
 
 export interface UpdateDefinitionsRequest {
   definitions: POADefinition[];
+}
+
+export interface UpdateReferencesRequest {
+  references: POAReference[];
 }
 
 // Función para transformar POA del frontend al formato del backend
@@ -145,5 +149,28 @@ export const POAAPI = {
   ): Promise<POA> {
     const response = await api.patch(`/procedures/${procedureId}/poa/definitions`, req);
     return response.data?.data;
+  },
+
+  // --- Métodos para Referencias ---
+
+  async updateReferences(
+    procedureId: string,
+    req: UpdateReferencesRequest
+  ): Promise<POA> {
+    try {
+      console.log('🔄 API: Enviando referencias al backend:', { procedureId, req });
+      const response = await api.patch(`/procedures/${procedureId}/poa/references`, req);
+      console.log('✅ API: Respuesta del backend:', response.data);
+      return response.data?.data;
+    } catch (error: any) {
+      console.error('❌ API: Error al actualizar referencias:', {
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      throw error;
+    }
   },
 }; 

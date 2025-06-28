@@ -120,6 +120,14 @@ export const poaDefinitionSchema = z.object({
 });
 export type POADefinition = z.infer<typeof poaDefinitionSchema>;
 
+export const poaReferenceSchema = z.object({
+  codigo: z.string().max(255, "El código no puede exceder 255 caracteres.").optional(),
+  nombreReferencia: z.string().min(1, "El nombre de la referencia es requerido.").max(500, "El nombre de la referencia no puede exceder 500 caracteres."),
+  tipoReferencia: z.string().min(1, "El tipo de referencia es requerido.").max(80, "El tipo de referencia no puede exceder 80 caracteres."),
+  enlace: z.string().max(500, "El enlace no puede exceder 500 caracteres.").optional(),
+});
+export type POAReference = z.infer<typeof poaReferenceSchema>;
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -134,6 +142,7 @@ export const poaSchema = z.object({
   activities: z.array(poaActivitySchema),
   responsibilities: z.array(poaResponsibleSchema),
   definitions: z.array(poaDefinitionSchema),
+  references: z.array(poaReferenceSchema),
   procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -194,6 +203,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     activities: [],
     responsibilities: [],
     definitions: [],
+    references: [],
     procedureId: '',
     createdAt: now,
     updatedAt: now,
