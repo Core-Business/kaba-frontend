@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { POAAPI, CreatePOARequest, UpdatePOARequest } from "@/api/poa";
+import { POAAPI, CreatePOARequest, UpdatePOARequest, UpdateDefinitionsRequest } from "@/api/poa";
 import type { POA } from "@/lib/schema";
 
 export function usePOAAPI() {
@@ -61,6 +61,15 @@ export function usePOAAPI() {
       mutationFn: POAAPI.generateDocument,
     });
 
+  const updateDefinitions = () =>
+    useMutation({
+      mutationFn: ({ procedureId, definitions }: { procedureId: string; definitions: UpdateDefinitionsRequest }) =>
+        POAAPI.updateDefinitions(procedureId, definitions),
+      onSuccess: (_, { procedureId }) => {
+        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
+      },
+    });
+
   return { 
     getByProcedureId, 
     create, 
@@ -68,6 +77,7 @@ export function usePOAAPI() {
     update, 
     partialUpdate, 
     remove, 
-    generateDocument 
+    generateDocument,
+    updateDefinitions
   };
 } 

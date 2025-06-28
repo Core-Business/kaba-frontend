@@ -114,6 +114,12 @@ export const poaResponsibleSchema = z.object({
 });
 export type POAResponsible = z.infer<typeof poaResponsibleSchema>;
 
+export const poaDefinitionSchema = z.object({
+  term: z.string().min(1, "El término es requerido.").max(250, "El término no puede exceder 250 caracteres."),
+  definition: z.string().min(1, "La definición es requerida.").max(4000, "La definición no puede exceder 4000 caracteres."),
+});
+export type POADefinition = z.infer<typeof poaDefinitionSchema>;
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -127,6 +133,7 @@ export const poaSchema = z.object({
   scopeHelperData: poaScopeHelperDataSchema.optional(),
   activities: z.array(poaActivitySchema),
   responsibilities: z.array(poaResponsibleSchema),
+  definitions: z.array(poaDefinitionSchema),
   procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -186,6 +193,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     scopeHelperData: { ...defaultPOAScopeHelperData },
     activities: [],
     responsibilities: [],
+    definitions: [],
     procedureId: '',
     createdAt: now,
     updatedAt: now,
