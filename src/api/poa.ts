@@ -173,4 +173,40 @@ export const POAAPI = {
       throw error;
     }
   },
+
+  // =====================================
+  // ENDPOINTS DE CONTROL DE CAMBIOS
+  // =====================================
+
+  changeControl: {
+    // Obtener todas las entradas
+    getAll: async (procedureId: string) => {
+      const response = await api.get(`/procedures/${procedureId}/poa/change-control`);
+      return response.data?.data || [];
+    },
+
+    // Agregar nueva entrada
+    add: async (procedureId: string, data: any) => {
+      const response = await api.post(`/procedures/${procedureId}/poa/change-control`, data);
+      return response.data?.data;
+    },
+
+    // Actualizar última entrada
+    updateLast: async (procedureId: string, data: any) => {
+      const response = await api.put(`/procedures/${procedureId}/poa/change-control/last`, data);
+      return response.data?.data;
+    },
+
+    // Eliminar última entrada
+    removeLast: async (procedureId: string) => {
+      const response = await api.delete(`/procedures/${procedureId}/poa/change-control/last`);
+      return response.data?.data;
+    },
+
+    // Actualizar todo el control de cambios
+    updateAll: async (procedureId: string, data: any) => {
+      const response = await api.patch(`/procedures/${procedureId}/poa/change-control`, data);
+      return response.data?.data;
+    },
+  },
 }; 

@@ -148,6 +148,74 @@ export type POAApprovals = z.infer<typeof poaApprovalsSchema>;
 // Tipo para tipos de aprobación
 export type ApprovalType = 'elaborated' | 'reviewed' | 'authorized';
 
+// Esquemas para control de cambios (MVP)
+export const poaChangeControlEntrySchema = z.object({
+  entryNumber: z.number().int().positive("El número de entrada debe ser positivo."),
+  changeDate: z.string()
+    .min(1, "La fecha de cambio es requerida.")
+    .regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-\d{4}$/, "La fecha debe estar en formato MM-DD-YYYY.")
+    .refine((date) => {
+      // Validar que la fecha no sea futura
+      const [month, day, year] = date.split('-').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // Permitir hasta el final del día actual
+      return inputDate <= today;
+    }, "La fecha no puede ser futura."),
+  changeReason: z.string()
+    .min(1, "El motivo del cambio es requerido.")
+    .max(255, "El motivo del cambio no puede exceder 255 caracteres."),
+  responsible: z.string()
+    .min(1, "El responsable es requerido.")
+    .max(255, "El responsable no puede exceder 255 caracteres."),
+  signature: z.string().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export type POAChangeControlEntry = z.infer<typeof poaChangeControlEntrySchema>;
+
+// Esquema para crear nueva entrada (sin entryNumber auto-generado)
+export const createChangeControlEntrySchema = z.object({
+  changeDate: z.string()
+    .min(1, "La fecha de cambio es requerida.")
+    .regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-\d{4}$/, "La fecha debe estar en formato MM-DD-YYYY.")
+    .refine((date) => {
+      const [month, day, year] = date.split('-').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return inputDate <= today;
+    }, "La fecha no puede ser futura."),
+  changeReason: z.string()
+    .min(1, "El motivo del cambio es requerido.")
+    .max(255, "El motivo del cambio no puede exceder 255 caracteres."),
+  responsible: z.string()
+    .min(1, "El responsable es requerido.")
+    .max(255, "El responsable no puede exceder 255 caracteres."),
+});
+export type CreateChangeControlEntry = z.infer<typeof createChangeControlEntrySchema>;
+
+// Esquema para actualizar entrada existente (campos opcionales)
+export const updateChangeControlEntrySchema = z.object({
+  changeDate: z.string()
+    .regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])-\d{4}$/, "La fecha debe estar en formato MM-DD-YYYY.")
+    .refine((date) => {
+      const [month, day, year] = date.split('-').map(Number);
+      const inputDate = new Date(year, month - 1, day);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return inputDate <= today;
+    }, "La fecha no puede ser futura.")
+    .optional(),
+  changeReason: z.string()
+    .max(255, "El motivo del cambio no puede exceder 255 caracteres.")
+    .optional(),
+  responsible: z.string()
+    .max(255, "El responsable no puede exceder 255 caracteres.")
+    .optional(),
+});
+export type UpdateChangeControlEntry = z.infer<typeof updateChangeControlEntrySchema>;
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -164,6 +232,7 @@ export const poaSchema = z.object({
   definitions: z.array(poaDefinitionSchema),
   references: z.array(poaReferenceSchema),
   approvals: poaApprovalsSchema.optional(),
+  changeControl: z.array(poaChangeControlEntrySchema).default([]),
   procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -232,6 +301,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     definitions: [],
     references: [],
     approvals: { ...defaultPOAApprovals },
+    changeControl: [],
     procedureId: '',
     createdAt: now,
     updatedAt: now,
