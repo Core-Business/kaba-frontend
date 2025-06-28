@@ -216,6 +216,79 @@ export const updateChangeControlEntrySchema = z.object({
 });
 export type UpdateChangeControlEntry = z.infer<typeof updateChangeControlEntrySchema>;
 
+// Esquemas para registros (MVP)
+export const poaRecordSchema = z.object({
+  id: z.string(),
+  recordNumber: z.number().int().positive("El número de registro debe ser positivo."),
+  title: z.string()
+    .min(1, "El título del registro es requerido.")
+    .max(255, "El título no puede exceder 255 caracteres."),
+  format: z.string()
+    .min(1, "El formato es requerido.")
+    .max(255, "El formato no puede exceder 255 caracteres."),
+  responsible: z.string()
+    .min(1, "El responsable es requerido.")
+    .max(255, "El responsable no puede exceder 255 caracteres."),
+  frequency: z.string()
+    .min(1, "La frecuencia es requerida.")
+    .max(255, "La frecuencia no puede exceder 255 caracteres."),
+  retentionTime: z.string()
+    .min(1, "El tiempo de retención es requerido.")
+    .max(255, "El tiempo de retención no puede exceder 255 caracteres."),
+  storageMethod: z.string()
+    .max(500, "El medio de almacenamiento no puede exceder 500 caracteres.")
+    .optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+export type POARecord = z.infer<typeof poaRecordSchema>;
+
+// Esquema para crear nuevo registro (sin id ni recordNumber auto-generados)
+export const createRecordSchema = z.object({
+  title: z.string()
+    .min(1, "El título del registro es requerido.")
+    .max(255, "El título no puede exceder 255 caracteres."),
+  format: z.string()
+    .min(1, "El formato es requerido.")
+    .max(255, "El formato no puede exceder 255 caracteres."),
+  responsible: z.string()
+    .min(1, "El responsable es requerido.")
+    .max(255, "El responsable no puede exceder 255 caracteres."),
+  frequency: z.string()
+    .min(1, "La frecuencia es requerida.")
+    .max(255, "La frecuencia no puede exceder 255 caracteres."),
+  retentionTime: z.string()
+    .min(1, "El tiempo de retención es requerido.")
+    .max(255, "El tiempo de retención no puede exceder 255 caracteres."),
+  storageMethod: z.string()
+    .max(500, "El medio de almacenamiento no puede exceder 500 caracteres.")
+    .optional(),
+});
+export type CreateRecord = z.infer<typeof createRecordSchema>;
+
+// Esquema para actualizar registro existente (todos los campos opcionales)
+export const updateRecordSchema = z.object({
+  title: z.string()
+    .max(255, "El título no puede exceder 255 caracteres.")
+    .optional(),
+  format: z.string()
+    .max(255, "El formato no puede exceder 255 caracteres.")
+    .optional(),
+  responsible: z.string()
+    .max(255, "El responsable no puede exceder 255 caracteres.")
+    .optional(),
+  frequency: z.string()
+    .max(255, "La frecuencia no puede exceder 255 caracteres.")
+    .optional(),
+  retentionTime: z.string()
+    .max(255, "El tiempo de retención no puede exceder 255 caracteres.")
+    .optional(),
+  storageMethod: z.string()
+    .max(500, "El medio de almacenamiento no puede exceder 500 caracteres.")
+    .optional(),
+});
+export type UpdateRecord = z.infer<typeof updateRecordSchema>;
+
 export const poaSchema = z.object({
   id: z.string(),
   name: z.string().min(1, "El Nombre del Procedimiento es requerido."),
@@ -233,6 +306,7 @@ export const poaSchema = z.object({
   references: z.array(poaReferenceSchema),
   approvals: poaApprovalsSchema.optional(),
   changeControl: z.array(poaChangeControlEntrySchema).default([]),
+  records: z.array(poaRecordSchema).default([]),
   procedureId: z.string(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -302,6 +376,7 @@ export function createNewPOA(id: string = 'new', name: string = 'Nuevo Procedimi
     references: [],
     approvals: { ...defaultPOAApprovals },
     changeControl: [],
+    records: [],
     procedureId: '',
     createdAt: now,
     updatedAt: now,

@@ -19,6 +19,7 @@ const navItemsForTitle = [
   { name: "Introducción", href: "introduction" },
   { name: "Aprobaciones", href: "approvals" },
   { name: "Control de Cambios", href: "change-control" },
+  { name: "Registros", href: "records" },
   { name: "Vista Previa", href: "document" },
 ];
 
