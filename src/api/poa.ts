@@ -209,4 +209,40 @@ export const POAAPI = {
       return response.data?.data;
     },
   },
+
+  // =====================================
+  // ENDPOINTS DE REGISTROS
+  // =====================================
+
+  records: {
+    // Obtener todos los registros
+    getAll: async (procedureId: string) => {
+      const response = await api.get(`/procedures/${procedureId}/poa/records`);
+      return response.data?.data || [];
+    },
+
+    // Agregar nuevo registro
+    add: async (procedureId: string, data: any) => {
+      const response = await api.post(`/procedures/${procedureId}/poa/records`, data);
+      return response.data?.data;
+    },
+
+    // Actualizar registro específico
+    update: async (procedureId: string, recordId: string, data: any) => {
+      const response = await api.put(`/procedures/${procedureId}/poa/records/${recordId}`, data);
+      return response.data?.data;
+    },
+
+    // Eliminar registro específico
+    remove: async (procedureId: string, recordId: string) => {
+      const response = await api.delete(`/procedures/${procedureId}/poa/records/${recordId}`);
+      return response.data?.data;
+    },
+
+    // Actualizar todos los registros (formulario)
+    updateAll: async (procedureId: string, data: any) => {
+      const response = await api.patch(`/procedures/${procedureId}/poa/records`, data);
+      return response.data?.data;
+    },
+  },
 }; 
