@@ -23,6 +23,7 @@ import {
   Home,
   ChevronLeft,
   Users,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
@@ -42,6 +43,7 @@ const navItems = [
   { name: "Actividades", href: "activities", icon: ListTree },
   { name: "Alcance", href: "scope", icon: ScanSearch },
   { name: "Responsabilidades", href: "responsibilities", icon: Users },
+  { name: "Definiciones", href: "definitions", icon: BookOpen },
   { name: "Introducción", href: "introduction", icon: BookOpenText },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];

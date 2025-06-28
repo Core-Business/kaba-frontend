@@ -1,5 +1,5 @@
 import { api } from "./http";
-import type { POA, POAResponsible } from "@/lib/schema";
+import type { POA, POAResponsible, POADefinition } from "@/lib/schema";
 
 export interface CreatePOARequest {
   name: string;
@@ -29,6 +29,10 @@ export interface UpdateResponsibleRequest {
   responsibleName?: string;
   role?: string;
   summary?: string;
+}
+
+export interface UpdateDefinitionsRequest {
+  definitions: POADefinition[];
 }
 
 // Función para transformar POA del frontend al formato del backend
@@ -131,5 +135,15 @@ export const POAAPI = {
     responsibleId: string
   ): Promise<void> {
     await api.delete(`/procedures/${procedureId}/poa/responsibilities/${responsibleId}`);
+  },
+
+  // --- Métodos para Definiciones ---
+
+  async updateDefinitions(
+    procedureId: string,
+    req: UpdateDefinitionsRequest
+  ): Promise<POA> {
+    const response = await api.patch(`/procedures/${procedureId}/poa/definitions`, req);
+    return response.data?.data;
   },
 }; 
