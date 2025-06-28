@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { usePOA } from '@/hooks/use-poa';
+import { api } from '@/api/http';
 import type { POAApprovals, ApprovalType } from '@/lib/schema';
 
 interface ApprovalPersonFormData {
@@ -36,32 +37,22 @@ export function useApprovals() {
   ): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/procedures/${procedureId}/poa/approvals/${type}`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(personData),
-        }
+      const response = await api.post(
+        `/procedures/${procedureId}/poa/approvals/${type}`,
+        personData
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al agregar persona');
-      }
 
       setIsDirty(true);
       toast({
         title: 'Persona agregada',
         description: `Se agregó exitosamente a ${getTypeLabel(type)}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding approval person:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo agregar la persona';
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo agregar la persona',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -77,32 +68,22 @@ export function useApprovals() {
   ): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/procedures/${procedureId}/poa/approvals/${type}/${personId}`,
-        {
-          method: 'PUT',
-          headers: { 
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(personData),
-        }
+      const response = await api.put(
+        `/procedures/${procedureId}/poa/approvals/${type}/${personId}`,
+        personData
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al actualizar persona');
-      }
 
       setIsDirty(true);
       toast({
         title: 'Persona actualizada',
         description: `Se actualizó exitosamente en ${getTypeLabel(type)}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating approval person:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo actualizar la persona';
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo actualizar la persona',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -117,28 +98,21 @@ export function useApprovals() {
   ): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/procedures/${procedureId}/poa/approvals/${type}/${personId}`,
-        {
-          method: 'DELETE',
-        }
+      const response = await api.delete(
+        `/procedures/${procedureId}/poa/approvals/${type}/${personId}`
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al eliminar persona');
-      }
 
       setIsDirty(true);
       toast({
         title: 'Persona eliminada',
         description: `Se eliminó exitosamente de ${getTypeLabel(type)}`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting approval person:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo eliminar la persona';
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo eliminar la persona',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -150,32 +124,22 @@ export function useApprovals() {
   const updateAllApprovals = async (approvals: POAApprovals): Promise<void> => {
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/procedures/${procedureId}/poa/approvals`,
-        {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(approvals),
-        }
+      const response = await api.post(
+        `/procedures/${procedureId}/poa/approvals`,
+        approvals
       );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al actualizar aprobaciones');
-      }
 
       setIsDirty(true);
       toast({
         title: 'Aprobaciones actualizadas',
         description: 'Se actualizaron todas las aprobaciones exitosamente',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating all approvals:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudieron actualizar las aprobaciones';
       toast({
         title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudieron actualizar las aprobaciones',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
