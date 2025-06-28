@@ -27,6 +27,29 @@ export function ReferencesForm() {
   const references = poa?.references || [];
   const updateReferencesMutation = updateReferencesAPI();
 
+  // Función helper para crear la referencia limpia
+  const createCleanReference = (ref: EditingReference | POAReference): POAReference => {
+    const cleanRef: POAReference = {
+      nombreReferencia: ref.nombreReferencia.trim(),
+      tipoReferencia: ref.tipoReferencia.trim(),
+    };
+    
+    // Solo agregar campos opcionales si tienen contenido
+    if (ref.codigo?.trim()) {
+      cleanRef.codigo = ref.codigo.trim();
+    }
+    if (ref.enlace?.trim()) {
+      cleanRef.enlace = ref.enlace.trim();
+    }
+    
+    return cleanRef;
+  };
+
+  // Función para limpiar todas las referencias (remover _id, id, etc.)
+  const cleanAllReferences = (refs: (POAReference | EditingReference)[]): POAReference[] => {
+    return refs.map(ref => createCleanReference(ref));
+  };
+
   const handleAddNew = () => {
     const newReference: EditingReference = {
       codigo: "",
@@ -109,40 +132,24 @@ export function ReferencesForm() {
 
     // Crear nueva lista de referencias
     let newReferences: POAReference[];
-    
-    // Función helper para crear la referencia limpia
-    const createCleanReference = (ref: EditingReference): POAReference => {
-      const cleanRef: POAReference = {
-        nombreReferencia: ref.nombreReferencia.trim(),
-        tipoReferencia: ref.tipoReferencia.trim(),
-      };
-      
-      // Solo agregar campos opcionales si tienen contenido
-      if (ref.codigo?.trim()) {
-        cleanRef.codigo = ref.codigo.trim();
-      }
-      if (ref.enlace?.trim()) {
-        cleanRef.enlace = ref.enlace.trim();
-      }
-      
-      return cleanRef;
-    };
 
     if (editingReference.isNew) {
       // Agregar nueva referencia
-      newReferences = [...references, createCleanReference(editingReference)];
+      const allRefs = [...references, editingReference];
+      newReferences = cleanAllReferences(allRefs);
     } else {
       // Actualizar referencia existente
-      newReferences = references.map((ref, index) => 
-        index === editingIndex ? createCleanReference(editingReference) : ref
+      const allRefs = references.map((ref, index) => 
+        index === editingIndex ? editingReference : ref
       );
+      newReferences = cleanAllReferences(allRefs);
     }
 
     try {
       // Debug logs
       console.log("🔄 Enviando referencias al backend:", {
         procedureId: poa.procedureId,
-        references: { references: newReferences },
+        references: newReferences,
         totalReferences: newReferences.length
       });
       
@@ -177,7 +184,8 @@ export function ReferencesForm() {
     if (!poa) return;
 
     const referenceToDelete = references[index];
-    const newReferences = references.filter((_, i) => i !== index);
+    const filteredReferences = references.filter((_, i) => i !== index);
+    const newReferences = cleanAllReferences(filteredReferences);
 
     try {
       // Debug logs para delete
