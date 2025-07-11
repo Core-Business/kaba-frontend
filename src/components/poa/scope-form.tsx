@@ -2,6 +2,8 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
+import { usePOABackend } from "@/hooks/use-poa-backend";
+import { useParams } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -22,13 +24,38 @@ import { defaultPOAScopeHelperData } from "@/lib/schema";
 
 
 export function ScopeForm() {
-  const { poa, updateField, saveCurrentPOA, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
+  const params = useParams();
+  const poaId = params.poaId as string;
+  
+  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
+  const procedureId = (() => {
+    if (!poaId || poaId === 'new') return null;
+    
+    if (poaId.startsWith('proc-')) {
+      // Formato: proc-{procedureId}-{timestamp}
+      const withoutPrefix = poaId.replace('proc-', '');
+      const parts = withoutPrefix.split('-');
+      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+    } else {
+      // Formato directo: {procedureId}
+      return poaId;
+    }
+  })();
+  
+  console.log('ScopeForm - poaId:', poaId, 'procedureId:', procedureId);
+  
+  // Usar usePOABackend para obtener datos del backend, usePOA para operaciones locales
+  const { poa: poaBackend, saveToBackend, isLoading } = usePOABackend(procedureId);
+  const { updateField, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true);
+
+  // Usar poa del backend
+  const poa = poaBackend;
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -194,13 +221,34 @@ export function ScopeForm() {
     }
   }, [scopeBeforeAi, poa, updateField, toast]);
 
-  const handleSave = useCallback(() => {
-    if (poa) {
-      saveCurrentPOA();
+  const handleSave = useCallback(async () => {
+    if (!poa || !procedureId) {
+      toast({
+        title: "Error",
+        description: "No hay datos para guardar o falta el ID del procedimiento.",
+        variant: "destructive",
+      });
+      return;
     }
-  }, [poa, saveCurrentPOA]);
 
-  if (!poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
+    try {
+      console.log('Guardando alcance con procedureId:', procedureId);
+      await saveToBackend();
+      toast({
+        title: "Alcance Guardado",
+        description: "El alcance ha sido guardado exitosamente en el servidor.",
+      });
+    } catch (error) {
+      console.error('Error al guardar alcance:', error);
+      toast({
+        title: "Error al Guardar",
+        description: `No se pudo guardar el alcance: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
+    }
+  }, [poa, procedureId, saveToBackend, toast]);
+
+  if (isLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
   const canGenerateFromHelperNow = Object.values(helperData).some(val => 
