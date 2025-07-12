@@ -50,10 +50,10 @@ const navItems = [
   { name: "Responsabilidades", href: "responsibilities", icon: Users },
   { name: "Definiciones", href: "definitions", icon: BookOpen },
   { name: "Referencias", href: "references", icon: ExternalLink },
-  { name: "Introducción", href: "introduction", icon: BookOpenText },
-  { name: "Aprobaciones", href: "approvals", icon: CheckCircle },
-  { name: "Control de Cambios", href: "change-control", icon: FileEdit },
   { name: "Registros", href: "records", icon: FileText },
+  { name: "Introducción", href: "introduction", icon: BookOpenText },
+  { name: "Control de Cambios", href: "change-control", icon: FileEdit },
+  { name: "Aprobaciones", href: "approvals", icon: CheckCircle },
   { name: "Anexos", href: "attachments", icon: Paperclip },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
@@ -112,6 +112,7 @@ export default function BuilderLayout({
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // El hook usePOABackend maneja toda la lógica de carga/guardado
   // Solo necesitamos manejar casos especiales como "new"
@@ -188,18 +189,30 @@ export default function BuilderLayout({
     };
   }, [isDirty]);
 
-  const confirmNavigation = (discardChanges: boolean) => {
-    setShowUnsavedDialog(false);
+  const confirmNavigation = async (discardChanges: boolean) => {
     if (nextPath) {
       if (discardChanges) {
+        setShowUnsavedDialog(false);
         setIsDirty(false);
         router.push(nextPath);
+        setNextPath(null);
       } else {
-        saveCurrentPOA();
-        router.push(nextPath);
+        setIsSaving(true);
+        try {
+          // Guardar realmente en el backend antes de navegar
+          await saveToBackend();
+          setShowUnsavedDialog(false);
+          router.push(nextPath);
+          setNextPath(null);
+        } catch (error) {
+          console.error('Error guardando antes de navegar:', error);
+          // Si falla el guardado, mantener el modal abierto para que el usuario decida
+          setShowUnsavedDialog(true);
+        } finally {
+          setIsSaving(false);
+        }
       }
     }
-    setNextPath(null);
   };
 
   const handleDashboardNavigationClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -325,7 +338,7 @@ export default function BuilderLayout({
       </div>
 
       <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-[700px]">
           <AlertDialogHeader>
             <AlertDialogTitle>Cambios sin Guardar</AlertDialogTitle>
             <AlertDialogDescription>
@@ -333,9 +346,32 @@ export default function BuilderLayout({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setShowUnsavedDialog(false); setNextPath(null); }}>Cancelar Navegación</AlertDialogCancel>
-            <Button variant="outline" onClick={() => confirmNavigation(true)}>Descartar Cambios y Salir</Button>
-            <AlertDialogAction onClick={() => confirmNavigation(false)}>Guardar y Salir</AlertDialogAction>
+            <AlertDialogCancel 
+              onClick={() => { setShowUnsavedDialog(false); setNextPath(null); }}
+              disabled={isSaving}
+            >
+              Cancelar Navegación
+            </AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={() => confirmNavigation(true)}
+              disabled={isSaving}
+            >
+              Descartar Cambios y Salir
+            </Button>
+            <AlertDialogAction 
+              onClick={() => confirmNavigation(false)}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <LoadingSpinner className="mr-2 h-4 w-4" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar y Salir'
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
