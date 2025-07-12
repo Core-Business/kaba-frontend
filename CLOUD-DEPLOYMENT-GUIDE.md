@@ -154,7 +154,6 @@ NODE_ENV=production
 
 ### 4.1. Actualizar CORS en Backend
 La configuración de CORS ya está incluida en el backend. Solo necesitas asegurarte de que los dominios estén configurados correctamente.
-
 ---
 
 ## ✅ PASO 5: VERIFICAR DESPLIEGUE
