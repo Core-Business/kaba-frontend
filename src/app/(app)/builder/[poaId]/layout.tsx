@@ -117,7 +117,51 @@ export default function BuilderLayout({
   // Solo necesitamos manejar casos especiales como "new"
   useEffect(() => {
     if (poaId === "new") {
-      createNew('new', 'Nuevo Procedimiento POA Sin Título');
+      // Auto-crear procedimiento en el backend y redirigir al ID real
+      const autoCreateNewProcedure = async () => {
+        try {
+          console.log('🔄 Auto-creando procedimiento desde /builder/new...');
+          
+          // Importar dinámicamente el hook de procedimientos
+          const { useProcedures } = await import('@/hooks/use-procedures');
+          
+          // No podemos usar hooks aquí, así que haremos la llamada directa a la API
+          const response = await fetch('/api/procedures', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('kaba.token')}`,
+              'X-Organization-Id': JSON.parse(localStorage.getItem('kaba.lastWorkspace') || '{}').orgId || '',
+              'X-Workspace-Id': JSON.parse(localStorage.getItem('kaba.lastWorkspace') || '{}').wsId || '',
+            },
+            body: JSON.stringify({
+              title: `Nuevo Procedimiento ${new Date().toLocaleDateString()}`,
+              description: "Procedimiento creado automáticamente",
+              code: `PROC-${Date.now()}`,
+              version: 1,
+              status: "draft"
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('No se pudo crear el procedimiento');
+          }
+
+          const result = await response.json();
+          const newProcedure = result.data;
+          
+          console.log('✅ Procedimiento auto-creado:', newProcedure.id);
+          
+          // Redirigir al ID real del procedimiento creado
+          router.push(`/builder/${newProcedure.id}`);
+        } catch (error) {
+          console.error('❌ Error auto-creando procedimiento:', error);
+          // Fallback: usar localStorage como antes
+          createNew('new', 'Nuevo Procedimiento POA Sin Título');
+        }
+      };
+      
+      autoCreateNewProcedure();
       return;
     }
     

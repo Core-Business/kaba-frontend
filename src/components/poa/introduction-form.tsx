@@ -2,6 +2,8 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
+import { usePOABackend } from "@/hooks/use-poa-backend";
+import { useParams } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -13,9 +15,32 @@ import { defineScope } from "@/ai/flows/define-scope";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Target as ScopeIcon, Save, Wand2, Undo2 } from "lucide-react"; 
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function IntroductionForm() { 
-  const { poa, updateField, saveCurrentPOA, setIsDirty } = usePOA();
+  const params = useParams();
+  const poaId = params.poaId as string;
+  
+  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
+  const procedureId = (() => {
+    if (!poaId || poaId === 'new') return null;
+    
+    if (poaId.startsWith('proc-')) {
+      // Formato: proc-{procedureId}-{timestamp}
+      const withoutPrefix = poaId.replace('proc-', '');
+      const parts = withoutPrefix.split('-');
+      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+    } else {
+      // Formato directo: {procedureId}
+      return poaId;
+    }
+  })();
+  
+  console.log('IntroductionForm - poaId:', poaId, 'procedureId:', procedureId);
+  
+  // Usar usePOABackend para obtener datos del backend, usePOA para operaciones locales
+  const { poa: poaBackend, saveToBackend, isLoading } = usePOABackend(procedureId);
+  const { updateField, setIsDirty } = usePOA();
   const [isEnhancingText, setIsEnhancingText] = useState(false);
   const [isGeneratingAiIntro, setIsGeneratingAiIntro] = useState(false); 
   const [isDefiningScope, setIsDefiningScope] = useState(false);
@@ -25,62 +50,63 @@ export function IntroductionForm() {
   const [introductionSuggestionBeforeAi, setIntroductionSuggestionBeforeAi] = useState<string | null>(null);
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
 
+  // Usar poa del backend
+  const poa = poaBackend;
 
   const handleProcedureDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("procedureDescription", e.target.value);
     setProcedureDescriptionBeforeAi(null); 
+    setIsDirty(true);
   };
 
-  const handleAiEnhanceUserIntro = async () => {
-    if (!poa?.procedureDescription) return;
+  const handleIntroductionSuggestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateField("introduction", e.target.value);
+    setIntroductionSuggestionBeforeAi(null);
+    setIsDirty(true);
+  };
+
+  const handleEnhanceText = async () => {
+    if (!poa?.procedureDescription) {
+      toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });
+      return;
+    }
     setProcedureDescriptionBeforeAi(poa.procedureDescription);
     setIsEnhancingText(true);
     try {
-      const result = await enhanceText({ text: poa.procedureDescription, context: "introduction" });
+      const enhanceInput: Parameters<typeof enhanceText>[0] = {
+        text: poa.procedureDescription,
+        context: "introduction",
+        maxWords: 150,
+      };
+      const result = await enhanceText(enhanceInput);
       updateField("procedureDescription", result.enhancedText);
-      toast({ title: "Introducción Editada con IA", description: "El texto de la introducción ha sido editado por IA." });
+      toast({ title: "Texto Editado con IA", description: "La introducción ha sido editada por IA." });
     } catch (error) {
-      console.error("Error editando introducción con IA:", error);
+      console.error("Error editing introduction:", error);
       toast({ title: "Fallo en Edición con IA", description: "No se pudo editar la introducción.", variant: "destructive" });
       setProcedureDescriptionBeforeAi(null);
     }
     setIsEnhancingText(false);
   };
-   const handleUndoProcedureDescriptionAi = () => {
-    if (procedureDescriptionBeforeAi !== null && poa) {
-      updateField("procedureDescription", procedureDescriptionBeforeAi);
-      toast({ title: "Acción Deshecha", description: "Se restauró el texto original de la introducción." });
-      setProcedureDescriptionBeforeAi(null);
-    }
-  };
 
-
-  const handleGenerateAiIntroduction = async () => {
+  const handleGenerateIntroduction = async () => {
     if (!poa?.procedureDescription) {
-      toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });
+      toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción en el campo de arriba.", variant: "destructive" });
       return;
     }
-    setIntroductionSuggestionBeforeAi(poa.introduction || ""); // Store current suggestion
+    setIntroductionSuggestionBeforeAi(poa.introduction || "");
     setIsGeneratingAiIntro(true);
     try {
       const result = await generateIntroduction({ procedureDescription: poa.procedureDescription });
-      updateField("introduction", result.introduction); 
-      toast({ title: "Sugerencia de Introducción Generada", description: "Se ha generado una sugerencia de introducción por IA." });
+      updateField("introduction", result.introduction);
+      toast({ title: "Introducción Generada con IA", description: "Se ha generado una nueva introducción." });
     } catch (error) {
-      console.error("Error generando sugerencia de introducción:", error);
-      toast({ title: "Fallo al Generar Sugerencia", description: "No se pudo generar una sugerencia de introducción.", variant: "destructive" });
+      console.error("Error generating introduction:", error);
+      toast({ title: "Fallo al Generar Introducción", description: "No se pudo generar la introducción.", variant: "destructive" });
       setIntroductionSuggestionBeforeAi(null);
     }
     setIsGeneratingAiIntro(false);
   };
-  const handleUndoIntroductionSuggestionAi = () => {
-    if (introductionSuggestionBeforeAi !== null && poa) {
-      updateField("introduction", introductionSuggestionBeforeAi);
-      toast({ title: "Acción Deshecha", description: "Se restauró la sugerencia de introducción anterior." });
-      setIntroductionSuggestionBeforeAi(null);
-    }
-  };
-
 
   const handleDefineScope = async () => {
     if (!poa?.procedureDescription) {
@@ -108,13 +134,34 @@ export function IntroductionForm() {
     }
   };
 
-  const handleSave = () => {
-    if (poa) {
-      saveCurrentPOA();
+  const handleSave = async () => {
+    if (!poa || !procedureId) {
+      toast({
+        title: "Error",
+        description: "No hay datos para guardar o falta el ID del procedimiento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('Guardando introducción con procedureId:', procedureId);
+      await saveToBackend();
+      toast({
+        title: "Introducción Guardada",
+        description: "La introducción ha sido guardada exitosamente en el servidor.",
+      });
+    } catch (error) {
+      console.error('Error al guardar introducción:', error);
+      toast({
+        title: "Error al Guardar",
+        description: `No se pudo guardar la introducción: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+        variant: "destructive",
+      });
     }
   };
   
-  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (isLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const userIntroTextExists = !!poa.procedureDescription && poa.procedureDescription.length > 10;
 
@@ -137,11 +184,11 @@ export function IntroductionForm() {
         </div>
         <div className="mt-3 flex flex-wrap gap-2 justify-start items-center">
           <AiEnhanceButton
-            onClick={handleAiEnhanceUserIntro}
+            onClick={handleEnhanceText}
             isLoading={isEnhancingText}
             textExists={userIntroTextExists}
             buttonText="Editar Introducción con IA"
-            onUndo={procedureDescriptionBeforeAi !== null ? handleUndoProcedureDescriptionAi : undefined}
+            onUndo={procedureDescriptionBeforeAi !== null ? () => updateField("procedureDescription", procedureDescriptionBeforeAi) : undefined}
             canUndo={procedureDescriptionBeforeAi !== null}
           >
             <Wand2 className="mr-2 h-4 w-4" />
@@ -158,7 +205,7 @@ export function IntroductionForm() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleGenerateAiIntroduction}
+              onClick={handleGenerateIntroduction}
               disabled={!userIntroTextExists || isGeneratingAiIntro}
               className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
             >
@@ -166,7 +213,7 @@ export function IntroductionForm() {
               {isGeneratingAiIntro ? "Generando..." : "Sugerir Introducción (IA)"}
             </Button>
             {introductionSuggestionBeforeAi !== null && (
-               <Button variant="outline" size="icon" onClick={handleUndoIntroductionSuggestionAi} title="Deshacer sugerencia de IA">
+               <Button variant="outline" size="icon" onClick={() => updateField("introduction", introductionSuggestionBeforeAi)} title="Deshacer sugerencia de IA">
                  <Undo2 className="h-4 w-4" />
                </Button>
             )}

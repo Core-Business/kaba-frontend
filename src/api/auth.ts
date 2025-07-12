@@ -20,6 +20,30 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  organizationName: string;
+}
+
+export interface RegisterResponse {
+  accessToken: string;
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  };
+  workspace: {
+    orgId: string;
+    wsId: string;
+    wsName: string;
+    role: 'WORKSPACE_ADMIN' | 'EDITOR' | 'VIEWER';
+  };
+}
+
 export interface UserContextsResponse {
   userId: string;
   currentOrganization: string;
@@ -79,6 +103,56 @@ export const AuthAPI = {
           orgId: payload.org,
           wsId: payload.ws,
           wsName: 'Default Workspace', // Será actualizado por getContexts
+          role: payload.role
+        };
+      }
+    } catch (error) {
+      console.warn('No se pudo decodificar el JWT:', error);
+    }
+    
+    return {
+      accessToken: authData.accessToken,
+      user: userInfo,
+      workspace: workspaceInfo
+    };
+  },
+
+  async register(registerData: RegisterRequest): Promise<RegisterResponse> {
+    const response = await api.post("/auth/register", registerData);
+    
+    // El backend devuelve: { statusCode, message, data: { accessToken, ... } }
+    const authData = response.data?.data;
+    
+    // Validate response structure
+    if (!authData?.accessToken) {
+      console.error('Respuesta del registro:', response.data);
+      throw new Error("Token de acceso no recibido del servidor");
+    }
+    
+    // Decodificar el JWT para obtener información del usuario y contexto
+    let userInfo = { 
+      id: 'unknown', 
+      email: registerData.email, 
+      firstName: registerData.firstName,
+      lastName: registerData.lastName
+    };
+    let workspaceInfo = { orgId: '', wsId: '', wsName: registerData.organizationName, role: 'WORKSPACE_ADMIN' as const };
+    
+    try {
+      const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));
+      userInfo = {
+        id: payload.sub || 'unknown',
+        email: payload.email || registerData.email,
+        firstName: registerData.firstName,
+        lastName: registerData.lastName
+      };
+      
+      // Extraer contexto del JWT
+      if (payload.org && payload.ws && payload.role) {
+        workspaceInfo = {
+          orgId: payload.org,
+          wsId: payload.ws,
+          wsName: registerData.organizationName,
           role: payload.role
         };
       }
