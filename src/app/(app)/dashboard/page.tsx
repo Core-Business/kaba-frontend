@@ -282,8 +282,9 @@ export default function DashboardPage() {
   const itemsPerPage = 5;
 
   // Queries
-  const { list } = useProcedures();
+  const { list, create } = useProcedures();
   const proceduresQuery = list();
+  const createMutation = create();
 
   // Métricas calculadas
   const metrics: DashboardMetrics = useMemo(() => {
@@ -338,13 +339,38 @@ export default function DashboardPage() {
 
   const handleCreateNew = async () => {
     try {
-      router.push('/builder/new');
+      // Mostrar loading state
+      toast({
+        title: "Creando Procedimiento",
+        description: "Preparando el nuevo procedimiento...",
+      });
+
+      // Crear un procedimiento nuevo en el backend
+      const newProcedure = await createMutation.mutateAsync({
+        title: `Nuevo Procedimiento ${new Date().toLocaleDateString()}`,
+        description: "Procedimiento creado desde el builder",
+        code: `PROC-${Date.now()}`,
+        version: 1,
+        status: "draft"
+      });
+
+      // Redirigir al ID real del procedimiento creado
+      router.push(`/builder/${newProcedure.id}`);
+      
+      toast({
+        title: "Procedimiento Creado",
+        description: "Procedimiento creado exitosamente. Redirigiendo al editor...",
+      });
     } catch (error) {
+      console.error('Error creating procedure:', error);
       toast({
         title: "Error",
-        description: "No se pudo navegar al builder.",
+        description: "No se pudo crear el procedimiento. Intentando modo offline...",
         variant: "destructive",
       });
+      
+      // Fallback: ir a builder/new como antes
+      router.push('/builder/new');
     }
   };
 
@@ -408,6 +434,53 @@ export default function DashboardPage() {
     setActiveFilter(filter);
     setCurrentPage(1);
   };
+
+  // 🔍 DIAGNÓSTICO MULTI-TENANT - Agregar antes de los otros useEffect
+  useEffect(() => {
+    console.log('🔍 DIAGNÓSTICO MULTI-TENANT - Dashboard');
+    
+    // Verificar localStorage
+    const token = localStorage.getItem('kaba.token');
+    const workspaceCtx = localStorage.getItem('kaba.lastWorkspace');
+    
+    console.log('📱 Token presente:', token ? 'SÍ' : 'NO');
+    console.log('🏢 Workspace context:', workspaceCtx ? JSON.parse(workspaceCtx) : 'NO ENCONTRADO');
+    
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔐 JWT payload:', {
+          sub: payload.sub,
+          email: payload.email,
+          org: payload.org,
+          ws: payload.ws,
+          role: payload.role
+        });
+      } catch (error) {
+        console.error('❌ Error decodificando JWT:', error);
+      }
+    }
+    
+    // Verificar si los headers se están enviando
+    const originalFetch = window.fetch;
+    window.fetch = async (url, options = {}) => {
+      const headers = options.headers as any || {};
+      console.log('📤 Request headers:', {
+        url,
+        'X-Organization-Id': headers['X-Organization-Id'],
+        'X-Workspace-Id': headers['X-Workspace-Id'],
+        'Authorization': headers['Authorization'] ? 'Bearer ***' : 'NO TOKEN'
+      });
+      
+      return originalFetch(url, options);
+    };
+    
+    // Limpiar el monkey patch después de 10 segundos
+    setTimeout(() => {
+      window.fetch = originalFetch;
+    }, 10000);
+    
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">

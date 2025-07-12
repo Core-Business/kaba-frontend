@@ -482,5 +482,3 @@ export function ScopeForm() {
     </Card>
   );
 }
-
-
