@@ -150,19 +150,12 @@ export function LoginForm() {
 
                   {/* Forgot password link */}
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <Link
+                      href="/forgot-password"
                       className="text-sm text-blue-600 hover:text-blue-500 hover:underline font-sans font-normal tracking-normal"
-                      onClick={() => {
-                        toast({
-                          title: "Función en desarrollo",
-                          description: "Esta función se encuentra en desarrollo y será desplegada próximamente",
-                          variant: "default",
-                        });
-                      }}
                     >
                       ¿Olvidaste tu contraseña?
-                    </button>
+                    </Link>
                   </div>
 
                   {error && (
