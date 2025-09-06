@@ -72,6 +72,84 @@ export interface SwitchWorkspaceResponse {
   expiresIn: number;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ██████╗ ████████╗██████╗     ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗ █████╗  ██████╗███████╗███████╗
+// ██╔═══██╗╚══██╔══╝██╔══██╗    ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝
+// ██║   ██║   ██║   ██████╔╝    ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝█████╗  ███████║██║     █████╗  ███████╗
+// ██║   ██║   ██║   ██╔═══╝     ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝  ╚════██║
+// ╚██████╔╝   ██║   ██║         ██║██║ ╚████║   ██║   ███████╗██║  ██║██║     ██║  ██║╚██████╗███████╗███████║
+//  ╚═════╝    ╚═╝   ╚═╝         ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+export interface RegisterEmailRequest {
+  email: string;
+}
+
+export interface RegisterEmailResponse {
+  message: string;
+}
+
+export interface VerifyOTPRequest {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyOTPResponse {
+  message: string;
+  requiresProfile: boolean;
+}
+
+export interface ResendOTPRequest {
+  email: string;
+}
+
+export interface ResendOTPResponse {
+  message: string;
+}
+
+export interface CompleteProfileRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  organizationName: string;
+  role?: string;
+}
+
+export interface CompleteProfileResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export interface ForgotPasswordOTPRequest {
+  email: string;
+}
+
+export interface ForgotPasswordOTPResponse {
+  message: string;
+}
+
+export interface VerifyResetOTPRequest {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyResetOTPResponse {
+  message: string;
+  resetToken?: string;
+}
+
+export interface ResetPasswordWithTokenRequest {
+  resetToken: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordWithTokenResponse {
+  message: string;
+}
+
 export const AuthAPI = {
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await api.post("/auth/login", { email, password });
@@ -191,6 +269,53 @@ export const AuthAPI = {
       resourceId
     });
     return response.data;
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ██████╗ ████████╗██████╗     ███╗   ███╗███████╗████████╗██╗  ██╗ ██████╗ ██████╗ ███████╗
+  // ██╔═══██╗╚══██╔══╝██╔══██╗    ████╗ ████║██╔════╝╚══██╔══╝██║  ██║██╔═══██╗██╔══██╗██╔════╝
+  // ██║   ██║   ██║   ██████╔╝    ██╔████╔██║█████╗     ██║   ███████║██║   ██║██║  ██║███████╗
+  // ██║   ██║   ██║   ██╔═══╝     ██║╚██╔╝██║██╔══╝     ██║   ██╔══██║██║   ██║██║  ██║╚════██║
+  // ╚██████╔╝   ██║   ██║         ██║ ╚═╝ ██║███████╗   ██║   ██║  ██║╚██████╔╝██████╔╝███████║
+  //  ╚═════╝    ╚═╝   ╚═╝         ╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  async registerEmail(email: string): Promise<RegisterEmailResponse> {
+    const response = await api.post("/auth/register-email", { email });
+    return response.data?.data || response.data;
+  },
+
+  async verifyOTP(email: string, otp: string): Promise<VerifyOTPResponse> {
+    const response = await api.post("/auth/verify-otp", { email, otp });
+    return response.data?.data || response.data;
+  },
+
+  async resendOTP(email: string): Promise<ResendOTPResponse> {
+    const response = await api.post("/auth/resend-otp", { email });
+    return response.data?.data || response.data;
+  },
+
+  async completeProfile(profileData: CompleteProfileRequest): Promise<CompleteProfileResponse> {
+    const response = await api.post("/auth/complete-profile", profileData);
+    return response.data?.data || response.data;
+  },
+
+  async forgotPasswordOTP(email: string): Promise<ForgotPasswordOTPResponse> {
+    const response = await api.post("/auth/forgot-password-otp", { email });
+    return response.data?.data || response.data;
+  },
+
+  async verifyResetOTP(email: string, otp: string): Promise<VerifyResetOTPResponse> {
+    const response = await api.post("/auth/verify-reset-otp", { email, otp });
+    return response.data?.data || response.data;
+  },
+
+  async resetPasswordWithToken(resetToken: string, newPassword: string): Promise<ResetPasswordWithTokenResponse> {
+    const response = await api.post("/auth/reset-password-with-token", { 
+      resetToken, 
+      newPassword 
+    });
+    return response.data?.data || response.data;
   },
 
   logout() {

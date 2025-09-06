@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthAPI } from '@/api/auth';
 import { Loader2, Mail, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 
-export default function SignupPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

@@ -118,7 +118,7 @@ export function VerifyEmailForm() {
                 </div>
                 <div className="space-y-2">
                   <Button asChild variant="outline" className="w-full">
-                    <Link href="/signup">
+                    <Link href="/register">
                       Crear nueva cuenta
                     </Link>
                   </Button>

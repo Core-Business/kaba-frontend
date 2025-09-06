@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Building, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
-import { EmailsAPI } from "@/api/emails";
+import { Building, Eye, EyeOff, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { AuthAPI } from "@/api/auth";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
@@ -50,10 +50,7 @@ export function ResetPasswordForm() {
     }
     
     try {
-      const response = await EmailsAPI.resetPassword({ 
-        token, 
-        newPassword 
-      });
+      const response = await AuthAPI.resetPasswordWithToken(token, newPassword);
       
       setIsSuccess(true);
       
@@ -112,13 +109,13 @@ export function ResetPasswordForm() {
                   Token no encontrado
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  El enlace para restablecer la contraseña no es válido o ha expirado.
+                  El token para restablecer la contraseña no es válido o ha expirado.
                 </p>
               </div>
               <div className="space-y-2">
                 <Button asChild className="w-full">
                   <Link href="/forgot-password">
-                    Solicitar nuevo enlace
+                    Solicitar nuevo código
                   </Link>
                 </Button>
                 <Button asChild variant="ghost" className="w-full">
@@ -277,7 +274,14 @@ export function ResetPasswordForm() {
               className="w-full" 
               disabled={isLoading}
             >
-              {isLoading ? "Actualizando..." : "Actualizar contraseña"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Actualizando contraseña...
+                </>
+              ) : (
+                "Actualizar contraseña"
+              )}
             </Button>
 
             <Button asChild variant="ghost" className="w-full">
