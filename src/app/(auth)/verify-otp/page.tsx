@@ -18,6 +18,8 @@ import {
   Shield
 } from 'lucide-react';
 
+const OTP_LENGTH = 10;
+
 function VerifyOTPContent() {
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +52,7 @@ function VerifyOTPContent() {
   }, [email, router]);
 
   const handleVerifyOTP = async () => {
-    if (otp.length !== 6) return;
+    if (otp.length !== OTP_LENGTH) return;
     
     setError('');
     setSuccess('');
@@ -127,14 +129,14 @@ function VerifyOTPContent() {
   };
 
   const canResend = cooldownSeconds === 0 && !isResending && !isLoading;
-  const canSubmit = otp.length === 6 && !isLoading;
+  const canSubmit = otp.length === OTP_LENGTH && !isLoading;
 
   const pageTitle = type === 'verification' 
     ? 'Verifica tu email' 
     : 'Verifica código de recuperación';
     
   const pageDescription = type === 'verification'
-    ? `Ingresa el código de 6 dígitos que enviamos a ${email}`
+    ? `Ingresa el código de ${OTP_LENGTH} dígitos que enviamos a ${email}`
     : `Ingresa el código de recuperación enviado a ${email}`;
 
   return (
@@ -160,7 +162,7 @@ function VerifyOTPContent() {
           {/* OTP Input */}
           <div className="space-y-4">
             <OTPInput
-              length={6}
+              length={OTP_LENGTH}
               value={otp}
               onChange={setOtp}
               onComplete={handleVerifyOTP}

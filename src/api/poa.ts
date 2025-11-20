@@ -12,7 +12,7 @@ export interface CreatePOARequest {
   activities?: any[];
 }
 
-export interface UpdatePOARequest extends Partial<CreatePOARequest> {}
+export type UpdatePOARequest = Partial<CreatePOARequest>;
 
 // Nuevos tipos para Responsabilidades
 export interface GenerateResponsibilitiesRequest {

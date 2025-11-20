@@ -160,7 +160,7 @@ export default function RegisterPage() {
               </h3>
               <div className="mt-2 text-sm text-blue-700">
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Te enviaremos un código de 6 dígitos a tu email</li>
+                  <li>Te enviaremos un código de 10 dígitos a tu email</li>
                   <li>Verifica tu email con el código recibido</li>
                   <li>Completa tu perfil y crea tu organización</li>
                 </ul>

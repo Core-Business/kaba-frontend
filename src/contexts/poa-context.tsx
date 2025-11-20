@@ -226,8 +226,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...options,
       };
       
-      let activitiesToProcess = [...currentPoa.activities, newActivity];
-      let finalActivities = renumberUserNumbers(activitiesToProcess);
+      const activitiesToProcess = [...currentPoa.activities, newActivity];
+      const finalActivities = renumberUserNumbers(activitiesToProcess);
 
       const newlyAddedActivityIndex = finalActivities.findIndex(act => act.id === newActivity.id);
       if (newlyAddedActivityIndex !== -1) {
@@ -293,8 +293,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       
-      let remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
-      let finalActivities = renumberUserNumbers(remainingActivities);
+      const remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
+      const finalActivities = renumberUserNumbers(remainingActivities);
       
       setExpandedActivityIds(prev => {
         const newSet = new Set(prev);

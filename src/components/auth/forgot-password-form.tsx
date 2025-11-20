@@ -86,7 +86,7 @@ export function ForgotPasswordForm() {
                 </h3>
                 <p className="text-muted-foreground text-sm">
                   Si existe una cuenta con el email <strong>{email}</strong>, 
-                  recibirás un código de 6 dígitos para restablecer tu contraseña.
+                  recibirás un código de 10 dígitos para restablecer tu contraseña.
                 </p>
                 <p className="text-muted-foreground text-xs">
                   Serás redirigido automáticamente para ingresar el código...

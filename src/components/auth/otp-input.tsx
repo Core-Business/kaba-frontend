@@ -14,7 +14,7 @@ interface OTPInputProps {
 }
 
 export function OTPInput({
-  length = 6,
+  length = 10,
   value,
   onChange,
   onComplete,

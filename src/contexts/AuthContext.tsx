@@ -92,7 +92,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     if (!currentToken) return;
     
     try {
-      let headers: Record<string, string> = {
+      const headers: Record<string, string> = {
         'Authorization': `Bearer ${currentToken}`,
       };
 
