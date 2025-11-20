@@ -112,7 +112,7 @@ await saveToBackend();
 ### **1. Desarrollo Solo Frontend**
 ```bash
 cd kaba-frontend
-pnpm dev
+npm run dev
 ```
 > Frontend disponible en `http://localhost:9002`
 
@@ -124,15 +124,15 @@ npm run start:dev
 
 # Terminal 2: Frontend  
 cd kaba-frontend
-pnpm dev
+npm run dev
 ```
 
 ### **3. Scripts Disponibles**
 ```bash
-pnpm dev          # Desarrollo
-pnpm build        # Construcción
-pnpm lint         # Linting
-pnpm typecheck    # Verificación TypeScript
+npm run dev          # Desarrollo
+npm run build        # Construcción
+npm run lint         # Linting
+npm run typecheck    # Verificación TypeScript
 ```
 
 ## 🔧 **CONFIGURACIÓN BACKEND NECESARIA**
