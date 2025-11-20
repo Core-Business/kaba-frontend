@@ -2,14 +2,16 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useProcedures } from "@/hooks/use-procedures";
+import {
+  useCreateProcedureMutation,
+  useProceduresList,
+} from "@/hooks/use-procedures";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { 
   Building, 
   FileText, 
@@ -31,6 +33,7 @@ import { NewProcedureButton } from "@/components/dashboard/NewProcedureButton";
 import { WorkspaceSelector } from "@/components/workspace/WorkspaceSelector";
 import { UserNav } from "@/components/layout/user-nav";
 import Link from "next/link";
+import type { Procedure } from "@/api/procedures";
 
 // Tipos para las métricas
 interface DashboardMetrics {
@@ -58,8 +61,6 @@ function DashboardAppHeader() {
 
 // Componente del Sidebar
 function DashboardSidebar() {
-  const router = useRouter();
-  
   const menuItems = [
     { 
       icon: FileText, 
@@ -149,22 +150,24 @@ function MetricCard({ title, value, isLoading }: { title: string; value: number;
 }
 
 // Componente de lista de procedimientos
-function ProceduresList({ 
-  procedures, 
-  onEdit, 
-  onDownload, 
-  onDuplicate, 
-  onArchive, 
-  onDelete 
-}: {
-  procedures: any[];
-  onEdit: (procedure: any) => void;
-  onDownload: (procedure: any) => void;
-  onDuplicate: (procedure: any) => void;
-  onArchive: (procedure: any) => void;
-  onDelete: (procedure: any) => void;
-}) {
-     const getStatusColor = (status: string) => {
+interface ProceduresListProps {
+  procedures: Procedure[];
+  onEdit: (procedure: Procedure) => void;
+  onDownload: (procedure: Procedure) => void;
+  onDuplicate: (procedure: Procedure) => void;
+  onArchive: (procedure: Procedure) => void;
+  onDelete: (procedure: Procedure) => void;
+}
+
+function ProceduresList({
+  procedures,
+  onEdit,
+  onDownload,
+  onDuplicate,
+  onArchive,
+  onDelete,
+}: ProceduresListProps) {
+     const getStatusColor = (status?: string) => {
      switch (status?.toLowerCase()) {
        case 'published':
          return 'bg-green-100 text-green-800';
@@ -179,7 +182,7 @@ function ProceduresList({
      }
    };
 
-   const getStatusLabel = (status: string) => {
+   const getStatusLabel = (status?: string) => {
      switch (status?.toLowerCase()) {
        case 'published':
          return 'Publicado';
@@ -197,7 +200,10 @@ function ProceduresList({
   return (
     <div className="space-y-4">
       {procedures.map((procedure) => (
-        <Card key={procedure.id} className="hover:shadow-md transition-shadow rounded-md border bg-white shadow-sm">
+        <Card
+          key={procedure.id ?? `${procedure.code}-${procedure.updatedAt ?? procedure.createdAt ?? "draft"}`}
+          className="hover:shadow-md transition-shadow rounded-md border bg-white shadow-sm"
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex-1 space-y-2">
@@ -282,47 +288,50 @@ export default function DashboardPage() {
   const itemsPerPage = 5;
 
   // Queries
-  const { list, create } = useProcedures();
-  const proceduresQuery = list();
-  const createMutation = create();
+  const proceduresQuery = useProceduresList();
+  const createMutation = useCreateProcedureMutation();
 
   // Métricas calculadas
   const metrics: DashboardMetrics = useMemo(() => {
-    const procedures = proceduresQuery.data || [];
+    const procedures = (proceduresQuery.data ?? []) as Procedure[];
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     
-         return {
-       total: procedures.length,
-      completed: procedures.filter((p: any) => p.status?.toLowerCase() === 'published').length,
-      drafts: procedures.filter((p: any) => p.status?.toLowerCase() === 'draft').length,
-      recent: procedures.filter((p: any) => new Date(p.updatedAt) >= sevenDaysAgo).length,
-     };
+    return {
+      total: procedures.length,
+      completed: procedures.filter((procedure) => procedure.status?.toLowerCase() === "published").length,
+      drafts: procedures.filter((procedure) => procedure.status?.toLowerCase() === "draft").length,
+      recent: procedures.filter((procedure) => new Date(procedure.updatedAt ?? procedure.createdAt ?? "") >= sevenDaysAgo).length,
+    };
   }, [proceduresQuery.data]);
 
   // Procedimientos filtrados y paginados
   const filteredAndPaginatedProcedures = useMemo(() => {
-    const procedures = proceduresQuery.data || [];
+    const procedures = (proceduresQuery.data ?? []) as Procedure[];
     
-    let filtered = procedures;
+    let filtered: Procedure[] = procedures;
     if (searchQuery) {
-      filtered = procedures.filter((p: any) => 
-        p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.code?.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = procedures.filter((procedure) =>
+        procedure.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        procedure.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        procedure.code?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     switch (activeFilter) {
              case 'completed':
-        filtered = filtered.filter((p: any) => p.status?.toLowerCase() === 'published');
+        filtered = filtered.filter((procedure) => procedure.status?.toLowerCase() === 'published');
          break;
       case 'drafts':
-        filtered = filtered.filter((p: any) => p.status?.toLowerCase() === 'draft');
+        filtered = filtered.filter((procedure) => procedure.status?.toLowerCase() === 'draft');
         break;
              case 'recent':
-         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        filtered = filtered.filter((p: any) => new Date(p.updatedAt) >= sevenDaysAgo);
+        {
+          const sevenDaysAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+          filtered = filtered.filter(
+            (procedure) => new Date(procedure.updatedAt ?? procedure.createdAt ?? "") >= sevenDaysAgo,
+          );
+        }
          break;
     }
     
@@ -355,7 +364,11 @@ export default function DashboardPage() {
       });
 
       // Redirigir al ID real del procedimiento creado
-      router.push(`/builder/${newProcedure.id}`);
+      if (newProcedure.id) {
+        router.push(`/builder/${newProcedure.id}`);
+      } else {
+        router.push("/builder/new");
+      }
       
       toast({
         title: "Procedimiento Creado",
@@ -374,11 +387,11 @@ export default function DashboardPage() {
     }
   };
 
-  const handleEdit = (procedure: any) => {
+  const handleEdit = (procedure: Procedure) => {
     router.push(`/builder/${procedure.id}`);
   };
 
-     const handleDownload = (procedure: any) => {
+  const handleDownload = (procedure: Procedure) => {
     // Implementar lógica de descarga
     toast({
       title: "Descarga Iniciada",
@@ -386,13 +399,13 @@ export default function DashboardPage() {
     });
   };
 
-  const handleDuplicate = async (procedure: any) => {
+  const handleDuplicate = async (procedure: Procedure) => {
     try {
       toast({
         title: "Procedimiento Duplicado",
         description: `Se ha creado una copia de "${procedure.title}".`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "No se pudo duplicar el procedimiento.",
@@ -401,21 +414,22 @@ export default function DashboardPage() {
     }
   };
 
-  const handleArchive = (procedure: any) => {
+  const handleArchive = (procedure: Procedure) => {
     toast({
       title: "Procedimiento Archivado",
       description: `"${procedure.title}" ha sido archivado.`,
     });
   };
 
-  const handleDelete = async (procedure: any) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este procedimiento? Esta acción no se puede deshacer.")) {
+  const handleDelete = async (procedure: Procedure) => {
+    const confirmMessage = `¿Estás seguro de que quieres eliminar "${procedure.title}"? Esta acción no se puede deshacer.`;
+    if (window.confirm(confirmMessage)) {
       try {
         toast({
           title: "Procedimiento Eliminado",
           description: "El procedimiento ha sido eliminado exitosamente.",
         });
-      } catch (error) {
+      } catch {
         toast({
           title: "Error",
           description: "No se pudo eliminar el procedimiento.",
@@ -454,25 +468,25 @@ export default function DashboardPage() {
           email: payload.email,
           org: payload.org,
           ws: payload.ws,
-          role: payload.role
+          role: payload.role,
         });
-      } catch (error) {
-        console.error('❌ Error decodificando JWT:', error);
+      } catch {
+        console.error('❌ Error decodificando JWT');
       }
     }
     
     // Verificar si los headers se están enviando
     const originalFetch = window.fetch;
-    window.fetch = async (url, options = {}) => {
-      const headers = options.headers as any || {};
+    window.fetch = async (input, init: RequestInit = {}) => {
+      const headers = new Headers(init.headers ?? {});
       console.log('📤 Request headers:', {
-        url,
-        'X-Organization-Id': headers['X-Organization-Id'],
-        'X-Workspace-Id': headers['X-Workspace-Id'],
-        'Authorization': headers['Authorization'] ? 'Bearer ***' : 'NO TOKEN'
+        url: input,
+        'X-Organization-Id': headers.get('X-Organization-Id'),
+        'X-Workspace-Id': headers.get('X-Workspace-Id'),
+        Authorization: headers.has('Authorization') ? 'Bearer ***' : 'NO TOKEN',
       });
-      
-      return originalFetch(url, options);
+
+      return originalFetch(input, init);
     };
     
     // Limpiar el monkey patch después de 10 segundos

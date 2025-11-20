@@ -79,8 +79,19 @@ export default function SignupPage() {
         router.push(`/verify-otp?email=${encodeURIComponent(email)}&type=verification`);
       }, 2000);
       
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al enviar código de verificación');
+    } catch (unknownError) {
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        setError((unknownError as { response: { data: { message: string } } }).response.data.message);
+      } else if (unknownError instanceof Error) {
+        setError(unknownError.message);
+      } else {
+        setError('Error al enviar código de verificación');
+      }
     } finally {
       setIsLoading(false);
     }

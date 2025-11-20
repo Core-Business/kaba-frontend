@@ -63,15 +63,23 @@ export function ResetPasswordForm() {
       setTimeout(() => {
         router.push("/login");
       }, 3000);
-    } catch (error: any) {
-      console.error('Reset password error:', error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Error al restablecer la contraseña. El token puede haber expirado.";
-      
+    } catch (unknownError) {
+      console.error('Reset password error:', unknownError);
+
+      let errorMessage = "Error al restablecer la contraseña. El token puede haber expirado.";
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+      } else if (unknownError instanceof Error && unknownError.message) {
+        errorMessage = unknownError.message;
+      }
+
       setError(errorMessage);
-      
+
       toast({
         title: "Error",
         description: errorMessage,

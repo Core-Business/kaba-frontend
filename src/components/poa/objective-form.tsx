@@ -2,7 +2,6 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -24,7 +23,6 @@ import { defaultPOAObjectiveHelperData } from "@/lib/schema";
 
 export function ObjectiveForm() {
   const { poa, updateField, saveCurrentPOA, setIsDirty, updateObjectiveHelperData: updatePoaObjectiveHelperData } = usePOA();
-  const { saveToBackend } = usePOABackend();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
   const [maxWords, setMaxWords] = useState(30);

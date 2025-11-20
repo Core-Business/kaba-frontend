@@ -59,12 +59,6 @@ export function IntroductionForm() {
     setIsDirty(true);
   };
 
-  const handleIntroductionSuggestionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateField("introduction", e.target.value);
-    setIntroductionSuggestionBeforeAi(null);
-    setIsDirty(true);
-  };
-
   const handleEnhanceText = async () => {
     if (!poa?.procedureDescription) {
       toast({ title: "Información Faltante", description: "Por favor, escribe primero una introducción.", variant: "destructive" });

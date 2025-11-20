@@ -41,15 +41,23 @@ export function LoginForm() {
       });
       
       router.push("/dashboard");
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.";
-      
+    } catch (unknownError) {
+      console.error('Login error:', unknownError);
+
+      let errorMessage = "Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.";
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+      } else if (unknownError instanceof Error && unknownError.message) {
+        errorMessage = unknownError.message;
+      }
+
       setError(errorMessage);
-      
+
       toast({
         title: "Error de inicio de sesión",
         description: errorMessage,
@@ -63,7 +71,7 @@ export function LoginForm() {
   const handleSocialLogin = (provider: string) => {
     toast({
       title: "Función en desarrollo",
-      description: "Esta función se encuentra en desarrollo y será desplegada próximamente",
+      description: `El inicio de sesión con ${provider} estará disponible próximamente.`,
       variant: "default",
     });
   };

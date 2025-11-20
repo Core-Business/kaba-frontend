@@ -1,9 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 import { POAAPI } from '@/api/poa';
-import { POAAttachment, CreateAttachment, UpdateAttachment } from '@/lib/schema';
+import { POAAttachment } from '@/lib/schema';
 import { useToast } from '@/hooks/use-toast';
 import { usePOABackend } from '@/hooks/use-poa-backend';
 import { validateFile, formatFileSize, getFileTypeLabel } from '@/lib/file-validation';
+
+const getAttachmentsErrorMessage = (unknownError: unknown, fallback: string): string => {
+  if (
+    typeof unknownError === "object" &&
+    unknownError !== null &&
+    "response" in unknownError &&
+    typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+  ) {
+    return (unknownError as { response: { data: { message: string } } }).response.data.message;
+  }
+  if (unknownError instanceof Error && unknownError.message) {
+    return unknownError.message;
+  }
+  return fallback;
+};
 
 export function useAttachments(procedureId: string) {
   const [attachments, setAttachments] = useState<POAAttachment[]>([]);
@@ -24,10 +39,10 @@ export function useAttachments(procedureId: string) {
       const data = await POAAPI.attachments.getAll(procedureId, poa.id);
       const safeAttachments = Array.isArray(data) ? data : [];
       setAttachments(safeAttachments);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al cargar anexos';
+    } catch (unknownError) {
+      const errorMessage = getAttachmentsErrorMessage(unknownError, 'Error al cargar anexos');
       setError(errorMessage);
-      console.error('Error al obtener anexos:', err);
+      console.error('Error al obtener anexos:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
@@ -75,16 +90,16 @@ export function useAttachments(procedureId: string) {
       });
       
       return newAttachment;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al subir anexo';
+    } catch (unknownError) {
+      const errorMessage = getAttachmentsErrorMessage(unknownError, 'Error al subir anexo');
       setError(errorMessage);
-      console.error('Error al subir anexo:', err);
+      console.error('Error al subir anexo:', unknownError);
       toast({
         title: "Error al subir archivo",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsUploading(false);
     }
@@ -113,16 +128,16 @@ export function useAttachments(procedureId: string) {
       });
       
       return updatedAttachment;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar descripción';
+    } catch (unknownError) {
+      const errorMessage = getAttachmentsErrorMessage(unknownError, 'Error al actualizar descripción');
       setError(errorMessage);
-      console.error('Error al actualizar descripción:', err);
+      console.error('Error al actualizar descripción:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }
@@ -145,16 +160,16 @@ export function useAttachments(procedureId: string) {
         title: "Éxito",
         description: "Anexo eliminado correctamente",
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar anexo';
+    } catch (unknownError) {
+      const errorMessage = getAttachmentsErrorMessage(unknownError, 'Error al eliminar anexo');
       setError(errorMessage);
-      console.error('Error al eliminar anexo:', err);
+      console.error('Error al eliminar anexo:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }
@@ -180,15 +195,15 @@ export function useAttachments(procedureId: string) {
         title: "Descarga iniciada",
         description: `Descargando "${attachment.originalName}"`,
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al descargar anexo';
-      console.error('Error al descargar anexo:', err);
+    } catch (unknownError) {
+      const errorMessage = getAttachmentsErrorMessage(unknownError, 'Error al descargar anexo');
+      console.error('Error al descargar anexo:', unknownError);
       toast({
         title: "Error al descargar",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     }
   }, [procedureId, poa?.id, toast]);
 

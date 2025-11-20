@@ -4,7 +4,10 @@
 // Another test comment for platform diagnosis
 import { usePOA } from "@/hooks/use-poa";
 import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useProcedures } from "@/hooks/use-procedures";
+import {
+  useProcedureQuery,
+  useUpdateProcedureMutation,
+} from "@/hooks/use-procedures";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,19 +52,18 @@ export function HeaderForm() {
   // Usar solo usePOABackend para evitar conflictos
   const { poa, saveToBackend, isLoading } = usePOABackend(procedureId);
   const { updateHeader, updatePoaName } = usePOA();
-  const { update: updateProcedure, get: getProcedure } = useProcedures();
-  const updateProcedureMutation = updateProcedure();
-  const procedureQuery = getProcedure(procedureId || '');
+  const updateProcedureMutation = useUpdateProcedureMutation();
+  const procedureQuery = useProcedureQuery(procedureId);
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const headerLogoUrl = poa?.header.logoUrl ?? null;
 
   useEffect(() => {
-    if (poa?.header.logoUrl) {
-      setLogoPreview(poa.header.logoUrl);
-    } else {
-      setLogoPreview(null);
-    }
-  }, [poa?.header.logoUrl]);
+    const frame = requestAnimationFrame(() => {
+      setLogoPreview(headerLogoUrl);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [headerLogoUrl]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

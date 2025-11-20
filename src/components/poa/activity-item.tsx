@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Sparkles, Expand, Undo2 } from "lucide-react";
+import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Sparkles, Expand } from "lucide-react";
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateActivityName } from "@/ai/flows/generate-activity-name";
@@ -175,14 +175,6 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
       setNameBeforeAi(null);
     }
   };
-
-  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (value === '' || /^[0-9]+$/.test(value)) {
-      onUpdate(activity.id, { [name]: value });
-    }
-  };
-
 
   const handleNextActivityTypeChange = (value: string) => {
     const newType = value as POAActivity['nextActivityType'];

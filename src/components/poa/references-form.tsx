@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pencil, Save, X, Trash2, Plus, Loader2 } from "lucide-react";
 import { usePOA } from "@/hooks/use-poa";
-import { usePOAAPI } from "@/hooks/use-poa-api";
+import { useUpdateReferencesMutation } from "@/hooks/use-poa-api";
 import { useToast } from "@/hooks/use-toast";
 import type { POAReference } from "@/lib/schema";
 
@@ -17,7 +17,6 @@ interface EditingReference extends POAReference {
 
 export function ReferencesForm() {
   const { poa, updateReferences } = usePOA();
-  const { updateReferences: updateReferencesAPI } = usePOAAPI();
   const { toast } = useToast();
   
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -25,7 +24,7 @@ export function ReferencesForm() {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const references = poa?.references || [];
-  const updateReferencesMutation = updateReferencesAPI();
+  const updateReferencesMutation = useUpdateReferencesMutation();
 
   // Función helper para crear la referencia limpia
   const createCleanReference = (ref: EditingReference | POAReference): POAReference => {

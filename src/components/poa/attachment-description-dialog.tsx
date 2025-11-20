@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -32,14 +31,16 @@ export function AttachmentDescriptionDialog({
 }: AttachmentDescriptionDialogProps) {
   const [description, setDescription] = useState('');
 
+  const attachmentDescription = attachment?.description ?? "";
+
   // Actualizar descripción cuando cambie el anexo
   useEffect(() => {
-    if (attachment) {
-      setDescription(attachment.description || '');
-    } else {
-      setDescription('');
-    }
-  }, [attachment]);
+    if (!open) return;
+    const frame = requestAnimationFrame(() => {
+      setDescription(attachmentDescription);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [attachmentDescription, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +56,7 @@ export function AttachmentDescriptionDialog({
   };
 
   const handleCancel = () => {
-    setDescription(attachment?.description || '');
+    setDescription(attachmentDescription);
     onOpenChange(false);
   };
 

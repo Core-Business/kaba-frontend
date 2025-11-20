@@ -34,8 +34,6 @@ function VerifyOTPContent() {
   
   const email = searchParams.get('email') || '';
   const type = searchParams.get('type') || 'verification'; // 'verification' | 'reset'
-  const resetToken = searchParams.get('resetToken') || '';
-
   // Cooldown timer
   useEffect(() => {
     if (cooldownSeconds > 0) {
@@ -87,12 +85,22 @@ function VerifyOTPContent() {
           }, 1500);
         }
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Código incorrecto';
+    } catch (unknownError) {
+      let errorMessage = 'Código incorrecto';
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+      } else if (unknownError instanceof Error) {
+        errorMessage = unknownError.message;
+      }
+      const attemptsMatch = errorMessage.match(/quedan (\d+) intentos/);
       setError(errorMessage);
       
       // Extraer intentos restantes si están en el mensaje
-      const attemptsMatch = errorMessage.match(/quedan (\d+) intentos/);
       if (attemptsMatch) {
         setRemainingAttempts(parseInt(attemptsMatch[1]));
       }
@@ -111,18 +119,29 @@ function VerifyOTPContent() {
 
     try {
       if (type === 'verification') {
-        const response = await AuthAPI.resendOTP(email);
+        await AuthAPI.resendOTP(email);
         setSuccess('Nuevo código enviado a tu email');
       } else if (type === 'reset') {
-        const response = await AuthAPI.forgotPasswordOTP(email);
+        await AuthAPI.forgotPasswordOTP(email);
         setSuccess('Nuevo código enviado a tu email');
       }
       
       setCooldownSeconds(60); // Cooldown de 60 segundos
       setRemainingAttempts(null); // Reset intentos
       setOtp(''); // Limpiar input
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al reenviar código');
+    } catch (unknownError) {
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        setError((unknownError as { response: { data: { message: string } } }).response.data.message);
+      } else if (unknownError instanceof Error) {
+        setError(unknownError.message);
+      } else {
+        setError('Error al reenviar código');
+      }
     } finally {
       setIsResending(false);
     }

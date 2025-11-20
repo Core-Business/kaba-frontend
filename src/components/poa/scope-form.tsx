@@ -22,6 +22,28 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
 
+type HelperField = 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas';
+type HelperItem<T extends HelperField> =
+  T extends 'usuariosYRoles'
+    ? POAScopeUsuarioRol
+    : T extends 'conexionesDocumentales'
+      ? POAScopeConexionDocumental
+      : POAScopeReferenciaNorma;
+type HelperArray<T extends HelperField> = HelperItem<T>[];
+
+const ensureHelperArray = <T extends HelperField>(value: POAScopeHelperData[T]): HelperArray<T> =>
+  (Array.isArray(value) ? [...value] : []) as HelperArray<T>;
+
+const createHelperItem = <T extends HelperField>(field: T): HelperItem<T> => {
+  if (field === 'usuariosYRoles') {
+    return { id: crypto.randomUUID(), usuario: '', rol: '' } as HelperItem<T>;
+  }
+  if (field === 'conexionesDocumentales') {
+    return { id: crypto.randomUUID(), documento: '', codigo: '' } as HelperItem<T>;
+  }
+  return { id: crypto.randomUUID(), referencia: '', codigo: '' } as HelperItem<T>;
+};
+
 
 export function ScopeForm() {
   const params = useParams();
@@ -126,33 +148,30 @@ export function ScopeForm() {
     [setIsDirty]
   );
 
-  const addHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas') => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as Array<any> || []);
-      let newItem: any;
-      if (field === 'usuariosYRoles') newItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
-      else if (field === 'conexionesDocumentales') newItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else if (field === 'referenciaANormas') newItem = { id: crypto.randomUUID(), referencia: '', codigo: '' };
-      else return prev;
+  const addHelperObjectItem = useCallback(
+    (field: HelperField) => {
+      setHelperData(prev => {
+        const currentArray = ensureHelperArray(prev[field]);
+        const newItem = createHelperItem(field);
+        return { ...prev, [field]: [...currentArray, newItem] };
+      });
+      setIsDirty(true);
+    },
+    [setIsDirty],
+  );
 
-      return { ...prev, [field]: [...currentArray, newItem] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const removeHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas', index: number) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as Array<any> || []);
-      const newArray = currentArray.filter((_, i) => i !== index);
-      let defaultItem: any;
-      if (field === 'usuariosYRoles') defaultItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
-      else if (field === 'conexionesDocumentales') defaultItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else if (field === 'referenciaANormas') defaultItem = { id: crypto.randomUUID(), referencia: '', codigo: '' };
-      
-      return { ...prev, [field]: newArray.length > 0 ? newArray : (defaultItem ? [defaultItem] : []) };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
+  const removeHelperObjectItem = useCallback(
+    (field: HelperField, index: number) => {
+      setHelperData(prev => {
+        const currentArray = ensureHelperArray(prev[field]);
+        const newArray = currentArray.filter((_, i) => i !== index);
+        const defaultItem = createHelperItem(field);
+        return { ...prev, [field]: newArray.length > 0 ? newArray : [defaultItem] };
+      });
+      setIsDirty(true);
+    },
+    [setIsDirty],
+  );
 
 
   const handleAiEnhance = useCallback(async () => {

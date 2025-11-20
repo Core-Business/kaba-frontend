@@ -33,14 +33,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
 import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POA as POASchemaType } from "@/lib/schema";
 import { AppHeader } from "@/components/layout/app-header";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
-const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
 
 const navItems = [
   { name: "Encabezado", href: "header", icon: ClipboardEdit },
@@ -57,20 +53,6 @@ const navItems = [
   { name: "Anexos", href: "attachments", icon: Paperclip },
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
-
-type StoredPOASummary = {
-  id: string;
-  name: string;
-  logo?: string;
-  updatedAt?: string;
-};
-
-const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
-  { id: "1", name: "Plan de Despliegue de Software", updatedAt: new Date().toISOString() },
-  { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: new Date().toISOString() },
-  { id: "3", name: "Campaña de Marketing Q3", updatedAt: new Date().toISOString() },
-];
-
 
 export default function BuilderLayout({
   children,
@@ -108,7 +90,7 @@ export default function BuilderLayout({
   } = usePOABackend(procedureId);
   
   // Mantener el hook local como fallback
-  const { loadPoa, createNew, setIsDirty, saveCurrentPOA } = usePOA();
+  const { createNew, setIsDirty } = usePOA();
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
@@ -122,10 +104,6 @@ export default function BuilderLayout({
       const autoCreateNewProcedure = async () => {
         try {
           console.log('🔄 Auto-creando procedimiento desde /builder/new...');
-          
-          // Importar dinámicamente el hook de procedimientos
-          const { useProcedures } = await import('@/hooks/use-procedures');
-          
           // No podemos usar hooks aquí, así que haremos la llamada directa a la API
           const response = await fetch('/api/procedures', {
             method: 'POST',

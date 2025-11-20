@@ -1,9 +1,18 @@
 import { api } from './http';
 
+type TemplateDynamicValue =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | TemplateDynamicValue[]
+  | { [key: string]: TemplateDynamicValue };
+
 export interface SendTemplateRequest {
   to: string;
   templateId: string;
-  dynamicTemplateData?: Record<string, any>;
+  dynamicTemplateData?: Record<string, TemplateDynamicValue>;
   cc?: string[];
   bcc?: string[];
 }

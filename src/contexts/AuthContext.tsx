@@ -1,14 +1,26 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Tipos
-interface WorkspaceCtx {
+export interface WorkspaceCtx {
   orgId: string;
   wsId: string;
   wsName: string;
   role: 'WORKSPACE_ADMIN' | 'EDITOR' | 'VIEWER';
+}
+
+interface WorkspaceSummary {
+  id: string;
+  name: string;
+  role: WorkspaceCtx['role'];
+}
+
+export interface OrganizationContext {
+  id: string;
+  name?: string;
+  workspaces: WorkspaceSummary[];
 }
 
 interface User {
@@ -18,14 +30,23 @@ interface User {
   lastName?: string;
 }
 
+const safeParse = <T,>(value: string | null): T | null => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+};
+
 interface AuthContextType {
   token: string | null;
   user: User | null;
   workspace: WorkspaceCtx | null;
-  availableWorkspaces: any[] | null;
+  availableWorkspaces: OrganizationContext[] | null;
   isLoading: boolean;
   setWorkspace: (workspace: WorkspaceCtx) => void;
-  setAvailableWorkspaces: (workspaces: any[]) => void;
+  setAvailableWorkspaces: (workspaces: WorkspaceCtx[]) => void;
   setAuth: (token: string, user: User, workspace: WorkspaceCtx) => void;
   refreshToken: (newToken: string) => void;
   clearAuth: () => void;
@@ -47,7 +68,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [workspace, setWorkspaceState] = useState<WorkspaceCtx | null>(null);
-  const [availableWorkspaces, setAvailableWorkspacesState] = useState<any[] | null>(null);
+  const [availableWorkspaces, setAvailableWorkspacesState] = useState<OrganizationContext[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -56,18 +77,18 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     const loadFromStorage = async () => {
       try {
         const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        const storedWorkspace = localStorage.getItem(STORAGE_KEYS.WORKSPACE);
+        const storedUser = safeParse<User>(localStorage.getItem(STORAGE_KEYS.USER));
+        const storedWorkspace = safeParse<WorkspaceCtx>(localStorage.getItem(STORAGE_KEYS.WORKSPACE));
 
         if (storedToken) {
           setToken(storedToken);
           
           if (storedUser) {
-            setUser(JSON.parse(storedUser));
+            setUser(storedUser);
           }
           
           if (storedWorkspace) {
-            setWorkspaceState(JSON.parse(storedWorkspace));
+            setWorkspaceState(storedWorkspace);
           }
 
           // Refrescar contextos disponibles si tenemos token
@@ -82,12 +103,12 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     };
 
     loadFromStorage();
-  }, []);
+  }, [clearAuth]);
 
   // Función para refrescar contextos disponibles
   const refreshContexts = async () => {
     const currentToken = localStorage.getItem('kaba.token');
-    const currentWorkspace = localStorage.getItem('kaba.lastWorkspace');
+    const currentWorkspace = safeParse<WorkspaceCtx>(localStorage.getItem('kaba.lastWorkspace'));
     
     if (!currentToken) return;
     
@@ -97,9 +118,8 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       };
 
       if (currentWorkspace) {
-        const ws = JSON.parse(currentWorkspace);
-        headers['X-Organization-Id'] = ws.orgId || '';
-        headers['X-Workspace-Id'] = ws.wsId || '';
+        headers['X-Organization-Id'] = currentWorkspace.orgId || '';
+        headers['X-Workspace-Id'] = currentWorkspace.wsId || '';
       }
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000"}/auth/contexts`, {
@@ -107,8 +127,9 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setAvailableWorkspacesState(data.availableContexts || []);
+        type ContextsResponse = { availableContexts?: OrganizationContext[] };
+        const data: ContextsResponse = await response.json();
+        setAvailableWorkspacesState(data.availableContexts ?? []);
       }
     } catch (error) {
       console.error('Error refreshing contexts:', error);
@@ -134,7 +155,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   };
 
   // Función para establecer workspaces disponibles
-  const setAvailableWorkspaces = (workspaces: any[]) => {
+  const setAvailableWorkspaces = (workspaces: OrganizationContext[]) => {
     setAvailableWorkspacesState(workspaces);
   };
 
@@ -146,7 +167,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
   };
 
   // Función para limpiar autenticación
-  const clearAuth = () => {
+  const clearAuth = useCallback(() => {
     setToken(null);
     setUser(null);
     setWorkspaceState(null);
@@ -159,7 +180,7 @@ export function AuthContextProvider({ children }: { children: ReactNode }) {
     
     // Redirigir al login
     router.push('/login');
-  };
+  }, [router]);
 
   const contextValue: AuthContextType = {
     token,

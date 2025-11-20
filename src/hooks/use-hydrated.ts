@@ -11,9 +11,12 @@ export function useHydrated(): boolean {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    // Solo se ejecuta en el cliente después de la hidratación
-    setHydrated(true);
-  }, []);
+    if (hydrated) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => setHydrated(true));
+    return () => cancelAnimationFrame(frame);
+  }, [hydrated]);
 
   return hydrated;
 } 

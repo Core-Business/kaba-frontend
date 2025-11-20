@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Building, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { EmailsAPI } from "@/api/emails";
@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 
 export function VerifyEmailForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
@@ -35,15 +34,23 @@ export function VerifyEmailForm() {
           title: "Email verificado",
           description: response.message,
         });
-      } catch (error: any) {
-        console.error('Email verification error:', error);
-        
-        const errorMessage = error.response?.data?.message || 
-                            error.message || 
-                            "Error al verificar el email. El token puede haber expirado.";
-        
+      } catch (unknownError) {
+        console.error('Email verification error:', unknownError);
+
+        let errorMessage = "Error al verificar el email. El token puede haber expirado.";
+        if (
+          typeof unknownError === "object" &&
+          unknownError !== null &&
+          "response" in unknownError &&
+          typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+        ) {
+          errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+        } else if (unknownError instanceof Error && unknownError.message) {
+          errorMessage = unknownError.message;
+        }
+
         setError(errorMessage);
-        
+
         toast({
           title: "Error de verificación",
           description: errorMessage,

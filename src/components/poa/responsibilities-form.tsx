@@ -103,7 +103,7 @@ export function ResponsibilitiesForm() {
             {!hasResponsibilities && !isLoading && (
               <div className="text-center text-muted-foreground py-10">
                 <p>Aún no se han generado responsabilidades.</p>
-                <p>Haga clic en "Generar" para empezar o agregue uno manualmente.</p>
+                <p>Haga clic en &quot;Generar&quot; para empezar o agregue uno manualmente.</p>
               </div>
             )}
             {isLoading && poa.responsibilities.length === 0 && <div className="flex justify-center items-center h-40"><LoadingSpinner /></div>}

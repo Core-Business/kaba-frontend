@@ -12,11 +12,26 @@ interface ApprovalPersonFormData {
   position: string;
 }
 
+const getErrorMessage = (unknownError: unknown, fallback: string): string => {
+  if (
+    typeof unknownError === "object" &&
+    unknownError !== null &&
+    "response" in unknownError &&
+    typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+  ) {
+    return (unknownError as { response: { data: { message: string } } }).response.data.message;
+  }
+  if (unknownError instanceof Error && unknownError.message) {
+    return unknownError.message;
+  }
+  return fallback;
+};
+
 export function useApprovals() {
   const [isLoading, setIsLoading] = useState(false);
   const params = useParams();
   const { toast } = useToast();
-  const { poa, setPoa, setIsDirty } = usePOA();
+  const { setPoa, setIsDirty } = usePOA();
   
   const procedureId = typeof params.poaId === 'string' ? params.poaId : '';
 
@@ -53,9 +68,9 @@ export function useApprovals() {
         title: 'Persona agregada',
         description: `Se agregó exitosamente a ${getTypeLabel(type)}`,
       });
-    } catch (error: any) {
-      console.error('Error adding approval person:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'No se pudo agregar la persona';
+    } catch (unknownError) {
+      console.error('Error adding approval person:', unknownError);
+      const errorMessage = getErrorMessage(unknownError, 'No se pudo agregar la persona');
       toast({
         title: 'Error',
         description: errorMessage,
@@ -90,9 +105,9 @@ export function useApprovals() {
         title: 'Persona actualizada',
         description: `Se actualizó exitosamente en ${getTypeLabel(type)}`,
       });
-    } catch (error: any) {
-      console.error('Error updating approval person:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'No se pudo actualizar la persona';
+    } catch (unknownError) {
+      console.error('Error updating approval person:', unknownError);
+      const errorMessage = getErrorMessage(unknownError, 'No se pudo actualizar la persona');
       toast({
         title: 'Error',
         description: errorMessage,
@@ -125,9 +140,9 @@ export function useApprovals() {
         title: 'Persona eliminada',
         description: `Se eliminó exitosamente de ${getTypeLabel(type)}`,
       });
-    } catch (error: any) {
-      console.error('Error deleting approval person:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'No se pudo eliminar la persona';
+    } catch (unknownError) {
+      console.error('Error deleting approval person:', unknownError);
+      const errorMessage = getErrorMessage(unknownError, 'No se pudo eliminar la persona');
       toast({
         title: 'Error',
         description: errorMessage,
@@ -158,9 +173,9 @@ export function useApprovals() {
         title: 'Aprobaciones actualizadas',
         description: 'Se actualizaron todas las aprobaciones exitosamente',
       });
-    } catch (error: any) {
-      console.error('Error updating all approvals:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'No se pudieron actualizar las aprobaciones';
+    } catch (unknownError) {
+      console.error('Error updating all approvals:', unknownError);
+      const errorMessage = getErrorMessage(unknownError, 'No se pudieron actualizar las aprobaciones');
       toast({
         title: 'Error',
         description: errorMessage,

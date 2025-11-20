@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Settings, Building, FileText } from "lucide-react";
+import { User, Lock, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UsersAPI } from "@/api/users";
 import { UserNav } from "@/components/layout/user-nav";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
 
 interface UserProfile {
   id: string;
@@ -28,14 +26,6 @@ interface UpdateProfileData {
   lastName?: string;
   email?: string;
 }
-
-interface ChangePasswordData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-
 
 // Componente de la barra superior para Settings
 function SettingsTopBar() {
@@ -76,12 +66,7 @@ export default function SettingsPage() {
     confirmPassword: "",
   });
 
-  // Cargar perfil del usuario
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     try {
       setIsLoadingProfile(true);
       
@@ -114,7 +99,12 @@ export default function SettingsPage() {
     } finally {
       setIsLoadingProfile(false);
     }
-  };
+  }, [router, toast]);
+
+  // Cargar perfil del usuario
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,11 +127,13 @@ export default function SettingsPage() {
         title: "Perfil Actualizado",
         description: "Tu información de perfil ha sido actualizada exitosamente.",
       });
-    } catch (error: any) {
-      console.error('Error actualizando perfil:', error);
+    } catch (unknownError) {
+      console.error('Error actualizando perfil:', unknownError);
+      const message =
+        unknownError instanceof Error ? unknownError.message : "No se pudo actualizar el perfil.";
       toast({
         title: "Error",
-        description: error.message || "No se pudo actualizar el perfil.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -192,11 +184,13 @@ export default function SettingsPage() {
         title: "Contraseña Cambiada",
         description: "Tu contraseña ha sido actualizada exitosamente.",
       });
-    } catch (error: any) {
-      console.error('Error cambiando contraseña:', error);
+    } catch (unknownError) {
+      console.error('Error cambiando contraseña:', unknownError);
+      const message =
+        unknownError instanceof Error ? unknownError.message : "No se pudo cambiar la contraseña.";
       toast({
         title: "Error",
-        description: error.message || "No se pudo cambiar la contraseña.",
+        description: message,
         variant: "destructive",
       });
     } finally {

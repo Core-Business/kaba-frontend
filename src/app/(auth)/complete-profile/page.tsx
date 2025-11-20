@@ -128,8 +128,19 @@ function CompleteProfileContent() {
         router.push('/dashboard');
       }, 2000);
       
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error al completar perfil');
+    } catch (unknownError) {
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        setError((unknownError as { response: { data: { message: string } } }).response.data.message);
+      } else if (unknownError instanceof Error) {
+        setError(unknownError.message);
+      } else {
+        setError("Error al completar perfil");
+      }
     } finally {
       setIsLoading(false);
     }

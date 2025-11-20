@@ -3,6 +3,21 @@ import { POAAPI } from '@/api/poa';
 import { POARecord, CreateRecord, UpdateRecord } from '@/lib/schema';
 import { useToast } from '@/hooks/use-toast';
 
+const getRecordsErrorMessage = (unknownError: unknown, fallback: string): string => {
+  if (
+    typeof unknownError === "object" &&
+    unknownError !== null &&
+    "response" in unknownError &&
+    typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+  ) {
+    return (unknownError as { response: { data: { message: string } } }).response.data.message;
+  }
+  if (unknownError instanceof Error && unknownError.message) {
+    return unknownError.message;
+  }
+  return fallback;
+};
+
 export function useRecords(procedureId: string) {
   const [records, setRecords] = useState<POARecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,10 +35,10 @@ export function useRecords(procedureId: string) {
       const data = await POAAPI.records.getAll(procedureId);
       const safeRecords = Array.isArray(data) ? data : [];
       setRecords(safeRecords);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al cargar registros';
+    } catch (unknownError) {
+      const errorMessage = getRecordsErrorMessage(unknownError, 'Error al cargar registros');
       setError(errorMessage);
-      console.error('Error al obtener registros:', err);
+      console.error('Error al obtener registros:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
@@ -48,16 +63,16 @@ export function useRecords(procedureId: string) {
         title: "Éxito",
         description: "Registro agregado correctamente",
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al agregar registro';
+    } catch (unknownError) {
+      const errorMessage = getRecordsErrorMessage(unknownError, 'Error al agregar registro');
       setError(errorMessage);
-      console.error('Error al agregar registro:', err);
+      console.error('Error al agregar registro:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }
@@ -77,16 +92,16 @@ export function useRecords(procedureId: string) {
         title: "Éxito",
         description: "Registro actualizado correctamente",
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar registro';
+    } catch (unknownError) {
+      const errorMessage = getRecordsErrorMessage(unknownError, 'Error al actualizar registro');
       setError(errorMessage);
-      console.error('Error al actualizar registro:', err);
+      console.error('Error al actualizar registro:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }
@@ -106,16 +121,16 @@ export function useRecords(procedureId: string) {
         title: "Éxito",
         description: "Registro eliminado correctamente",
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al eliminar registro';
+    } catch (unknownError) {
+      const errorMessage = getRecordsErrorMessage(unknownError, 'Error al eliminar registro');
       setError(errorMessage);
-      console.error('Error al eliminar registro:', err);
+      console.error('Error al eliminar registro:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }
@@ -135,16 +150,16 @@ export function useRecords(procedureId: string) {
         title: "Éxito",
         description: "Registros actualizados correctamente",
       });
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Error al actualizar registros';
+    } catch (unknownError) {
+      const errorMessage = getRecordsErrorMessage(unknownError, 'Error al actualizar registros');
       setError(errorMessage);
-      console.error('Error al actualizar registros:', err);
+      console.error('Error al actualizar registros:', unknownError);
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
-      throw err;
+      throw unknownError;
     } finally {
       setIsLoading(false);
     }

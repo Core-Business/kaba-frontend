@@ -8,18 +8,12 @@ import { SectionTitle } from "./common-form-elements";
 import { generatePOAHTML } from "@/lib/html-generator";
 import { Download, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 
 export function DocumentPreview() {
   const { poa } = usePOA();
   const { toast } = useToast();
-  const [htmlPreview, setHtmlPreview] = useState<string>("");
-
-  useEffect(() => {
-    if (poa) {
-      setHtmlPreview(generatePOAHTML(poa));
-    }
-  }, [poa]);
+  const htmlPreview = useMemo(() => (poa ? generatePOAHTML(poa) : ""), [poa]);
 
   const handleDownloadHTML = () => {
     if (!poa) {

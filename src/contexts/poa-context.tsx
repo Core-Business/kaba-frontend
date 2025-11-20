@@ -1,10 +1,10 @@
 
 "use client";
 
-import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition, POAReference } from '@/lib/schema';
+import type { POA, POAActivity, POAHeader, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition, POAReference } from '@/lib/schema';
 import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema';
 import type React from 'react';
-import { createContext, useCallback, useState, useEffect } from 'react';
+import { createContext, useCallback, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
 
@@ -413,7 +413,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      let updatedActivities = currentPoa.activities.map(act => {
+      const updatedActivities = currentPoa.activities.map(act => {
         if (act.id === activityId) {
           return {
             ...act,

@@ -45,7 +45,7 @@ export function useChangeControl({
     } finally {
       setIsLoading(false);
     }
-  }, [procedureId]);
+  }, [procedureId, onError]);
 
   // Agregar nueva entrada
   const addEntry = useCallback(
@@ -83,7 +83,7 @@ export function useChangeControl({
         setIsLoading(false);
       }
     },
-    [procedureId, fetchEntries]
+    [procedureId, fetchEntries, onSuccess, onError]
   );
 
   // Actualizar la última entrada
@@ -131,7 +131,7 @@ export function useChangeControl({
         setIsLoading(false);
       }
     },
-    [procedureId, entries.length, fetchEntries]
+    [procedureId, entries.length, fetchEntries, onSuccess, onError]
   );
 
   // Eliminar la última entrada
@@ -177,7 +177,7 @@ export function useChangeControl({
     } finally {
       setIsLoading(false);
     }
-  }, [procedureId, entries.length, fetchEntries]);
+  }, [procedureId, entries.length, fetchEntries, onSuccess, onError]);
 
   // Función para obtener la fecha actual en formato MM-DD-YYYY
   const getCurrentDateFormatted = useCallback(() => {

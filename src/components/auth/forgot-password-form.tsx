@@ -39,15 +39,23 @@ export function ForgotPasswordForm() {
         router.push(`/verify-otp?email=${encodeURIComponent(email)}&type=reset`);
       }, 2000);
       
-    } catch (error: any) {
-      console.error('Forgot password error:', error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Error al enviar la solicitud. Por favor, inténtalo de nuevo.";
-      
+    } catch (unknownError) {
+      console.error('Forgot password error:', unknownError);
+
+      let errorMessage = "Error al enviar la solicitud. Por favor, inténtalo de nuevo.";
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+      } else if (unknownError instanceof Error && unknownError.message) {
+        errorMessage = unknownError.message;
+      }
+
       setError(errorMessage);
-      
+
       toast({
         title: "Error",
         description: errorMessage,
