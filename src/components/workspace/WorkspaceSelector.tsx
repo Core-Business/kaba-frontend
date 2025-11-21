@@ -24,14 +24,17 @@ export function WorkspaceSelector() {
 
   // Extraer workspaces de todas las organizaciones del AuthContext
   const organizations: OrganizationContext[] = availableWorkspaces ?? [];
-  const flatWorkspaces: Array<WorkspaceCtx & { orgName?: string }> = organizations.flatMap((org) =>
-    org.workspaces.map((ws) => ({
-      orgId: org.id,
-      wsId: ws.id,
-      wsName: ws.name,
-      role: ws.role,
-      orgName: org.name ?? "",
-    })),
+  const flatWorkspaces: Array<WorkspaceCtx & { orgName?: string }> = organizations.flatMap(
+    (org) => {
+      const workspaces = Array.isArray(org.workspaces) ? org.workspaces : [];
+      return workspaces.map((ws) => ({
+        orgId: org.id,
+        wsId: ws.id,
+        wsName: ws.name,
+        role: ws.role,
+        orgName: org.name ?? "",
+      }));
+    },
   );
   const currentWorkspaceName = workspace?.wsName || "Seleccionar Workspace";
 
@@ -44,7 +47,7 @@ export function WorkspaceSelector() {
     typeof window !== 'undefined' && localStorage.getItem('kaba.token') ? 'SÍ' : 'NO');
 
   const handleWorkspaceSwitch = async (selectedWorkspace: WorkspaceCtx & { orgName?: string }) => {
-    if (selectedWorkspace.id === workspace?.wsId) {
+    if (selectedWorkspace.wsId === workspace?.wsId) {
       setIsOpen(false);
       return;
     }
@@ -133,7 +136,7 @@ export function WorkspaceSelector() {
             ) : (
               flatWorkspaces.map((ws) => (
                 <DropdownMenuItem
-                  key={ws.id}
+                  key={`${ws.orgId}-${ws.wsId}`}
                   onClick={() => handleWorkspaceSwitch(ws)}
                   className="flex items-center justify-between cursor-pointer"
                   disabled={isSwitching}

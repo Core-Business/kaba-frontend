@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ function VerifyOTPContent() {
   const [success, setSuccess] = useState('');
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
+  const isVerifyingRef = useRef(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,11 +51,12 @@ function VerifyOTPContent() {
   }, [email, router]);
 
   const handleVerifyOTP = async () => {
-    if (otp.length !== OTP_LENGTH) return;
+    if (otp.length !== OTP_LENGTH || isVerifyingRef.current) return;
     
     setError('');
     setSuccess('');
     setIsLoading(true);
+    isVerifyingRef.current = true;
 
     try {
       if (type === 'verification') {
@@ -108,6 +110,7 @@ function VerifyOTPContent() {
       // Limpiar OTP en caso de error
       setOtp('');
     } finally {
+      isVerifyingRef.current = false;
       setIsLoading(false);
     }
   };
@@ -116,6 +119,7 @@ function VerifyOTPContent() {
     setError('');
     setSuccess('');
     setIsResending(true);
+    isVerifyingRef.current = false;
 
     try {
       if (type === 'verification') {

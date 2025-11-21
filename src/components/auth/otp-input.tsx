@@ -24,6 +24,7 @@ export function OTPInput({
 }: OTPInputProps) {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const hasCompletedRef = useRef(false);
 
 
   // Asegurar que el valor tenga la longitud correcta
@@ -38,9 +39,16 @@ export function OTPInput({
   }, [digits, disabled]);
 
   useEffect(() => {
-    // Llamar onComplete cuando esté completo
-    if (value.length === length && onComplete) {
+    if (!onComplete) {
+      return;
+    }
+
+    if (value.length === length && !hasCompletedRef.current) {
+      hasCompletedRef.current = true;
       onComplete(value);
+    } else if (value.length < length && hasCompletedRef.current) {
+      // Si se borra algún dígito, permitir que vuelva a disparar onComplete
+      hasCompletedRef.current = false;
     }
   }, [value, length, onComplete]);
 
