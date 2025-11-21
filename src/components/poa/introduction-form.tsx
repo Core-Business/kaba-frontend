@@ -2,8 +2,6 @@
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useParams } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -18,29 +16,7 @@ import { BookOpen, Target as ScopeIcon, Save, Wand2, Undo2 } from "lucide-react"
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function IntroductionForm() { 
-  const params = useParams();
-  const poaId = params.poaId as string;
-  
-  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
-  const procedureId = (() => {
-    if (!poaId || poaId === 'new') return null;
-    
-    if (poaId.startsWith('proc-')) {
-      // Formato: proc-{procedureId}-{timestamp}
-      const withoutPrefix = poaId.replace('proc-', '');
-      const parts = withoutPrefix.split('-');
-      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
-    } else {
-      // Formato directo: {procedureId}
-      return poaId;
-    }
-  })();
-  
-  console.log('IntroductionForm - poaId:', poaId, 'procedureId:', procedureId);
-  
-  // Usar usePOABackend para obtener datos del backend, usePOA para operaciones locales
-  const { poa: poaBackend, saveToBackend, isLoading } = usePOABackend(procedureId);
-  const { updateField, setIsDirty } = usePOA();
+  const { poa, saveToBackend, isBackendLoading, backendProcedureId, updateField, setIsDirty } = usePOA();
   const [isEnhancingText, setIsEnhancingText] = useState(false);
   const [isGeneratingAiIntro, setIsGeneratingAiIntro] = useState(false); 
   const [isDefiningScope, setIsDefiningScope] = useState(false);
@@ -49,9 +25,6 @@ export function IntroductionForm() {
   const [procedureDescriptionBeforeAi, setProcedureDescriptionBeforeAi] = useState<string | null>(null);
   const [introductionSuggestionBeforeAi, setIntroductionSuggestionBeforeAi] = useState<string | null>(null);
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
-
-  // Usar poa del backend
-  const poa = poaBackend;
 
   const handleProcedureDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("procedureDescription", e.target.value);
@@ -129,7 +102,7 @@ export function IntroductionForm() {
   };
 
   const handleSave = async () => {
-    if (!poa || !procedureId) {
+    if (!poa || !backendProcedureId) {
       toast({
         title: "Error",
         description: "No hay datos para guardar o falta el ID del procedimiento.",
@@ -139,7 +112,7 @@ export function IntroductionForm() {
     }
 
     try {
-      console.log('Guardando introducción con procedureId:', procedureId);
+      console.log('Guardando introducción con procedureId:', backendProcedureId);
       await saveToBackend();
       toast({
         title: "Introducción Guardada",
@@ -155,7 +128,7 @@ export function IntroductionForm() {
     }
   };
   
-  if (isLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
+  if (isBackendLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const userIntroTextExists = !!poa.procedureDescription && poa.procedureDescription.length > 10;
 

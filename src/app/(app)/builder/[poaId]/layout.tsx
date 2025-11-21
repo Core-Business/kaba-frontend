@@ -32,8 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AppHeader } from "@/components/layout/app-header";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -81,25 +80,42 @@ export default function BuilderLayout({
     }
   })();
   
-  // Usar el hook del backend en lugar del localStorage
-  const { 
-    poa, 
-    isDirty, 
-    isLoading: isLoadingBackend,
-    saveToBackend 
-  } = usePOABackend(procedureId);
-  
-  // Mantener el hook local como fallback
-  const { createNew, setIsDirty } = usePOA();
+  const {
+    poa,
+    isDirty,
+    setIsDirty,
+    setBackendProcedureId,
+    isBackendLoading,
+    saveToBackend,
+    createNew,
+  } = usePOA();
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const hasAttemptedAutoCreation = useRef(false);
 
-  // El hook usePOABackend maneja toda la lógica de carga/guardado
-  // Solo necesitamos manejar casos especiales como "new"
   useEffect(() => {
     if (poaId === "new") {
+      setBackendProcedureId(null);
+    } else {
+      setBackendProcedureId(procedureId);
+    }
+
+    return () => {
+      setBackendProcedureId(null);
+    };
+  }, [poaId, procedureId, setBackendProcedureId]);
+
+  // El hook centralizado maneja la lógica de carga/guardado
+  useEffect(() => {
+    if (poaId === "new") {
+      if (hasAttemptedAutoCreation.current) {
+        return;
+      }
+
+      hasAttemptedAutoCreation.current = true;
+
       // Auto-crear procedimiento en el backend y redirigir al ID real
       const autoCreateNewProcedure = async () => {
         try {
@@ -142,6 +158,11 @@ export default function BuilderLayout({
       
       autoCreateNewProcedure();
       return;
+    }
+
+    // Resetear el intento al abandonar la ruta /builder/new
+    if (hasAttemptedAutoCreation.current) {
+      hasAttemptedAutoCreation.current = false;
     }
     
     if (!procedureId && poaId !== 'new') {
@@ -223,12 +244,12 @@ export default function BuilderLayout({
   }
 
   // Mostrar loading mientras se carga desde el backend
-  if (poaId !== "new" && (isLoadingBackend || !poa)) {
+  if (poaId !== "new" && (isBackendLoading || !poa)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
         <p className="ml-4 text-lg">
-          {isLoadingBackend ? 'Cargando desde el servidor...' : 'Preparando editor...'}
+          {isBackendLoading ? 'Cargando desde el servidor...' : 'Preparando editor...'}
         </p>
       </div>
     );

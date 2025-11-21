@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { POAAPI } from '@/api/poa';
 import { POAAttachment } from '@/lib/schema';
 import { useToast } from '@/hooks/use-toast';
-import { usePOABackend } from '@/hooks/use-poa-backend';
+import { usePOA } from '@/hooks/use-poa';
 import { validateFile, formatFileSize, getFileTypeLabel } from '@/lib/file-validation';
 
 const getAttachmentsErrorMessage = (unknownError: unknown, fallback: string): string => {
@@ -26,7 +26,7 @@ export function useAttachments(procedureId: string) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { poa } = usePOABackend(procedureId);
+  const { poa } = usePOA();
 
   // Obtener todos los anexos
   const fetchAttachments = useCallback(async () => {

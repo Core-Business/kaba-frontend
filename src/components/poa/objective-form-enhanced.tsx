@@ -1,6 +1,5 @@
 "use client";
 
-import { usePOABackend } from "@/hooks/use-poa-backend";
 import { usePOA } from "@/hooks/use-poa";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -14,7 +13,6 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Brain, Wand2, Lightbulb, PlusCircle, Trash2, Undo2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useParams } from "next/navigation";
 
 interface HelperData {
   generalDescription: string;
@@ -35,10 +33,7 @@ const defaultHelperData: HelperData = {
 };
 
 export function ObjectiveFormEnhanced() {
-  const params = useParams();
-  const poaId = typeof params.poaId === 'string' ? params.poaId : '';
-  const { poa, saveToBackend } = usePOABackend(poaId);
-  const { updateField, setIsDirty } = usePOA();
+  const { poa, saveToBackend, isBackendLoading, backendProcedureId, updateField, setIsDirty } = usePOA();
   
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
@@ -99,7 +94,7 @@ export function ObjectiveFormEnhanced() {
   };
 
   const handleSave = async () => {
-    if (!poa) return;
+    if (!poa || !backendProcedureId) return;
     
     setIsLoading(true);
     try {
@@ -219,7 +214,7 @@ export function ObjectiveFormEnhanced() {
     }
   };
 
-  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (isBackendLoading || !poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   const canEnhance = !!poa.objective && poa.objective.length > 5;
   const canGenerate = Object.values(helperData).some(val => 

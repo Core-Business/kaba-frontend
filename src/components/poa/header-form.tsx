@@ -3,7 +3,6 @@
 
 // Another test comment for platform diagnosis
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
 import {
   useProcedureQuery,
   useUpdateProcedureMutation,
@@ -20,7 +19,6 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { POAStatusType } from "@/lib/schema";
-import { useParams } from "next/navigation"; 
 
 const MAX_FILE_SIZE_KB = 100; // 100KB
 const ALLOWED_FORMATS = ["image/jpeg", "image/png", "image/svg+xml", "image/bmp", "image/tiff"];
@@ -29,31 +27,9 @@ const POA_STATUSES: POAStatusType[] = ['Borrador', 'Vigente', 'Revisión', 'Obso
 
 export function HeaderForm() {
   // Another test comment for platform diagnosis
-  const params = useParams();
-  const poaId = params.poaId as string;
-  
-  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
-  const procedureId = (() => {
-    if (!poaId || poaId === 'new') return null;
-    
-    if (poaId.startsWith('proc-')) {
-      // Formato: proc-{procedureId}-{timestamp}
-      const withoutPrefix = poaId.replace('proc-', '');
-      const parts = withoutPrefix.split('-');
-      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
-    } else {
-      // Formato directo: {procedureId}
-      return poaId;
-    }
-  })();
-  
-  console.log('HeaderForm - poaId:', poaId, 'procedureId:', procedureId);
-  
-  // Usar solo usePOABackend para evitar conflictos
-  const { poa, saveToBackend, isLoading } = usePOABackend(procedureId);
-  const { updateHeader, updatePoaName } = usePOA();
+  const { poa, saveToBackend, isBackendLoading, backendProcedureId, updateHeader, updatePoaName } = usePOA();
   const updateProcedureMutation = useUpdateProcedureMutation();
-  const procedureQuery = useProcedureQuery(procedureId);
+  const procedureQuery = useProcedureQuery(backendProcedureId);
   const { toast } = useToast();
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const headerLogoUrl = poa?.header.logoUrl ?? null;
@@ -114,7 +90,7 @@ export function HeaderForm() {
   };
 
   const handleSave = async () => {
-    if (!poa || !procedureId) {
+    if (!poa || !backendProcedureId) {
       toast({
         title: "Error",
         description: "No hay datos para guardar o falta el ID del procedimiento.",
@@ -124,7 +100,7 @@ export function HeaderForm() {
     }
 
     try {
-      console.log('Guardando encabezado con procedureId:', procedureId);
+      console.log('Guardando encabezado con procedureId:', backendProcedureId);
       
       // 1. Guardar POA en el backend
       await saveToBackend();
@@ -132,14 +108,14 @@ export function HeaderForm() {
       // 2. Actualizar también el procedimiento base para sincronizar el nombre en el dashboard
       if (poa.name) {
         console.log('Actualizando nombre del procedimiento:', poa.name);
-        console.log('Datos a enviar:', { id: procedureId, payload: { title: poa.name } });
+        console.log('Datos a enviar:', { id: backendProcedureId, payload: { title: poa.name } });
         
         try {
           // Primero verificar que el procedimiento existe y tenemos permisos
           console.log('🔍 Verificando procedimiento antes de actualizar...');
-          console.log('🔍 ProcedureId:', procedureId);
-          console.log('🔍 ProcedureId length:', procedureId?.length);
-          console.log('🔍 ProcedureId type:', typeof procedureId);
+          console.log('🔍 ProcedureId:', backendProcedureId);
+          console.log('🔍 ProcedureId length:', backendProcedureId?.length);
+          console.log('🔍 ProcedureId type:', typeof backendProcedureId);
           
           if (procedureQuery.data) {
             console.log('✅ Procedimiento encontrado:', procedureQuery.data);
@@ -154,7 +130,7 @@ export function HeaderForm() {
           }
           
           await updateProcedureMutation.mutateAsync({
-            id: procedureId,
+            id: backendProcedureId,
             payload: {
               title: poa.name, // Sincronizar el nombre del POA con el título del procedimiento
             }
@@ -183,7 +159,7 @@ export function HeaderForm() {
     }
   };
 
-  if (isLoading || !poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (isBackendLoading || !poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg w-full">

@@ -63,17 +63,21 @@ await createMutation.mutateAsync({
 
 ### **Gestión de POAs**
 ```tsx
-import { usePOABackend } from "@/hooks/use-poa-backend";
+import { usePOA } from "@/hooks/use-poa";
 
-const { 
-  poa, 
-  createNewPOA, 
-  autoCreatePOA, 
-  saveToBackend 
-} = usePOABackend(procedureId);
+const {
+  poa,
+  backendProcedureId,
+  isBackendLoading,
+  saveToBackend,
+  setBackendProcedureId,
+} = usePOA();
 
-// Auto-crear POA desde procedimiento
-await autoCreatePOA(procedureId);
+// Establece el procedimiento activo una única vez (ej. en el layout del builder)
+useEffect(() => {
+  setBackendProcedureId(procedureIdFromRoute);
+  return () => setBackendProcedureId(null);
+}, [procedureIdFromRoute, setBackendProcedureId]);
 
 // Guardar manual
 await saveToBackend();

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from "@tanstack/react-query";
-import { usePOA } from './use-poa';
 import {
   usePoaQuery,
   useAutoCreatePoaMutation,
@@ -8,51 +7,76 @@ import {
   usePartialUpdatePoaMutation,
   useUpdatePoaMutation,
 } from './use-poa-api';
+import { usePOA } from './use-poa';
 import type { POA } from '@/lib/schema';
 import type { CreatePOARequest } from '@/api/poa';
 import { useToast } from './use-toast';
 import { isAxiosError } from 'axios';
 
-export function usePOABackend(procedureId: string | null) {
+export interface UsePOABackendHandlers {
+  procedureId: string | null;
+  poa: POA | null;
+  isDirty: boolean;
+  setIsDirty: (dirty: boolean) => void;
+  loadPoa: (poaData: POA) => void;
+  saveToLocalStorage: () => void;
+}
+
+export function usePOABackendController({
+  procedureId,
+  poa,
+  isDirty,
+  setIsDirty,
+  loadPoa,
+  saveToLocalStorage,
+}: UsePOABackendHandlers) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const {
-    poa,
-    isDirty,
-    setIsDirty,
-    loadPoa,
-    saveCurrentPOA: saveToLocalStorage,
-  } = usePOA();
-  
-  // Para auto-save cada 2 segundos cuando hay cambios
+
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveRef = useRef<string>('');
+  const lastLoadedDataRef = useRef<POA | null>(null);
+  const autoCreateAttemptedRef = useRef<string | null>(null);
 
-  // Query para obtener POA del backend
   const poaQuery = usePoaQuery(procedureId);
-
-  // Declarar todas las mutations al inicio del hook
   const autoCreateMutation = useAutoCreatePoaMutation();
   const partialUpdateMutation = usePartialUpdatePoaMutation();
   const updateMutation = useUpdatePoaMutation();
   const createMutation = useCreatePoaMutation();
-  
-  // Cargar POA desde backend cuando cambie el procedureId
+
   useEffect(() => {
+    if (!procedureId) {
+      lastLoadedDataRef.current = null;
+      autoCreateAttemptedRef.current = null;
+      return;
+    }
+
     if (poaQuery.data && !poaQuery.isLoading) {
+      if (lastLoadedDataRef.current === poaQuery.data) {
+        return;
+      }
+
       console.log('✅ Cargando POA desde backend');
+      lastLoadedDataRef.current = poaQuery.data;
       loadPoa(poaQuery.data);
       lastSaveRef.current = JSON.stringify(poaQuery.data);
-    } else if (poaQuery.error && procedureId && isAxiosError(poaQuery.error)) {
-      // Si hay error 404, significa que no existe POA, auto-crearlo
+      autoCreateAttemptedRef.current = null;
+    } else if (poaQuery.error && isAxiosError(poaQuery.error)) {
       const errorStatus = poaQuery.error.response?.status;
       if (errorStatus === 404) {
+        if (autoCreateAttemptedRef.current === procedureId) {
+          return;
+        }
+
         console.log('POA no encontrado, auto-creando...');
+        autoCreateAttemptedRef.current = procedureId;
+
         autoCreateMutation.mutate(
           { procedureId, partialPoa: {} },
           {
             onSuccess: (newPoa) => {
               console.log('POA auto-creado exitosamente');
+              lastLoadedDataRef.current = null;
               loadPoa(newPoa);
               lastSaveRef.current = JSON.stringify(newPoa);
             },
@@ -63,27 +87,28 @@ export function usePOABackend(procedureId: string | null) {
         );
       }
     }
-  }, [poaQuery.data, poaQuery.isLoading, poaQuery.error, procedureId, autoCreateMutation, loadPoa]);
+  }, [
+    poaQuery.data,
+    poaQuery.isLoading,
+    poaQuery.error,
+    procedureId,
+    autoCreateMutation,
+    loadPoa,
+  ]);
 
-  // Las mutations ya están declaradas arriba
-  
-  // Auto-save al backend cada 2 segundos cuando hay cambios
   useEffect(() => {
     if (!poa || !procedureId || !isDirty) return;
 
-    // Limpiar timer anterior
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Configurar nuevo timer
     autoSaveTimerRef.current = setTimeout(() => {
       const currentPoaString = JSON.stringify(poa);
-      
-      // Solo guardar si hay cambios reales
+
       if (currentPoaString !== lastSaveRef.current) {
         console.log('🔄 Auto-guardando cambios...');
-        
+
         partialUpdateMutation.mutate(
           {
             procedureId,
@@ -97,23 +122,27 @@ export function usePOABackend(procedureId: string | null) {
             },
             onError: (error) => {
               console.error('❌ Error en auto-guardado:', error);
-              // Fallback al localStorage si falla el backend
               saveToLocalStorage();
             },
           },
         );
       }
-    }, 120000); // 120 segundos = 2 minutos
+    }, 120000);
 
-    // Cleanup
     return () => {
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [poa, procedureId, isDirty, partialUpdateMutation, setIsDirty, saveToLocalStorage]);
+  }, [
+    poa,
+    procedureId,
+    isDirty,
+    partialUpdateMutation,
+    setIsDirty,
+    saveToLocalStorage,
+  ]);
 
-  // Crear nuevo POA en el backend
   const createNewPOA = useCallback(async (procedureId: string, poaData?: Partial<POA>) => {
     try {
       const result = await createMutation.mutateAsync({
@@ -123,13 +152,13 @@ export function usePOABackend(procedureId: string | null) {
           ...poaData,
         },
       });
-      
+
       loadPoa(result);
       toast({
         title: "POA Creado",
         description: "El procedimiento POA ha sido creado exitosamente.",
       });
-      
+
       return result;
     } catch (error) {
       console.error('Error creando POA:', error);
@@ -142,36 +171,34 @@ export function usePOABackend(procedureId: string | null) {
     }
   }, [createMutation, loadPoa, toast]);
 
-  // Auto-crear POA desde procedimiento
   const autoCreatePOA = useCallback(
     async (procedureId: string, partialData?: Partial<CreatePOARequest>) => {
-    try {
-      const result = await autoCreateMutation.mutateAsync({
-        procedureId,
-        partialPoa: partialData,
-      });
-      
-      loadPoa(result);
-      toast({
-        title: "POA Creado Automáticamente",
-        description: "El procedimiento POA ha sido generado desde el procedimiento base.",
-      });
-      
-      return result;
-    } catch (error) {
-      console.error('Error auto-creando POA:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo generar automáticamente el procedimiento POA.",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  },
-  [autoCreateMutation, loadPoa, toast],
+      try {
+        const result = await autoCreateMutation.mutateAsync({
+          procedureId,
+          partialPoa: partialData,
+        });
+
+        loadPoa(result);
+        toast({
+          title: "POA Creado Automáticamente",
+          description: "El procedimiento POA ha sido generado desde el procedimiento base.",
+        });
+
+        return result;
+      } catch (error) {
+        console.error('Error auto-creando POA:', error);
+        toast({
+          title: "Error",
+          description: "No se pudo generar automáticamente el procedimiento POA.",
+          variant: "destructive",
+        });
+        throw error;
+      }
+    },
+    [autoCreateMutation, loadPoa, toast],
   );
 
-  // Guardar manualmente al backend
   const saveToBackend = useCallback(async () => {
     if (!poa || !procedureId) return;
 
@@ -180,19 +207,18 @@ export function usePOABackend(procedureId: string | null) {
         procedureId,
         poa,
       });
-      
+
       loadPoa(result);
       setIsDirty(false);
       lastSaveRef.current = JSON.stringify(result);
-      
-      // Invalidar cache de procedimientos para actualizar el dashboard
+
       queryClient.invalidateQueries({ queryKey: ["procedures"] });
-      
+
       toast({
         title: "POA Guardado",
         description: "Los cambios han sido guardados exitosamente.",
       });
-      
+
       return result;
     } catch (error) {
       console.error('Error guardando POA:', error);
@@ -201,30 +227,46 @@ export function usePOABackend(procedureId: string | null) {
         description: "No se pudieron guardar los cambios.",
         variant: "destructive",
       });
-      
-      // Fallback al localStorage
+
       saveToLocalStorage();
       throw error;
     }
-  }, [poa, procedureId, updateMutation, loadPoa, setIsDirty, toast, saveToLocalStorage, queryClient]);
+  }, [
+    poa,
+    procedureId,
+    updateMutation,
+    loadPoa,
+    setIsDirty,
+    toast,
+    saveToLocalStorage,
+    queryClient,
+  ]);
 
   return {
-    // Estado del POA
     poa,
     isDirty,
     isLoading: poaQuery.isLoading,
     error: poaQuery.error,
-    
-    // Métodos para trabajar con backend
     createNewPOA,
     autoCreatePOA,
     saveToBackend,
     refetch: poaQuery.refetch,
-    
-    // Operaciones de mutation
     isCreating: createMutation.isPending,
     isAutoCreating: autoCreateMutation.isPending,
     isUpdating: updateMutation.isPending,
     isPartialUpdating: partialUpdateMutation.isPending,
   };
-} 
+}
+
+export function usePOABackend(procedureId: string | null) {
+  const { poa, isDirty, setIsDirty, loadPoa, saveCurrentPOA } = usePOA();
+
+  return usePOABackendController({
+    procedureId,
+    poa,
+    isDirty,
+    setIsDirty,
+    loadPoa,
+    saveToLocalStorage: saveCurrentPOA,
+  });
+}
