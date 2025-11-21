@@ -228,7 +228,6 @@ export function HeaderForm() {
         </div>
 
         <div className="mt-3 pt-3 border-t border-border">
-          <h3 className="text-lg font-medium text-primary mb-2">Aprobaciones</h3>
           <div className="space-y-3">
             <div>
               <Label htmlFor="author">Nombre del Autor</Label>
