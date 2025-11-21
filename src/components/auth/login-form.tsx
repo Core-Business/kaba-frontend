@@ -75,6 +75,15 @@ export function LoginForm() {
       variant: "default",
     });
   };
+  const handleGoogleLogin = () => {
+    const apiBaseUrl = (
+      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api"
+    ).replace(/\/$/, "");
+
+    if (typeof window !== "undefined") {
+      window.location.href = `${apiBaseUrl}/auth/google`;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -199,7 +208,7 @@ export function LoginForm() {
                     type="button"
                     variant="outline"
                     className="h-12 border-gray-300 hover:bg-gray-50 hover:text-gray-900 font-sans font-normal tracking-normal leading-tight"
-                    onClick={() => handleSocialLogin('google')}
+                    onClick={handleGoogleLogin}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path
