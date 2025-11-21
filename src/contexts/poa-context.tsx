@@ -5,7 +5,7 @@ import type { POA, POAActivity, POAHeader, POAActivityAlternativeBranch, POAObje
 import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema';
 import type { CreatePOARequest } from '@/api/poa';
 import type React from 'react';
-import { createContext, useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
 import { usePOABackendController } from '@/hooks/use-poa-backend';
@@ -54,6 +54,12 @@ interface POAContextType {
     isAutoCreating: boolean;
     isUpdating: boolean;
     isPartialUpdating: boolean;
+  };
+  completion: {
+    headerComplete: boolean;
+    objectiveComplete: boolean;
+    activitiesComplete: boolean;
+    allCriticalComplete: boolean;
   };
 }
 
@@ -152,18 +158,23 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeader = useCallback((updates: Partial<POAHeader>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
       if (updates.title && updates.title !== currentPoa.header.title) {
         newName = updates.title;
       }
 
-      return {
+      const updatedPoa = {
         ...currentPoa,
         name: newName,
         header: newHeader,
       };
+
+      if (JSON.stringify(updatedPoa) !== JSON.stringify(currentPoa)) {
+        setIsDirty(true);
+      }
+
+      return updatedPoa;
     });
   }, []);
 
@@ -537,6 +548,25 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveToLocalStorage: saveCurrentPOA,
   });
 
+  const completion = useMemo(() => {
+    const headerComplete = Boolean(
+      poa?.header?.title?.trim() &&
+      poa?.header?.companyName?.trim() &&
+      poa?.header?.departmentArea?.trim() &&
+      poa?.header?.status?.trim()
+    );
+
+    const objectiveComplete = Boolean(poa?.objective && poa.objective.trim().length > 0);
+    const activitiesComplete = Boolean(poa?.activities && poa.activities.length > 0);
+
+    return {
+      headerComplete,
+      objectiveComplete,
+      activitiesComplete,
+      allCriticalComplete: headerComplete && objectiveComplete && activitiesComplete,
+    };
+  }, [poa]);
+
   useEffect(() => {
     if (lastBackendProcedureIdRef.current === backendProcedureId) {
       return;
@@ -595,6 +625,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isUpdating,
         isPartialUpdating,
       },
+      completion,
     }}>
       {children}
     </POAContext.Provider>

@@ -53,6 +53,18 @@ const navItems = [
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
 
+const gatedSections = new Set([
+  "responsibilities",
+  "definitions",
+  "references",
+  "records",
+  "introduction",
+  "change-control",
+  "approvals",
+  "attachments",
+  "document",
+]);
+
 export default function BuilderLayout({
   children,
 }: {
@@ -88,12 +100,18 @@ export default function BuilderLayout({
     isBackendLoading,
     saveToBackend,
     createNew,
+    completion,
   } = usePOA();
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showLockedDialog, setShowLockedDialog] = useState(false);
   const hasAttemptedAutoCreation = useRef(false);
+
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const currentSection =
+    pathSegments.length >= 3 ? pathSegments[2] : "header";
 
   useEffect(() => {
     if (poaId === "new") {
@@ -172,6 +190,13 @@ export default function BuilderLayout({
       return;
     }
   }, [poaId, procedureId, createNew, router]);
+
+  useEffect(() => {
+    if (!poaId) return;
+    if (!completion.allCriticalComplete && gatedSections.has(currentSection)) {
+      router.replace(`/builder/${poaId}/header`);
+    }
+  }, [completion.allCriticalComplete, currentSection, poaId, router]);
 
 
   useEffect(() => {
@@ -277,6 +302,7 @@ export default function BuilderLayout({
                 const isActive = pathname === itemPath ||
                                 (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}`) ||
                                 (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}/header`);
+                const isLockedSection = gatedSections.has(item.href) && !completion.allCriticalComplete;
 
                 return (
                   <SidebarMenuItem key={item.name}>
@@ -289,6 +315,11 @@ export default function BuilderLayout({
                        <Link
                         href={itemPath}
                         onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                          if (isLockedSection) {
+                            e.preventDefault();
+                            setShowLockedDialog(true);
+                            return;
+                          }
                           if (isDirty) {
                             e.preventDefault();
                             setNextPath(itemPath);
@@ -370,6 +401,22 @@ export default function BuilderLayout({
               ) : (
                 'Guardar y Salir'
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showLockedDialog} onOpenChange={setShowLockedDialog}>
+        <AlertDialogContent className="sm:max-w-[500px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Completa los primeros pasos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Antes de avanzar a este paso debes completar el Encabezado, Objetivo y agregar Actividades.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowLockedDialog(false)}>
+              Entendido
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
