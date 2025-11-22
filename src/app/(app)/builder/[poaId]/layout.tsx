@@ -283,7 +283,7 @@ export default function BuilderLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-1 min-h-screen bg-background p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
+      <div className="flex flex-1 min-h-screen bg-background w-full">
         <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between">
@@ -361,9 +361,11 @@ export default function BuilderLayout({
 
         <div className="flex flex-col flex-1 min-w-0">
           <AppHeader />
-          <main className="flex-1 w-full overflow-y-auto bg-muted/40 rounded-lg shadow-md">
-            {children}
-          </main>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col">
+            <main className="w-full flex-1 bg-muted/40 rounded-lg shadow-md">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
