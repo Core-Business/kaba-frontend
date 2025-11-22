@@ -62,6 +62,9 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   
   const isExpanded = expandedActivityIds.has(activity.id);
   const itemScrollRef = useRef<HTMLDivElement>(null); // Internal ref for scrolling logic
+  const isSummaryEnabled =
+    Boolean(activity.responsible?.trim()) &&
+    Boolean(activity.description?.trim());
 
   useEffect(() => {
     if (activity.id === scrollToActivityId && itemScrollRef.current) {
@@ -135,10 +138,10 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   };
   
   const handleGenerateName = async () => {
-    if (!activity.description) {
+    if (!activity.responsible?.trim() || !activity.description?.trim()) {
         toast({
-            title: "Descripción Requerida",
-            description: "Por favor, ingresa una descripción para la actividad antes de generar un nombre.",
+            title: "Información Incompleta",
+            description: "Registra un responsable y una descripción antes de generar un nombre.",
             variant: "destructive",
         });
         return;
@@ -296,15 +299,21 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     placeholder="Auto"
                     className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
                 />
-                 <div className="flex-grow">
+                <div className="flex-grow">
+                  {isSummaryEnabled ? (
                     <Input
-                        id={`activity-name-${activity.id}`}
-                        name="activityName"
-                        value={activity.activityName || ""}
-                        onChange={handleInputChange}
-                        placeholder="Nombre corto de actividad (Opcional)"
-                        className="w-full text-sm h-8 font-medium"
+                      id={`activity-name-${activity.id}`}
+                      name="activityName"
+                      value={activity.activityName || ""}
+                      onChange={handleInputChange}
+                      placeholder="Nombre corto de actividad (Opcional)"
+                      className="w-full text-sm h-8 font-medium"
                     />
+                  ) : (
+                    <div className="text-xs italic text-muted-foreground">
+                      Completa la información del responsable y la descripción de la actividad para agregar el titúlo de la actividad.
+                    </div>
+                  )}
                 </div>
                 <Button
                   type="button"
@@ -316,18 +325,20 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                 <AiEnhanceButton
+                {isSummaryEnabled && (
+                  <AiEnhanceButton
                     onClick={handleGenerateName}
                     isLoading={isGeneratingName}
                     textExists={!!activity.description && activity.description.length > 0}
                     className="text-xs px-1 py-0.5 h-7"
                     onUndo={nameBeforeAi !== null ? handleUndoNameAi : undefined}
                     canUndo={nameBeforeAi !== null}
-                >
-                    <Sparkles className="mr-1 h-3 w-3" />
-                    <span className="hidden sm:inline">{isGeneratingName ? "Generando..." : "Generar"}</span>
-                    <span className="sm:hidden">{isGeneratingName ? "..." : "AI"}</span>
-                </AiEnhanceButton>
+                  >
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      <span className="hidden sm:inline">{isGeneratingName ? "Generando..." : "Generar"}</span>
+                      <span className="sm:hidden">{isGeneratingName ? "..." : "AI"}</span>
+                  </AiEnhanceButton>
+                )}
             </div>
 
              {isExpanded && (
