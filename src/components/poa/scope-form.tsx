@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
@@ -12,13 +11,26 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
+import { generateScopeFromActivities } from "@/ai/flows/generate-scope-from-activities";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
-import { useState, useEffect, useCallback } from "react";
+import type { GenerateScopeFromActivitiesInput } from "@/ai/flows/generate-scope-from-activities";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react";
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, FileText } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
+import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma, POAActivity } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type HelperField = 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas';
 type HelperItem<T extends HelperField> =
@@ -55,10 +67,12 @@ export function ScopeForm() {
   } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
+  const [isLoadingAiGenerateFromActivities, setIsLoadingAiGenerateFromActivities] = useState(false);
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true);
+  const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -98,6 +112,9 @@ export function ScopeForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [helperData, poa?.id]);
 
+  const isActivitiesLocked = useMemo(() => {
+    return poa?.activities.some((act: POAActivity) => act.nextActivityType === 'process_end') || false;
+  }, [poa?.activities]);
 
   const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("scope", e.target.value);
@@ -213,6 +230,42 @@ export function ScopeForm() {
     setIsLoadingAiGenerate(false);
   }, [poa, updateField, toast, maxWords, helperData]);
 
+  const performGenerateFromActivities = async () => {
+    if (!poa) return;
+    setScopeBeforeAi(poa.scope);
+    setIsLoadingAiGenerateFromActivities(true);
+    try {
+        const inputForAI: GenerateScopeFromActivitiesInput = {
+            procedureName: poa.header.title || "",
+            companyName: poa.header.companyName,
+            objective: poa.objective,
+            activities: poa.activities.map(a => ({
+                responsible: a.responsible,
+                description: a.description
+            })),
+            maxWords: maxWords
+        };
+
+        const result = await generateScopeFromActivities(inputForAI);
+        updateField("scope", result.generatedScope);
+        toast({ title: "Alcance Generado", description: "Se ha generado el alcance basado en las actividades." });
+    } catch (error) {
+        console.error("Error generando alcance desde actividades:", error);
+        toast({ title: "Error", description: "No se pudo generar el alcance.", variant: "destructive" });
+        setScopeBeforeAi(null);
+    }
+    setIsLoadingAiGenerateFromActivities(false);
+    setShowOverwriteDialog(false);
+  };
+
+  const handleGenerateFromActivitiesClick = () => {
+    if (poa?.scope && poa.scope.trim().length > 0) {
+        setShowOverwriteDialog(true);
+    } else {
+        performGenerateFromActivities();
+    }
+  };
+
   const handleUndoAi = useCallback(() => {
     if (scopeBeforeAi !== null && poa) {
       updateField("scope", scopeBeforeAi);
@@ -265,7 +318,34 @@ export function ScopeForm() {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1">
-          <Label htmlFor="scope">Definición del Alcance</Label>
+          <div className="flex justify-between items-end mb-2">
+            <Label htmlFor="scope">Definición del Alcance</Label>
+            
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={0}> {/* Wrap in span to allow tooltip on disabled button */}
+                            <Button 
+                                onClick={handleGenerateFromActivitiesClick} 
+                                disabled={!isActivitiesLocked || isLoadingAiGenerateFromActivities}
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                            >
+                                {isLoadingAiGenerateFromActivities ? <LoadingSpinner className="mr-2 h-3 w-3" /> : <FileText className="mr-2 h-3 w-3" />}
+                                Generar con base en Actividades
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    {!isActivitiesLocked && (
+                        <TooltipContent>
+                            <p>Completa y cierra la sección de Actividades para usar esta función</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
+
+          </div>
           <Textarea
             id="scope"
             value={poa.scope || ""}
@@ -297,8 +377,8 @@ export function ScopeForm() {
             onClick={handleAiEnhance}
             isLoading={isLoadingAiEnhance}
             textExists={canEnhanceMainScope}
-            onUndo={scopeBeforeAi !== null && !isLoadingAiGenerate ? handleUndoAi : undefined}
-            canUndo={scopeBeforeAi !== null && !isLoadingAiGenerate}
+            onUndo={scopeBeforeAi !== null && !isLoadingAiGenerate && !isLoadingAiGenerateFromActivities ? handleUndoAi : undefined}
+            canUndo={scopeBeforeAi !== null && !isLoadingAiGenerate && !isLoadingAiGenerateFromActivities}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             {isLoadingAiEnhance ? "Editando..." : "Edición con IA"}
@@ -327,7 +407,7 @@ export function ScopeForm() {
                 {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
                 {isLoadingAiGenerate ? "Generando..." : "Generar Alcance"}
               </Button>
-              {scopeBeforeAi !== null && !isLoadingAiEnhance && (
+              {scopeBeforeAi !== null && !isLoadingAiEnhance && !isLoadingAiGenerateFromActivities && (
                 <Button
                   type="button"
                   variant="outline"
@@ -479,6 +559,22 @@ export function ScopeForm() {
           Guardar Alcance
         </Button>
       </CardFooter>
+
+      <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Sobrescribir Alcance Actual?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Ya existe texto en la definición del alcance. Al generar uno nuevo con IA, se perderá el contenido actual.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={performGenerateFromActivities}>Sobrescribir y Generar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Card>
   );
 }
