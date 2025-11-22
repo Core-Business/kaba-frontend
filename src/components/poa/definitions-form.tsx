@@ -206,7 +206,7 @@ export function DefinitionsForm() {
       const termToGenerate = editingDefinition.term.trim();
       console.log("🔄 Generando definición para término:", termToGenerate);
       
-      const response = await aiApi.generateDefinition(termToGenerate);
+      const response = await aiApi.generateDefinition(termToGenerate, poa?.procedureId);
       console.log("✅ Respuesta de IA recibida:", response);
       console.log("✅ Tipo de respuesta:", typeof response);
       console.log("✅ response.definition:", (response as { definition?: unknown }).definition);
