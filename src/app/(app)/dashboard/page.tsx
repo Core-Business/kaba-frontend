@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   useCreateProcedureMutation,
+  useDeleteProcedureMutation,
   useProceduresList,
 } from "@/hooks/use-procedures";
 import { useToast } from "@/hooks/use-toast";
@@ -157,6 +158,7 @@ interface ProceduresListProps {
   onDuplicate: (procedure: Procedure) => void;
   onArchive: (procedure: Procedure) => void;
   onDelete: (procedure: Procedure) => void;
+  deletingId?: string | null;
 }
 
 function ProceduresList({
@@ -166,6 +168,7 @@ function ProceduresList({
   onDuplicate,
   onArchive,
   onDelete,
+  deletingId,
 }: ProceduresListProps) {
      const getStatusColor = (status?: string) => {
      switch (status?.toLowerCase()) {
@@ -263,8 +266,16 @@ function ProceduresList({
                       <Archive className="mr-2 h-4 w-4" />
                       Archivar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDelete(procedure)} className="text-red-600">
-                      <Trash2 className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem
+                      onClick={() => onDelete(procedure)}
+                      className="text-red-600"
+                      disabled={deletingId === procedure.id}
+                    >
+                      {deletingId === procedure.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="mr-2 h-4 w-4" />
+                      )}
                       Eliminar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -285,11 +296,13 @@ export default function DashboardPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("recent");
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const itemsPerPage = 5;
 
   // Queries
   const proceduresQuery = useProceduresList();
   const createMutation = useCreateProcedureMutation();
+  const deleteMutation = useDeleteProcedureMutation();
 
   // Métricas calculadas
   const metrics: DashboardMetrics = useMemo(() => {
@@ -422,20 +435,37 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (procedure: Procedure) => {
+    if (!procedure.id) {
+      toast({
+        title: "Error",
+        description: "No se encontró el identificador del procedimiento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const confirmMessage = `¿Estás seguro de que quieres eliminar "${procedure.title}"? Esta acción no se puede deshacer.`;
-    if (window.confirm(confirmMessage)) {
-      try {
-        toast({
-          title: "Procedimiento Eliminado",
-          description: "El procedimiento ha sido eliminado exitosamente.",
-        });
-      } catch {
-        toast({
-          title: "Error",
-          description: "No se pudo eliminar el procedimiento.",
-          variant: "destructive",
-        });
-      }
+    const isConfirmed = window.confirm(confirmMessage);
+    if (!isConfirmed || deleteMutation.isPending) {
+      return;
+    }
+
+    try {
+      setDeletingId(procedure.id);
+      await deleteMutation.mutateAsync(procedure.id);
+      toast({
+        title: "Procedimiento Eliminado",
+        description: "El procedimiento ha sido eliminado exitosamente.",
+      });
+    } catch (error) {
+      console.error("Error deleting procedure:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el procedimiento.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -608,6 +638,7 @@ export default function DashboardPage() {
                     onDuplicate={handleDuplicate}
                     onArchive={handleArchive}
                     onDelete={handleDelete}
+                    deletingId={deletingId}
                   />
 
                   {/* Pagination */}
