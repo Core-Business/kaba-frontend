@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { POAActivity } from "@/lib/schema";
@@ -11,11 +10,20 @@ import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Spa
 import { AiEnhanceButton } from "./common-form-elements";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateActivityName } from "@/ai/flows/generate-activity-name";
-import React, { useState, useEffect, useRef } from "react"; // Added useRef
+import React, { useState, useEffect, useRef } from "react"; 
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { usePOA } from "@/hooks/use-poa";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ActivityItemProps {
   activity: POAActivity;
@@ -28,6 +36,8 @@ interface ActivityItemProps {
   onDrop?: (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => void;
   isDragging?: boolean;
   isSubActivity?: boolean;
+  isLastActivity?: boolean; // New prop
+  isLocked?: boolean; // New prop
 }
 
 export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
@@ -41,12 +51,15 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   onDrop,
   isDragging,
   isSubActivity = false,
-}, ref) => { // `ref` here is for drag-n-drop from ActivitiesForm
+  isLastActivity = false,
+  isLocked = false,
+}, ref) => { 
   const [isLoadingAiEnhanceDesc, setIsLoadingAiEnhanceDesc] = useState(false);
   const [isLoadingAiExpandDesc, setIsLoadingAiExpandDesc] = useState(false);
   const [descriptionBeforeAi, setDescriptionBeforeAi] = useState<string | null>(null);
   const [isGeneratingName, setIsGeneratingName] = useState(false);
   const [nameBeforeAi, setNameBeforeAi] = useState<string | null>(null);
+  const [showEndProcessDialog, setShowEndProcessDialog] = useState(false);
   const { toast } = useToast();
   const { 
     addActivity, 
@@ -56,12 +69,12 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
     expandedActivityIds,
     toggleActivityExpansion,
     poa,
-    scrollToActivityId, // Added for scrolling
-    setScrollToActivityId, // Added for scrolling
+    scrollToActivityId, 
+    setScrollToActivityId, 
   } = usePOA(); 
   
   const isExpanded = expandedActivityIds.has(activity.id);
-  const itemScrollRef = useRef<HTMLDivElement>(null); // Internal ref for scrolling logic
+  const itemScrollRef = useRef<HTMLDivElement>(null); 
   const isSummaryEnabled =
     Boolean(activity.responsible?.trim()) &&
     Boolean(activity.description?.trim());
@@ -69,11 +82,10 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   useEffect(() => {
     if (activity.id === scrollToActivityId && itemScrollRef.current) {
       itemScrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      setScrollToActivityId(null); // Reset after scrolling
+      setScrollToActivityId(null); 
     }
   }, [activity.id, scrollToActivityId, setScrollToActivityId]);
 
-  // Combine forwarded ref (for DND) and internal ref (for scrolling)
   const handleCardRef = (instance: HTMLDivElement | null) => {
     (itemScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = instance;
     if (typeof ref === 'function') {
@@ -90,7 +102,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
 
 
   const handleAiEnhanceDescription = async () => {
-    if (!activity.description) return;
+    if (!activity.description || isLocked) return;
     setDescriptionBeforeAi(activity.description);
     setIsLoadingAiEnhanceDesc(true);
     try {
@@ -106,7 +118,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   };
   
   const handleAiExpandDescription = async () => {
-    if (!activity.description) return;
+    if (!activity.description || isLocked) return;
     setDescriptionBeforeAi(activity.description);
     setIsLoadingAiExpandDesc(true);
     try {
@@ -130,7 +142,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   };
 
   const handleUndoDescriptionAi = () => {
-    if (descriptionBeforeAi !== null) {
+    if (descriptionBeforeAi !== null && !isLocked) {
       onUpdate(activity.id, { description: descriptionBeforeAi });
       toast({ title: "Acción Deshecha", description: "Se restauró la descripción anterior." });
       setDescriptionBeforeAi(null);
@@ -138,6 +150,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   };
   
   const handleGenerateName = async () => {
+    if (isLocked) return;
     if (!activity.responsible?.trim() || !activity.description?.trim()) {
         toast({
             title: "Información Incompleta",
@@ -160,7 +173,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
   };
 
   const handleUndoNameAi = () => {
-    if (nameBeforeAi !== null) {
+    if (nameBeforeAi !== null && !isLocked) {
         onUpdate(activity.id, { activityName: nameBeforeAi });
         toast({ title: "Acción Deshecha", description: "Se restauró el nombre anterior de la actividad." });
         setNameBeforeAi(null);
@@ -169,6 +182,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (isLocked) return;
     const { name, value } = e.target;
     onUpdate(activity.id, { [name]: value });
     if (name === "description") {
@@ -179,7 +193,26 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
     }
   };
 
+  const confirmProcessEnd = () => {
+      setShowEndProcessDialog(false);
+      // The actual update is done here after confirmation
+       const updates: Partial<POAActivity> = { 
+        nextActivityType: 'process_end',
+        nextIndividualActivityRef: '',
+        decisionBranches: undefined,
+        alternativeBranches: undefined
+      };
+      onUpdate(activity.id, updates);
+  };
+
   const handleNextActivityTypeChange = (value: string) => {
+    if (isLocked) return;
+    
+    if (value === 'process_end') {
+        setShowEndProcessDialog(true);
+        return;
+    }
+
     const newType = value as POAActivity['nextActivityType'];
     const updates: Partial<POAActivity> = { nextActivityType: newType };
 
@@ -203,12 +236,17 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
         if (!activity.alternativeBranches || activity.alternativeBranches.length === 0) { 
             updates.alternativeBranches = [{ id: crypto.randomUUID(), label: 'Alternativa 1' }];
         }
+    } else if (newType === 'alternative_end') {
+        updates.nextIndividualActivityRef = '';
+        updates.decisionBranches = undefined;
+        updates.alternativeBranches = undefined;
     }
+    
     onUpdate(activity.id, updates);
   };
 
   const handleAlternativeBranchLabelChange = (branchIndex: number, value: string) => {
-     if (activity.alternativeBranches) {
+     if (activity.alternativeBranches && !isLocked) {
         const newAlternativeBranches = activity.alternativeBranches.map((branch, i) =>
             i === branchIndex ? { ...branch, label: value } : branch
         );
@@ -218,6 +256,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
 
 
   const handleAddSubActivity = (parentBranchCondition: string) => {
+    if (isLocked) return;
     if (!poa) {
       toast({
         title: "Error de Carga",
@@ -270,22 +309,27 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
 
 
   return (
+    <>
     <Card
-      ref={handleCardRef} // Use combined ref handler
-      className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'} ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}`}
-      draggable={!!onDragStart && !isSubActivity}
-      onDragStart={(e) => !isSubActivity && index !== undefined && onDragStart?.(e, index)}
+      ref={handleCardRef} 
+      className={`w-full mb-2 p-0.5 bg-card shadow-sm border rounded-md transition-opacity 
+        ${isDragging ? 'opacity-50' : 'opacity-100'} 
+        ${isSubActivity ? 'ml-4 border-l-2 border-primary/30' : ''}
+        ${isLocked ? 'opacity-80 pointer-events-none' : ''}
+      `}
+      draggable={!!onDragStart && !isSubActivity && !isLocked}
+      onDragStart={(e) => !isSubActivity && !isLocked && index !== undefined && onDragStart?.(e, index)}
       onDragOver={onDragOver}
-      onDrop={(e) => !isSubActivity && index !== undefined && onDrop?.(e, index)}
+      onDrop={(e) => !isSubActivity && !isLocked && index !== undefined && onDrop?.(e, index)}
     >
       <CardContent className="p-2 space-y-1.5">
         <div className="flex items-start gap-1.5">
           {!isSubActivity && onDragStart && (
-             <button type="button" className="cursor-grab p-1 text-muted-foreground hover:text-foreground" title="Arrastrar para reordenar">
+             <button type="button" className={`cursor-grab p-1 text-muted-foreground hover:text-foreground ${isLocked ? 'invisible' : ''}`} title="Arrastrar para reordenar">
                 <GripVertical className="h-4 w-4 mt-1" /> 
              </button>
           )}
-           <button type="button" onClick={() => toggleActivityExpansion(activity.id)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5" title={isExpanded ? "Colapsar" : "Expandir"}>
+           <button type="button" onClick={() => toggleActivityExpansion(activity.id)} className="p-1 text-muted-foreground hover:text-foreground mt-0.5 pointer-events-auto" title={isExpanded ? "Colapsar" : "Expandir"}>
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           <div className="flex-grow space-y-1.5">
@@ -298,6 +342,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     readOnly
                     placeholder="Auto"
                     className="w-10 text-base font-semibold text-primary bg-card border-none shadow-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 read-only:cursor-default text-center"
+                    disabled={isLocked}
                 />
                 <div className="flex-grow">
                   {isSummaryEnabled ? (
@@ -308,6 +353,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                       onChange={handleInputChange}
                       placeholder="Nombre corto de actividad (Opcional)"
                       className="w-full text-sm h-8 font-medium"
+                      disabled={isLocked}
                     />
                   ) : (
                     <div className="text-xs italic text-muted-foreground">
@@ -315,6 +361,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     </div>
                   )}
                 </div>
+                {!isLocked && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -325,7 +372,8 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-                {isSummaryEnabled && (
+                )}
+                {isSummaryEnabled && !isLocked && (
                   <AiEnhanceButton
                     onClick={handleGenerateName}
                     isLoading={isGeneratingName}
@@ -352,6 +400,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                         onChange={handleInputChange}
                         placeholder="Ej., Gerente de TI, Líder de Equipo"
                         className="mt-0.5 w-full text-xs"
+                        disabled={isLocked}
                     />
                 </div>
 
@@ -365,8 +414,11 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     placeholder="Describe la actividad o tarea"
                     rows={2}
                     className="mt-0.5 w-full min-h-[50px] text-xs"
+                    disabled={isLocked}
                   />
                    <div className="mt-1.5 flex flex-wrap gap-2">
+                       {!isLocked && (
+                        <>
                         <AiEnhanceButton
                             onClick={handleAiEnhanceDescription}
                             isLoading={isLoadingAiEnhanceDesc}
@@ -391,6 +443,8 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                             <span className="hidden sm:inline">{isLoadingAiExpandDesc ? "Ampliando..." : "Ampliar IA"}</span>
                             <span className="sm:hidden">{isLoadingAiExpandDesc ? "..." : "Ampliar"}</span>
                         </AiEnhanceButton>
+                        </>
+                       )}
                     </div>
                 </div>
 
@@ -400,19 +454,34 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     id={`activity-nextActivityType-${activity.id}`}
                     value={activity.nextActivityType || 'individual'}
                     onValueChange={handleNextActivityTypeChange}
-                    className="flex flex-col sm:flex-row gap-1.5 sm:gap-3 mt-0.5"
+                    className="flex flex-col mt-0.5 gap-1.5"
+                    disabled={isLocked}
                   >
-                    <div className="flex items-center space-x-1.5">
-                      <RadioGroupItem value="individual" id={`type-individual-${activity.id}`} />
-                      <Label htmlFor={`type-individual-${activity.id}`} className="font-normal text-xs">Individual</Label>
-                    </div>
-                    <div className="flex items-center space-x-1.5">
-                      <RadioGroupItem value="decision" id={`type-decision-${activity.id}`} />
-                      <Label htmlFor={`type-decision-${activity.id}`} className="font-normal text-xs">Decisión (Sí/No)</Label>
-                    </div>
-                    <div className="flex items-center space-x-1.5">
-                      <RadioGroupItem value="alternatives" id={`type-alternatives-${activity.id}`} />
-                      <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal text-xs">Alternativas</Label>
+                    <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="individual" id={`type-individual-${activity.id}`} />
+                        <Label htmlFor={`type-individual-${activity.id}`} className="font-normal text-xs">Individual</Label>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="decision" id={`type-decision-${activity.id}`} />
+                        <Label htmlFor={`type-decision-${activity.id}`} className="font-normal text-xs">Decisión (Sí/No)</Label>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="alternatives" id={`type-alternatives-${activity.id}`} />
+                        <Label htmlFor={`type-alternatives-${activity.id}`} className="font-normal text-xs">Alternativas</Label>
+                        </div>
+                        
+                        <div className="flex items-center space-x-1.5">
+                        <RadioGroupItem value="alternative_end" id={`type-alternative_end-${activity.id}`} />
+                        <Label htmlFor={`type-alternative_end-${activity.id}`} className="font-normal text-xs">Fin Alternativo</Label>
+                        </div>
+
+                        {(isLastActivity || activity.nextActivityType === 'process_end') && (
+                            <div className="flex items-center space-x-1.5">
+                            <RadioGroupItem value="process_end" id={`type-process_end-${activity.id}`} />
+                            <Label htmlFor={`type-process_end-${activity.id}`} className="font-normal text-xs">Fin del Procedimiento</Label>
+                            </div>
+                        )}
                     </div>
                   </RadioGroup>
                 </div>
@@ -426,7 +495,24 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                             onChange={handleInputChange}
                             placeholder="Siguiente Actividad No. (Número Entero o FIN o No Aplica)"
                             className="mt-0.5 w-full text-xs"
+                            disabled={isLocked}
                         />
+                    </div>
+                )}
+
+                {activity.nextActivityType === 'alternative_end' && (
+                    <div className="mt-2 p-2 border border-yellow-200 bg-yellow-50 rounded-md">
+                        <p className="text-xs text-yellow-800">
+                            Esta actividad marca un fin alternativo o una salida del flujo principal. 
+                        </p>
+                    </div>
+                )}
+
+                {activity.nextActivityType === 'process_end' && (
+                     <div className="mt-2 p-2 border border-green-200 bg-green-50 rounded-md">
+                        <p className="text-xs text-green-800 font-medium">
+                            Fin del procedimiento (Cerrado)
+                        </p>
                     </div>
                 )}
               </>
@@ -454,15 +540,18 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     }}
                     placeholder="Ej: Sí o Opción positiva"
                     className="w-full text-xs h-8"
+                    disabled={isLocked}
                   />
                   <div className="ml-2 space-y-1.5">
                     {yesChildren.map((child, childIndex) => (
-                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity isLocked={isLocked} />
                     ))}
                   </div>
+                  {!isLocked && (
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('yes')} className="text-xs h-7 px-2 py-1 border-green-600 text-green-700 hover:bg-green-100">
                     <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - Sí
                   </Button>
+                  )}
                 </div>
 
                 <div className="p-2 border-l-2 border-red-500 bg-red-50/50 rounded-r-md space-y-1.5">
@@ -481,15 +570,18 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     }}
                     placeholder="Ej: No o Opción negativa"
                     className="w-full text-xs h-8"
+                    disabled={isLocked}
                   />
                   <div className="ml-2 space-y-1.5">
                     {noChildren.map((child, childIndex) => (
-                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
+                      <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity isLocked={isLocked} />
                     ))}
                   </div>
+                  {!isLocked && (
                   <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity('no')} className="text-xs h-7 px-2 py-1 border-red-600 text-red-700 hover:bg-red-100">
                     <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - No
                   </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -512,9 +604,10 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                           onChange={(e) => handleAlternativeBranchLabelChange(branchIndex, e.target.value)}
                           placeholder={`Ej., Opción ${branchIndex + 1}`}
                           className="mt-0.5 w-full text-xs h-8"
+                          disabled={isLocked}
                         />
                       </div>
-                      {(activity.alternativeBranches || []).length > 1 && (
+                      {(activity.alternativeBranches || []).length > 1 && !isLocked && (
                         <Button
                           type="button"
                           variant="ghost"
@@ -529,14 +622,17 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                     </div>
                     <div className="ml-2 space-y-1.5">
                       {alternativeChildren(branch.id).map((child, childIndex) => (
-                         <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity />
+                         <ActivityItem key={child.id} activity={child} onUpdate={onUpdate} onDelete={onDelete} index={childIndex} isSubActivity isLocked={isLocked} />
                       ))}
                     </div>
+                     {!isLocked && (
                      <Button type="button" variant="outline" size="sm" onClick={() => handleAddSubActivity(branch.id)} className="text-xs h-7 px-2 py-1 border-blue-600 text-blue-700 hover:bg-blue-100">
                         <PlusCircle className="mr-1 h-3 w-3" /> Agregar Actividad - Alternativa
                      </Button>
+                     )}
                   </div>
                 ))}
+                {!isLocked && (
                 <Button
                     type="button"
                     variant="outline"
@@ -546,6 +642,7 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
                   >
                   <PlusCircle className="mr-1 h-3 w-3" /> Añadir Otra Alternativa
                 </Button>
+                )}
               </div>
             )}
              <div className="flex justify-between items-center mt-1 mb-0.5 pt-1.5 border-t">
@@ -558,7 +655,22 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
         
       </CardContent>
     </Card>
+
+    <AlertDialog open={showEndProcessDialog} onOpenChange={setShowEndProcessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar Fin del Procedimiento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al confirmar esta acción, la sección de Actividades quedará cerrada y ya no permitirá cambios adicionales. ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmProcessEnd}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 });
 ActivityItem.displayName = 'ActivityItem';
-

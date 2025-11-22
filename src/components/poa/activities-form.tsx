@@ -1,4 +1,3 @@
-
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
@@ -6,12 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { ActivityItem } from "./activity-item";
-import { PlusCircle, ListChecks, Save } from "lucide-react";
+import { PlusCircle, ListChecks, Save, Lock } from "lucide-react";
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { POAActivity } from "@/lib/schema";
 import { useToast } from "@/hooks/use-toast";
 import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 export function ActivitiesForm() {
   const {
     poa,
@@ -24,9 +35,14 @@ export function ActivitiesForm() {
     setActivities,
   } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+  const [showReopenDialog, setShowReopenDialog] = useState(false);
   const { toast } = useToast();
 
   const topLevelActivities = poa?.activities.filter((act: POAActivity) => !act.parentId) || [];
+  
+  const isActivitiesLocked = useMemo(() => {
+    return poa?.activities.some((act: POAActivity) => act.nextActivityType === 'process_end') || false;
+  }, [poa?.activities]);
 
   useEffect(() => {
     if (poa && poa.activities.length > 0) {
@@ -62,6 +78,8 @@ export function ActivitiesForm() {
   if (isBackendLoading || !poa) return <div className="flex justify-center items-center h-64"><p>Cargando datos del Procedimiento POA...</p></div>;
 
   const handleAddTopLevelActivity = () => {
+    if (isActivitiesLocked) return;
+
     if (poa && poa.activities.length > 0) {
       const orderedActivities = getActivitiesInProceduralOrder(poa.activities);
       if (orderedActivities.length > 0) {
@@ -81,6 +99,7 @@ export function ActivitiesForm() {
   };
 
   const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    if (isActivitiesLocked) return;
     setDraggedItemIndex(index);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -91,7 +110,7 @@ export function ActivitiesForm() {
   };
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
-    if (!poa) {
+    if (!poa || isActivitiesLocked) {
       return;
     }
     e.preventDefault();
@@ -155,18 +174,52 @@ export function ActivitiesForm() {
     }
   };
 
+  const handleReopenActivities = () => {
+    setShowReopenDialog(false);
+    const endActivity = poa.activities.find((act: POAActivity) => act.nextActivityType === 'process_end');
+    if (endActivity) {
+        updateActivity(endActivity.id, { nextActivityType: 'individual' });
+        toast({
+            title: "Actividades Reabiertas",
+            description: "Ya puedes agregar o editar actividades.",
+        });
+    }
+  };
+
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
         <SectionTitle title="Actividades del Procedimiento" description="Define los pasos individuales, decisiones y rutas alternativas para este Procedimiento POA." />
       </CardHeader>
       <CardContent>
+        
+        {isActivitiesLocked && (
+            <Alert className="mb-6 bg-yellow-50 border-yellow-200">
+                <Lock className="h-4 w-4 text-yellow-600" />
+                <AlertTitle className="text-yellow-800 ml-2">Actividades Cerradas</AlertTitle>
+                <AlertDescription className="text-yellow-700 ml-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <span>
+                        Las actividades están cerradas porque marcaste un <strong>Fin del Procedimiento</strong>. 
+                        Para realizar cambios, deberás reabrir el flujo.
+                    </span>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="whitespace-nowrap border-yellow-600 text-yellow-800 hover:bg-yellow-100"
+                        onClick={() => setShowReopenDialog(true)}
+                    >
+                        Reabrir actividades
+                    </Button>
+                </AlertDescription>
+            </Alert>
+        )}
+
         {topLevelActivities.length === 0 ? (
           <div className="text-center py-8 border-2 border-dashed rounded-lg">
             <ListChecks className="mx-auto h-12 w-12 text-muted-foreground" />
             <p className="mt-4 text-lg font-medium text-muted-foreground">Aún no hay actividades definidas.</p>
             <p className="text-sm text-muted-foreground">Añade tu primera actividad para comenzar.</p>
-            <Button onClick={handleAddTopLevelActivity} className="mt-6">
+            <Button onClick={handleAddTopLevelActivity} className="mt-6" disabled={isActivitiesLocked}>
               <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
             </Button>
           </div>
@@ -185,11 +238,13 @@ export function ActivitiesForm() {
                 onDrop={onDrop}
                 isDragging={draggedItemIndex === index}
                 isSubActivity={false}
+                isLastActivity={index === topLevelActivities.length - 1}
+                isLocked={isActivitiesLocked}
               />
             ))}
           </div>
         )}
-        {topLevelActivities.length > 0 && (
+        {topLevelActivities.length > 0 && !isActivitiesLocked && (
            <div className="mt-3 pt-3 border-t">
             <Button onClick={handleAddTopLevelActivity} variant="outline" size="sm">
               <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
@@ -203,6 +258,22 @@ export function ActivitiesForm() {
           Guardar Actividades
         </Button>
       </CardFooter>
+
+      <AlertDialog open={showReopenDialog} onOpenChange={setShowReopenDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Reabrir actividades?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esto permitirá editar y agregar actividades de nuevo. ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReopenActivities}>Reabrir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Card>
   );
 }
