@@ -14,7 +14,7 @@ import { generateScope } from "@/ai/flows/generate-scope";
 import { generateScopeFromActivities } from "@/ai/flows/generate-scope-from-activities";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
 import type { GenerateScopeFromActivitiesInput } from "@/ai/flows/generate-scope-from-activities";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, FileText } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -87,23 +87,28 @@ export function ScopeForm() {
     };
   });
 
+  const lastPoaIdRef = useRef<string | undefined>(poa?.id);
+
   useEffect(() => {
     if (!poa) return;
-    const contextSource = poa.scopeHelperData || defaultPOAScopeHelperData;
-    const newLocalStateCandidate: POAScopeHelperData = {
-        ...defaultPOAScopeHelperData,
-        ...contextSource,
-        productosClave: contextSource.productosClave || '',
-        direccionGerencia: contextSource.direccionGerencia || '',
-        usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
-        conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
-        referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
-    };
-    if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
+    
+    // Only update local state from context if the POA ID has changed (e.g., navigation or initial load)
+    if (poa.id !== lastPoaIdRef.current) {
+        lastPoaIdRef.current = poa.id;
+        const contextSource = poa.scopeHelperData || defaultPOAScopeHelperData;
+        const newLocalStateCandidate: POAScopeHelperData = {
+            ...defaultPOAScopeHelperData,
+            ...contextSource,
+            productosClave: contextSource.productosClave || '',
+            direccionGerencia: contextSource.direccionGerencia || '',
+            usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
+            conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
+            referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
+        };
         setHelperData(newLocalStateCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poa?.scopeHelperData]);
+  }, [poa?.id]);
 
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
@@ -177,7 +182,7 @@ export function ScopeForm() {
       toast({ title: "Texto Requerido", description: "Por favor, escribe un alcance para editarlo con IA.", variant: "destructive" });
       return;
     }
-    setScopeBeforeAi(poa.scope);
+    setScopeBeforeAi(poa.scope || null);
     setIsLoadingAiEnhance(true);
     try {
         const enhanceInput: Parameters<typeof enhanceText>[0] = {
@@ -200,7 +205,7 @@ export function ScopeForm() {
     if (!poa) return;
     const canGenerateFromHelper = Object.values(helperData).some(val => 
         Array.isArray(val) ? 
-        val.some(item => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some(v => typeof v === 'string' && v.trim() !== '')))
+        val.some((item: any) => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some((v: any) => typeof v === 'string' && v.trim() !== '')))
         : (typeof val === 'string' && val.trim() !== '')
     );
 
@@ -209,7 +214,7 @@ export function ScopeForm() {
         return;
     }
 
-    setScopeBeforeAi(poa.scope);
+    setScopeBeforeAi(poa.scope || null);
     setIsLoadingAiGenerate(true);
     try {
       const inputForAI: GenerateScopeInput = {
@@ -232,7 +237,7 @@ export function ScopeForm() {
 
   const performGenerateFromActivities = async () => {
     if (!poa) return;
-    setScopeBeforeAi(poa.scope);
+    setScopeBeforeAi(poa.scope || null);
     setIsLoadingAiGenerateFromActivities(true);
     try {
         const inputForAI: GenerateScopeFromActivitiesInput = {
@@ -306,7 +311,7 @@ export function ScopeForm() {
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
   const canGenerateFromHelperNow = Object.values(helperData).some(val => 
     Array.isArray(val) ? 
-    val.some(item => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some(v => typeof v === 'string' && v.trim() !== '')))
+    val.some((item: any) => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some((v: any) => typeof v === 'string' && v.trim() !== '')))
     : (typeof val === 'string' && val.trim() !== '')
   );
 
@@ -450,8 +455,8 @@ export function ScopeForm() {
                             <Label>Usuarios y Roles</Label>
                             {(helperData.usuariosYRoles || [{ id: crypto.randomUUID(), usuario: '', rol: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario', e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol', e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario' as any, e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol' as any, e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
                                 {(helperData.usuariosYRoles || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('usuariosYRoles', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -507,8 +512,8 @@ export function ScopeForm() {
                             <Label>Documentos, POAs, Guías o Manuales Relacionados</Label>
                             {(helperData.conexionesDocumentales || [{ id: crypto.randomUUID(), documento: '', codigo: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento', e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo', e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
+                                <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento' as any, e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo' as any, e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
                                 {(helperData.conexionesDocumentales || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('conexionesDocumentales', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -521,8 +526,8 @@ export function ScopeForm() {
                             <Label>Normativas, Estándares o Políticas Aplicables</Label>
                             {(helperData.referenciaANormas || [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia', e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo', e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
+                                <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia' as any, e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo' as any, e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
                                 {(helperData.referenciaANormas || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('referenciaANormas', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}

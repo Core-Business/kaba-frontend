@@ -68,11 +68,22 @@ export interface UpdateReferencesRequest {
 function transformPOAForBackend(poa: POA): UpdatePOARequest {
   const {
     id: ignoredId,
+    _id: ignoredMongoId,
+    organizationId: ignoredOrganizationId,
+    workspaceId: ignoredWorkspaceId,
     createdAt: ignoredCreatedAt,
     updatedAt: ignoredUpdatedAt,
     procedureId: ignoredProcedureId,
+    responsibilities: ignoredResponsibilities,
+    approvals: ignoredApprovals,
+    changeControl: ignoredChangeControl,
+    records: ignoredRecords,
     ...rest
-  } = poa;
+  } = poa as POA & {
+    _id?: string;
+    organizationId?: string;
+    workspaceId?: string;
+  };
 
   return rest;
 }
