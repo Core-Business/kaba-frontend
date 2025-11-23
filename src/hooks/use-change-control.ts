@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { POAAPI } from '@/api/poa';
 import {
@@ -21,6 +21,16 @@ export function useChangeControl({
   const [isLoading, setIsLoading] = useState(false);
   const [entries, setEntries] = useState<POAChangeControlEntry[]>([]);
 
+  // Use refs to keep callbacks stable and avoid infinite loops in useEffects
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
+
   // Obtener todas las entradas de control de cambios
   const fetchEntries = useCallback(async () => {
     if (!procedureId || procedureId === 'new') {
@@ -36,7 +46,7 @@ export function useChangeControl({
     } catch (error) {
       console.error('Error fetching change control entries:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      onError?.(errorMessage);
+      onErrorRef.current?.(errorMessage);
       toast({
         title: 'Error',
         description: 'No se pudieron cargar las entradas de control de cambios',
@@ -45,7 +55,7 @@ export function useChangeControl({
     } finally {
       setIsLoading(false);
     }
-  }, [procedureId, onError]);
+  }, [procedureId]);
 
   // Agregar nueva entrada
   const addEntry = useCallback(
@@ -63,7 +73,7 @@ export function useChangeControl({
       try {
         await POAAPI.changeControl.add(procedureId, entryData);
         await fetchEntries(); // Recargar entradas
-        onSuccess?.();
+        onSuccessRef.current?.();
         toast({
           title: 'Éxito',
           description: 'Entrada de control de cambios agregada correctamente',
@@ -72,7 +82,7 @@ export function useChangeControl({
       } catch (error) {
         console.error('Error adding change control entry:', error);
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        onError?.(errorMessage);
+        onErrorRef.current?.(errorMessage);
         toast({
           title: 'Error',
           description: 'No se pudo agregar la entrada de control de cambios',
@@ -83,7 +93,7 @@ export function useChangeControl({
         setIsLoading(false);
       }
     },
-    [procedureId, fetchEntries, onSuccess, onError]
+    [procedureId, fetchEntries]
   );
 
   // Actualizar la última entrada
@@ -111,7 +121,7 @@ export function useChangeControl({
       try {
         await POAAPI.changeControl.updateLast(procedureId, entryData);
         await fetchEntries(); // Recargar entradas
-        onSuccess?.();
+        onSuccessRef.current?.();
         toast({
           title: 'Éxito',
           description: 'Última entrada actualizada correctamente',
@@ -120,7 +130,7 @@ export function useChangeControl({
       } catch (error) {
         console.error('Error updating last change control entry:', error);
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-        onError?.(errorMessage);
+        onErrorRef.current?.(errorMessage);
         toast({
           title: 'Error',
           description: 'No se pudo actualizar la última entrada',
@@ -131,7 +141,7 @@ export function useChangeControl({
         setIsLoading(false);
       }
     },
-    [procedureId, entries.length, fetchEntries, onSuccess, onError]
+    [procedureId, entries.length, fetchEntries]
   );
 
   // Eliminar la última entrada
@@ -158,7 +168,7 @@ export function useChangeControl({
     try {
       await POAAPI.changeControl.removeLast(procedureId);
       await fetchEntries(); // Recargar entradas
-      onSuccess?.();
+      onSuccessRef.current?.();
       toast({
         title: 'Éxito',
         description: 'Última entrada eliminada correctamente',
@@ -167,7 +177,7 @@ export function useChangeControl({
     } catch (error) {
       console.error('Error removing last change control entry:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-      onError?.(errorMessage);
+      onErrorRef.current?.(errorMessage);
       toast({
         title: 'Error',
         description: 'No se pudo eliminar la última entrada',
@@ -177,7 +187,7 @@ export function useChangeControl({
     } finally {
       setIsLoading(false);
     }
-  }, [procedureId, entries.length, fetchEntries, onSuccess, onError]);
+  }, [procedureId, entries.length, fetchEntries]);
 
   // Función para obtener la fecha actual en formato MM-DD-YYYY
   const getCurrentDateFormatted = useCallback(() => {
