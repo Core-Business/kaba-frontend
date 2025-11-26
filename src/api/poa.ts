@@ -128,6 +128,13 @@ export const POAAPI = {
     return response.data?.data;
   },
 
+  async downloadPdf(procedureId: string): Promise<Blob> {
+    const response = await api.get(`/procedures/${procedureId}/poa/download-pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // --- Métodos para Responsabilidades ---
 
   async generateResponsibilities(

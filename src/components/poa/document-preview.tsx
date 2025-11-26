@@ -10,11 +10,21 @@ import { Download, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMemo } from "react";
 import { useAttachments } from "@/hooks/use-attachments";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, FileCode, FileText, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { POAAPI } from "@/api/poa";
 
 export function DocumentPreview() {
   const { poa } = usePOA();
   const { toast } = useToast();
   const { attachments } = useAttachments(poa?.procedureId || "");
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const htmlPreview = useMemo(() => (poa ? generatePOAHTML(poa, attachments) : ""), [poa, attachments]);
 
@@ -36,6 +46,28 @@ export function DocumentPreview() {
     toast({ title: "Descarga Iniciada", description: `${fileName}.html se está descargando.` });
   };
 
+  const handleDownloadPDF = async () => {
+    if (!poa) return;
+    try {
+      setIsDownloading(true);
+      const blob = await POAAPI.downloadPdf(poa.procedureId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = poa.header.title ? poa.header.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'procedimiento_poa';
+      link.setAttribute('download', `${fileName}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      toast({ title: "Descarga completada", description: "El PDF se ha descargado correctamente." });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "No se pudo descargar el PDF.", variant: "destructive" });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
@@ -45,10 +77,34 @@ export function DocumentPreview() {
       </CardHeader>
       <CardContent>
         <div className="flex justify-end mb-4">
-          <Button onClick={handleDownloadHTML}>
-            <Download className="mr-2 h-4 w-4" />
-            Descargar HTML
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={isDownloading}>
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Descargando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    Descargar
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDownloadHTML}>
+                <FileCode className="mr-2 h-4 w-4" />
+                Descargar HTML
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadPDF}>
+                <FileText className="mr-2 h-4 w-4" />
+                Descargar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         <div className="w-full border rounded-lg p-1 bg-muted aspect-[1/1.414] overflow-hidden"> 
