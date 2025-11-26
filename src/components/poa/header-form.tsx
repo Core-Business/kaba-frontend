@@ -164,11 +164,11 @@ export function HeaderForm() {
   return (
     <Card className="shadow-lg w-full">
       <CardHeader>
-        <SectionTitle title="Encabezado del Procedimiento POA" description="Define los detalles principales de tu Procedimiento POA." />
+        <SectionTitle title="Encabezado del procedimiento" description="Define los detalles principales de tu procedimiento." />
       </CardHeader>
       <CardContent className="space-y-3"> 
         <div className="md:col-span-2">
-          <Label htmlFor="name">Nombre del Procedimiento</Label>
+          <Label htmlFor="name">Nombre del procedimiento</Label>
           <Input
             id="name"
             name="name" 
@@ -178,20 +178,20 @@ export function HeaderForm() {
             className="mt-1 w-full"
             maxLength={60} 
           />
-          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el Procedimiento POA en tu panel y como título en el documento (máx. ~10 palabras).</p>
+          <p className="text-xs text-muted-foreground mt-1">Este nombre se usa para identificar el procedimiento en tu panel y como título en el documento (máx. ~10 palabras).</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3"> 
           <div>
-            <Label htmlFor="companyName">Nombre de la Empresa</Label>
-            <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu Empresa" className="mt-1 w-full" />
+            <Label htmlFor="companyName">Nombre de la empresa</Label>
+            <Input id="companyName" name="companyName" value={poa.header.companyName || ""} onChange={handleInputChange} placeholder="Nombre de tu empresa" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="departmentArea">Área o Departamento</Label>
+            <Label htmlFor="departmentArea">Área o departamento</Label>
             <Input id="departmentArea" name="departmentArea" value={poa.header.departmentArea || ""} onChange={handleInputChange} placeholder="Ej., Marketing, Operaciones" className="mt-1 w-full" />
           </div>
           <div>
-            <Label htmlFor="documentCode">Código del Documento (Opcional)</Label>
+            <Label htmlFor="documentCode">Código del documento (Opcional)</Label>
             <Input id="documentCode" name="documentCode" value={poa.header.documentCode || ""} onChange={handleInputChange} placeholder="Ej., RH-PROC-001" className="mt-1 w-full" />
           </div>
           <div>
@@ -223,14 +223,14 @@ export function HeaderForm() {
         </div>
 
         <div className="mt-3"> 
-          <Label htmlFor="fileLocation">Ubicación del Archivo</Label>
+          <Label htmlFor="fileLocation">Ubicación del archivo</Label>
           <Input id="fileLocation" name="fileLocation" value={poa.header.fileLocation || ""} onChange={handleInputChange} placeholder="Ej., Servidor Interno / Documentos / POAs" className="mt-1 w-full" />
         </div>
 
         <div className="mt-3 pt-3 border-t border-border">
           <div className="space-y-3">
             <div>
-              <Label htmlFor="author">Nombre del Autor</Label>
+              <Label htmlFor="author">Nombre del autor</Label>
               <Input id="author" name="author" value={poa.header.author || ""} onChange={handleInputChange} placeholder="Ej., Juan Pérez" className="mt-1 w-full" />
             </div>
             <p className="text-sm text-muted-foreground">Define aquí los responsables de la aprobación del documento.</p>
@@ -238,7 +238,7 @@ export function HeaderForm() {
         </div>
 
         <div className="mt-3 pt-3 border-t border-border"> 
-          <Label htmlFor="logo-upload">Logo de la Compañía (máx ${MAX_FILE_SIZE_KB}KB)</Label>
+          <Label htmlFor="logo-upload">Logo de la mompañía (máx {MAX_FILE_SIZE_KB}KB)</Label>
           <div className="mt-2 flex items-center gap-4">
             {logoPreview ? (
               <div className="relative group">

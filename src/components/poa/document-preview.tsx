@@ -9,18 +9,21 @@ import { generatePOAHTML } from "@/lib/html-generator";
 import { Download, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMemo } from "react";
+import { useAttachments } from "@/hooks/use-attachments";
 
 export function DocumentPreview() {
   const { poa } = usePOA();
   const { toast } = useToast();
-  const htmlPreview = useMemo(() => (poa ? generatePOAHTML(poa) : ""), [poa]);
+  const { attachments } = useAttachments(poa?.procedureId || "");
+
+  const htmlPreview = useMemo(() => (poa ? generatePOAHTML(poa, attachments) : ""), [poa, attachments]);
 
   const handleDownloadHTML = () => {
     if (!poa) {
       toast({ title: "Error", description: "No hay datos del Procedimiento POA para descargar.", variant: "destructive" });
       return;
     }
-    const htmlContent = generatePOAHTML(poa);
+    const htmlContent = generatePOAHTML(poa, attachments);
     const blob = new Blob([htmlContent], { type: "text/html" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
