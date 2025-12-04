@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ClipboardEdit,
   Target,
@@ -307,10 +308,14 @@ export default function BuilderLayout({
           <SidebarHeader className="p-4">
             <div className="flex items-center justify-between overflow-hidden">
               <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                <FileText className="h-6 w-6 text-blue-600" />
-                <span className="font-bold text-lg tracking-tight text-sidebar-foreground">
-                  KABA Services
-                </span>
+                <Image 
+                  src="/images/logo-kaba-blue.png" 
+                  alt="KABA" 
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto"
+                  priority
+                />
               </div>
               <SidebarTrigger className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
             </div>
