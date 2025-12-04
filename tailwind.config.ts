@@ -41,8 +41,16 @@ export default {
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
   			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
+			'border-subtle': 'hsl(var(--border-subtle))',
+			input: 'hsl(var(--input))',
+			ring: 'hsl(var(--ring))',
+			surface: {
+				DEFAULT: 'hsl(var(--surface))',
+				elevated: 'hsl(var(--surface-elevated))',
+			},
+			'accent-secondary': 'hsl(var(--accent-secondary))',
+			warning: 'hsl(var(--warning))',
+			danger: 'hsl(var(--destructive))',
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',

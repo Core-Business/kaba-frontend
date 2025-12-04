@@ -2,10 +2,10 @@
 
 import { usePOA } from "@/hooks/use-poa";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { ActivityItem } from "./activity-item";
-import { PlusCircle, ListChecks, Save, Lock } from "lucide-react";
+import { PlusCircle, ListChecks, Save, Lock, Maximize2, Minimize2 } from "lucide-react";
 import type React from "react";
 import { useState, useEffect, useMemo } from "react";
 import type { POAActivity } from "@/lib/schema";
@@ -33,6 +33,8 @@ export function ActivitiesForm() {
     updateActivity,
     deleteActivity,
     setActivities,
+    expandAllActivitiesInContext,
+    collapseAllActivitiesInContext,
   } = usePOA();
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
@@ -187,11 +189,20 @@ export function ActivitiesForm() {
   };
 
   return (
-    <Card className="shadow-lg w-full">
-      <CardHeader>
-        <SectionTitle title="Actividades del Procedimiento" description="Define los pasos individuales, decisiones y rutas alternativas para este Procedimiento POA." />
-      </CardHeader>
-      <CardContent>
+    <Card className="shadow-lg w-full border-none bg-transparent shadow-none">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
+        <SectionTitle title="Actividades del Procedimiento" description="Define los pasos individuales, decisiones y rutas alternativas para este Procedimiento." />
+        <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={expandAllActivitiesInContext} className="bg-background">
+                <Maximize2 className="mr-2 h-4 w-4" /> Expandir
+            </Button>
+            <Button variant="outline" size="sm" onClick={collapseAllActivitiesInContext} className="bg-background">
+                <Minimize2 className="mr-2 h-4 w-4" /> Contraer
+            </Button>
+        </div>
+      </div>
+      
+      <CardContent className="p-0">
         
         {isActivitiesLocked && (
             <Alert className="mb-6 bg-yellow-50 border-yellow-200">
@@ -215,45 +226,50 @@ export function ActivitiesForm() {
         )}
 
         {topLevelActivities.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed rounded-lg">
-            <ListChecks className="mx-auto h-12 w-12 text-muted-foreground" />
-            <p className="mt-4 text-lg font-medium text-muted-foreground">Aún no hay actividades definidas.</p>
-            <p className="text-sm text-muted-foreground">Añade tu primera actividad para comenzar.</p>
-            <Button onClick={handleAddTopLevelActivity} className="mt-6" disabled={isActivitiesLocked}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
+          <div className="text-center py-12 border-2 border-dashed rounded-xl bg-white">
+            <ListChecks className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-4 text-lg font-medium text-gray-900">Aún no hay actividades definidas</p>
+            <p className="text-sm text-gray-500">Comienza definiendo el flujo de tu procedimiento.</p>
+            <Button onClick={handleAddTopLevelActivity} className="mt-6 bg-blue-600 hover:bg-blue-700" disabled={isActivitiesLocked}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Primera Actividad
             </Button>
           </div>
         ) : (
-          <div className="space-y-1"> 
-            {topLevelActivities.map((activity, index) => (
-              <ActivityItem
-                key={activity.id}
-                activity={activity}
-                onUpdate={updateActivity}
-                onDelete={deleteActivity}
-                index={index}
-                totalActivities={topLevelActivities.length}
-                onDragStart={onDragStart}
-                onDragOver={onDragOver}
-                onDrop={onDrop}
-                isDragging={draggedItemIndex === index}
-                isSubActivity={false}
-                isLastActivity={index === topLevelActivities.length - 1}
-                isLocked={isActivitiesLocked}
-              />
-            ))}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="space-y-3">
+              {topLevelActivities.map((activity, index) => (
+                <ActivityItem
+                  key={activity.id}
+                  activity={activity}
+                  onUpdate={updateActivity}
+                  onDelete={deleteActivity}
+                  index={index}
+                  totalActivities={topLevelActivities.length}
+                  onDragStart={onDragStart}
+                  onDragOver={onDragOver}
+                  onDrop={onDrop}
+                  isDragging={draggedItemIndex === index}
+                  isSubActivity={false}
+                  isLastActivity={index === topLevelActivities.length - 1}
+                  isLocked={isActivitiesLocked}
+                />
+              ))}
+            </div>
+            {!isActivitiesLocked && (
+              <Button 
+                onClick={handleAddTopLevelActivity} 
+                variant="outline" 
+                className="w-full mt-4 border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 h-11 rounded-full transition-colors bg-white"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
+              </Button>
+            )}
           </div>
         )}
-        {topLevelActivities.length > 0 && !isActivitiesLocked && (
-           <div className="mt-3 pt-3 border-t">
-            <Button onClick={handleAddTopLevelActivity} variant="outline" size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" /> Agregar Actividad
-            </Button>
-          </div>
-        )}
+
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-4">
-        <Button onClick={handleSave}>
+      <CardFooter className="flex justify-end pt-8 px-0">
+        <Button onClick={handleSave} size="lg" className="rounded-full px-8 bg-blue-600 hover:bg-blue-700 text-white">
           <Save className="mr-2 h-4 w-4" />
           Guardar Actividades
         </Button>
