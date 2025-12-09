@@ -15,9 +15,16 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateIntroductionInputSchema = z.object({
+  procedureName: z.string().optional().describe('El nombre del procedimiento.'),
+  companyName: z.string().optional().describe('El nombre de la empresa.'),
+  department: z.string().optional().describe('El área o departamento.'),
+  objective: z.string().optional().describe('El objetivo del procedimiento.'),
+  activities: z.array(z.string()).optional().describe('Lista de actividades del procedimiento.'),
+  scope: z.string().optional().describe('El alcance del procedimiento.'),
   procedureDescription: z
     .string()
-    .describe('The detailed description of the procedure for which the introduction is to be generated.'),
+    .optional()
+    .describe('La descripción actual del procedimiento (opcional).'),
 });
 
 export type GenerateIntroductionInput = z.infer<typeof GenerateIntroductionInputSchema>;
@@ -25,7 +32,7 @@ export type GenerateIntroductionInput = z.infer<typeof GenerateIntroductionInput
 const GenerateIntroductionOutputSchema = z.object({
   introduction: z
     .string()
-    .describe('Una introducción concisa (hasta 200 palabras) que resume la descripción del procedimiento. La respuesta DEBE ser en español y directa, sin frases introductorias genéricas.'),
+    .describe('Una introducción concisa (hasta 200 palabras) que resume el procedimiento basándose en su contexto. La respuesta DEBE ser en español y directa, sin frases introductorias genéricas.'),
 });
 
 export type GenerateIntroductionOutput = z.infer<typeof GenerateIntroductionOutputSchema>;
@@ -35,12 +42,26 @@ const generateIntroductionPrompt = ai.definePrompt({
   input: {schema: GenerateIntroductionInputSchema},
   output: {schema: GenerateIntroductionOutputSchema},
   prompt: `Eres un experto en crear introducciones concisas e informativas para Procedimientos POA.
-  Basado en la siguiente descripción del procedimiento, crea una introducción que no tenga más de 200 palabras.
-  La introducción debe proporcionar una visión general clara y directa del procedimiento para el lector.
+  Basado en la siguiente información del procedimiento, crea una introducción que no tenga más de 200 palabras.
+  La introducción debe proporcionar una visión general clara y directa del procedimiento para el lector, integrando la información disponible.
+  
+  Información del Procedimiento:
+  - Nombre del Procedimiento: {{procedureName}}
+  - Empresa: {{companyName}}
+  - Departamento/Área: {{department}}
+  - Objetivo: {{objective}}
+  - Alcance: {{scope}}
+  - Actividades Principales:
+    {{#each activities}}
+    - {{this}}
+    {{/each}}
+  
+  {{#if procedureDescription}}
+  Descripción actual (referencia): {{procedureDescription}}
+  {{/if}}
+
   Evita frases introductorias como "La presente introducción..." o "Este documento describe...". Ve directamente al resumen del procedimiento.
   La respuesta DEBE estar en español.
-
-  Descripción del Procedimiento: {{{procedureDescription}}}
 
   Introducción en español (directa y concisa):`,
 });
@@ -50,14 +71,6 @@ const generateIntroductionFlow = ai.defineFlow(
     name: 'generateIntroductionFlow',
     inputSchema: GenerateIntroductionInputSchema,
     outputSchema: GenerateIntroductionOutputSchema,
-    retry: {
-      maxAttempts: 3,
-      backoff: {
-        initialDelayMs: 500,
-        maxDelayMs: 5000,
-        multiplier: 2,
-      },
-    },
   },
   async input => {
     const {output} = await generateIntroductionPrompt(input);

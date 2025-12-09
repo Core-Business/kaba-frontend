@@ -9,7 +9,7 @@ export default function RecordsPage() {
   const procedureId = params.poaId as string;
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="w-full px-4 md:px-6 py-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Registros</h1>
         <p className="text-muted-foreground">

@@ -1,4 +1,8 @@
-import axios, { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, {
+  AxiosResponse,
+  AxiosError,
+  InternalAxiosRequestConfig,
+} from "axios";
 import { toast } from "@/hooks/use-toast";
 
 export const api = axios.create({
@@ -31,6 +35,25 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 // Interceptor de response - Manejo de errores contextuales
+const extractErrorMessage = (error: AxiosError): string | null => {
+  const data = error.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data &&
+    typeof (data as { message: unknown }).message === "string"
+  ) {
+    return (data as { message: string }).message;
+  }
+
+  return null;
+};
+
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
@@ -39,6 +62,9 @@ api.interceptors.response.use(
     }
 
     const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+    const requestMethod = error.config?.method?.toUpperCase() || 'UNKNOWN';
+    const backendMessage = extractErrorMessage(error);
     
     switch (status) {
       case 401:
@@ -54,14 +80,21 @@ api.interceptors.response.use(
         window.location.href = '/workspace-revoked';
         break;
         
-      case 429:
-        // Rate limit excedido (switch workspace)
+      case 429: {
+        console.warn(
+          `[API 429] ${requestMethod} ${requestUrl} -> ${backendMessage ?? 'Rate limit exceeded'}`,
+        );
+        const isWorkspaceSwitch = requestUrl.includes('/auth/switch-workspace');
         toast({
-          title: "Demasiados cambios",
-          description: "Demasiados cambios de Workspace. Intenta más tarde.",
+          title: isWorkspaceSwitch ? "Demasiados cambios" : "Demasiadas solicitudes",
+          description: backendMessage
+            || (isWorkspaceSwitch
+              ? "Demasiados cambios de Workspace. Intenta más tarde."
+              : "Has excedido el límite de solicitudes. Intenta más tarde."),
           variant: "destructive"
         });
         break;
+      }
         
       default:
         // Otros errores se propagan normalmente

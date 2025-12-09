@@ -1,0 +1,11 @@
+---
+description: Cuando toquemos Dockerfile, docker-compose.yml o docs de infra del frontend.
+alwaysApply: false
+---
+
+## Docker e infraestructura local – Frontend (modo sugerido: Apply Intelligently)
+
+- Para servicios locales (Postgres, MongoDB, Minio) usa este flujo:
+  - `cd kaba-frontend && docker compose up -d postgres mongodb minio`.
+- No sugieras levantar bases de datos fuera de ese `docker-compose.yml` salvo que también lo actualices explícitamente.
+

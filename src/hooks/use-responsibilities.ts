@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { usePOA } from '@/hooks/use-poa';
 import { useToast } from '@/hooks/use-toast';
 import { POAAPI, CreateManualResponsibleRequest, UpdateResponsibleRequest } from '@/api/poa';
-import type { POA, POAResponsible } from '@/lib/schema';
 import { useParams } from 'next/navigation';
 
 export function useResponsibilities() {
@@ -12,9 +11,17 @@ export function useResponsibilities() {
   const params = useParams();
   const procedureId = params.poaId as string;
 
-  const handleError = (error: any, defaultMessage: string) => {
+  const handleError = (unknownError: unknown, defaultMessage: string) => {
     setIsLoading(false);
-    const message = error.response?.data?.message || defaultMessage;
+    const message =
+      typeof unknownError === "object" &&
+      unknownError !== null &&
+      "response" in unknownError &&
+      typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+        ? (unknownError as { response: { data: { message: string } } }).response.data.message
+        : unknownError instanceof Error && unknownError.message
+          ? unknownError.message
+          : defaultMessage;
     toast({
       title: 'Error',
       description: message,

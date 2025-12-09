@@ -1,12 +1,12 @@
 "use client";
 
-import { Building, FileText, Settings } from "lucide-react";
+import { Building, FileText, Settings, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 interface MenuItem {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   href: string;
 }

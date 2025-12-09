@@ -1,4 +1,13 @@
 import { api } from "./http";
+import type { AxiosError } from "axios";
+
+type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
 export interface Procedure {
   id?: string;
@@ -10,7 +19,7 @@ export interface Procedure {
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface CreateProcedureRequest {
@@ -52,11 +61,12 @@ export const ProceduresAPI = {
       const createdProcedure = data?.data || data;
       console.log('Extracted procedure:', createdProcedure);
       return createdProcedure;
-    } catch (error: any) {
+    } catch (unknownError: unknown) {
+      const error = unknownError as AxiosError;
       console.error('Error creating procedure:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
-      throw error;
+      throw unknownError;
     }
   },
 
@@ -80,7 +90,8 @@ export const ProceduresAPI = {
       console.log('✅ Procedure updated successfully:', data);
       // Backend returns { statusCode, message, data: {...} }
       return data?.data || data;
-    } catch (error: any) {
+    } catch (unknownError: unknown) {
+      const error = unknownError as AxiosError<{ message?: string }>;
       console.error('❌ Error actualizando procedimiento:', {
         id,
         procedure,
@@ -106,11 +117,12 @@ export const ProceduresAPI = {
       console.log('Deleting procedure with ID:', id);
       const response = await api.delete(`/procedures/${id}`);
       console.log('Procedure deleted successfully:', response.data);
-    } catch (error: any) {
+    } catch (unknownError: unknown) {
+      const error = unknownError as AxiosError;
       console.error('Error deleting procedure:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
-      throw error;
+      throw unknownError;
     }
   },
 }; 

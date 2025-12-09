@@ -41,15 +41,23 @@ export function LoginForm() {
       });
       
       router.push("/dashboard");
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          "Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.";
-      
+    } catch (unknownError) {
+      console.error('Login error:', unknownError);
+
+      let errorMessage = "Correo electrónico o contraseña inválidos. Por favor, inténtalo de nuevo.";
+      if (
+        typeof unknownError === "object" &&
+        unknownError !== null &&
+        "response" in unknownError &&
+        typeof (unknownError as { response?: { data?: { message?: string } } }).response?.data?.message === "string"
+      ) {
+        errorMessage = (unknownError as { response: { data: { message: string } } }).response.data.message;
+      } else if (unknownError instanceof Error && unknownError.message) {
+        errorMessage = unknownError.message;
+      }
+
       setError(errorMessage);
-      
+
       toast({
         title: "Error de inicio de sesión",
         description: errorMessage,
@@ -63,9 +71,18 @@ export function LoginForm() {
   const handleSocialLogin = (provider: string) => {
     toast({
       title: "Función en desarrollo",
-      description: "Esta función se encuentra en desarrollo y será desplegada próximamente",
+      description: `El inicio de sesión con ${provider} estará disponible próximamente.`,
       variant: "default",
     });
+  };
+  const handleGoogleLogin = () => {
+    const apiBaseUrl = (
+      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api"
+    ).replace(/\/$/, "");
+
+    if (typeof window !== "undefined") {
+      window.location.href = `${apiBaseUrl}/auth/google`;
+    }
   };
 
   return (
@@ -150,19 +167,12 @@ export function LoginForm() {
 
                   {/* Forgot password link */}
                   <div className="flex justify-end">
-                    <button
-                      type="button"
+                    <Link
+                      href="/forgot-password"
                       className="text-sm text-blue-600 hover:text-blue-500 hover:underline font-sans font-normal tracking-normal"
-                      onClick={() => {
-                        toast({
-                          title: "Función en desarrollo",
-                          description: "Esta función se encuentra en desarrollo y será desplegada próximamente",
-                          variant: "default",
-                        });
-                      }}
                     >
                       ¿Olvidaste tu contraseña?
-                    </button>
+                    </Link>
                   </div>
 
                   {error && (
@@ -198,7 +208,7 @@ export function LoginForm() {
                     type="button"
                     variant="outline"
                     className="h-12 border-gray-300 hover:bg-gray-50 hover:text-gray-900 font-sans font-normal tracking-normal leading-tight"
-                    onClick={() => handleSocialLogin('google')}
+                    onClick={handleGoogleLogin}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path

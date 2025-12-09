@@ -1,0 +1,25 @@
+---
+alwaysApply: true
+---
+
+## KABA Frontend – Stack base (AI Assistant)
+
+### Stack y herramientas
+
+- Asume siempre **Node.js 20.x** (vía `nvm`) y **npm** como único gestor de paquetes.
+- Usa `npm install` y `npm run ...` en todos los ejemplos; no sugieras `pnpm` ni `yarn`.
+- Considera `package-lock.json` como lockfile oficial.
+
+### Reglas generales para esta IA
+
+- Usa siempre npm en comandos y ejemplos.
+- No toques secretos ni archivos `.env*` sin aprobación clara.
+- Si cambias algo relevante del stack (por ejemplo cómo se levanta el proyecto o qué puertos usa), indica cómo actualizar también la documentación del workspace (`/Users/mariorgzr/kaba/README.md`) y los docs del frontend.
+
+> Para reglas detalladas ver:
+> - `docker.mdc` – Docker e infraestructura local (modo sugerido: **Apply Intelligently**).
+> - `env.mdc` – Variables de entorno (modo sugerido: **Apply Intelligently** o **Apply to Specific Files**).
+> - `api-and-architecture.mdc` – Arquitectura de frontend y acceso a API (modo sugerido: **Apply Intelligently**).
+> - `auth-and-navigation.mdc` – Autenticación, contextos y navegación (modo sugerido: **Apply Intelligently**).
+> - `quality-and-prs.mdc` – Calidad, rutas y PRs (modo sugerido: **Apply Intelligently**).
+

@@ -33,7 +33,7 @@
 - **Ruteo**: App Router con grupos `src/app/(auth)` y `src/app/(app)`. Redirección base `src/app/page.tsx` a `/login`.
 - **Contextos**:
   - `AuthContext`: token, usuario, workspace actual, lista de workspaces; persistencia en `localStorage`.
-  - `POAContext`: estado y operaciones del builder (local), con `usePOABackend` para sincronizar con backend.
+  - `POAContext`: estado y operaciones del builder; ahora integra la sincronización con backend (fetch, auto-create, auto-save) y expone `usePOA` como única API para los formularios.
 - **API Layer**: `src/api/http.ts` centraliza baseURL e interceptores; endpoints por dominio (`auth`, `users`, `procedures`, `poa`, etc.).
 - **UI/Layout**: `AppHeader`, `AppSidebar`, `WorkspaceSelector`, `UserNav`; páginas de dashboard y builder por secciones.
 

@@ -1,19 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Settings, Building, FileText } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Settings, User, Building } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UsersAPI } from "@/api/users";
 import { UserNav } from "@/components/layout/user-nav";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProfileSettings } from "@/components/settings/profile-settings";
+import { OrganizationSettings } from "@/components/settings/organization-settings";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
   id: string;
@@ -21,21 +17,8 @@ interface UserProfile {
   firstName: string;
   lastName: string;
   role: string;
+  avatarUrl?: string;
 }
-
-interface UpdateProfileData {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-}
-
-interface ChangePasswordData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-
 
 // Componente de la barra superior para Settings
 function SettingsTopBar() {
@@ -60,45 +43,19 @@ export default function SettingsPage() {
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  // Estados de formularios
-  const [profileForm, setProfileForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-  });
-
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  // Cargar perfil del usuario
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
+  const loadUserProfile = useCallback(async () => {
     try {
       setIsLoadingProfile(true);
       
-      const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem("kaba.token"); // Updated token key based on AuthContext
       if (!token) {
         router.push("/login");
         return;
       }
 
       const userProfile = await UsersAPI.getCurrentUser();
-      
       setProfile(userProfile);
-      setProfileForm({
-        firstName: userProfile.firstName,
-        lastName: userProfile.lastName,
-        email: userProfile.email,
-      });
     } catch (error) {
       console.error('Error cargando perfil:', error);
       toast({
@@ -114,94 +71,15 @@ export default function SettingsPage() {
     } finally {
       setIsLoadingProfile(false);
     }
-  };
+  }, [router, toast]);
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!profile) return;
+  // Cargar perfil del usuario
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
-    try {
-      setIsUpdatingProfile(true);
-      
-      const updateData: UpdateProfileData = {
-        firstName: profileForm.firstName,
-        lastName: profileForm.lastName,
-        email: profileForm.email,
-      };
-
-      const updatedProfile = await UsersAPI.updateCurrentUser(updateData);
-      setProfile(updatedProfile);
-      
-      toast({
-        title: "Perfil Actualizado",
-        description: "Tu información de perfil ha sido actualizada exitosamente.",
-      });
-    } catch (error: any) {
-      console.error('Error actualizando perfil:', error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo actualizar el perfil.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingProfile(false);
-    }
-  };
-
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!profile) return;
-
-    // Validar que las contraseñas coincidan
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas nuevas no coinciden.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validar longitud mínima
-    if (passwordForm.newPassword.length < 6) {
-      toast({
-        title: "Error", 
-        description: "La nueva contraseña debe tener al menos 6 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsChangingPassword(true);
-      
-      await UsersAPI.changePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      });
-
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      
-      toast({
-        title: "Contraseña Cambiada",
-        description: "Tu contraseña ha sido actualizada exitosamente.",
-      });
-    } catch (error: any) {
-      console.error('Error cambiando contraseña:', error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo cambiar la contraseña.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
+    setProfile(updatedProfile);
   };
 
   if (isLoadingProfile) {
@@ -232,123 +110,36 @@ export default function SettingsPage() {
           <div className="max-w-4xl">
             <div className="mb-8">
               <p className="text-muted-foreground">
-                Administra tu perfil y configuración de cuenta
+                Administra tu perfil y configuración de la organización.
               </p>
             </div>
 
-            <div className="grid gap-6">
-              {/* Información del Perfil */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Información del Perfil
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">Nombre</Label>
-                        <Input
-                          id="firstName"
-                          value={profileForm.firstName}
-                          onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-                          placeholder="Tu nombre"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Apellido</Label>
-                        <Input
-                          id="lastName"
-                          value={profileForm.lastName}
-                          onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-                          placeholder="Tu apellido"
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Correo Electrónico</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={profileForm.email}
-                        onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                        placeholder="tu@email.com"
-                        required
-                      />
-                    </div>
-
-                    <Button type="submit" disabled={isUpdatingProfile}>
-                      {isUpdatingProfile ? "Actualizando..." : "Actualizar Perfil"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <Separator />
-
-              {/* Cambio de Contraseña */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lock className="h-5 w-5" />
-                    Cambiar Contraseña
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePasswordChange} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="currentPassword">Contraseña Actual</Label>
-                      <Input
-                        id="currentPassword"
-                        type="password"
-                        value={passwordForm.currentPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                        placeholder="Tu contraseña actual"
-                        required
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">Nueva Contraseña</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={passwordForm.newPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                        placeholder="Tu nueva contraseña"
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirmar Nueva Contraseña</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={passwordForm.confirmPassword}
-                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                        placeholder="Confirma tu nueva contraseña"
-                        required
-                        minLength={6}
-                      />
-                    </div>
-
-                    <Button type="submit" disabled={isChangingPassword}>
-                      {isChangingPassword ? "Cambiando..." : "Cambiar Contraseña"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
+            <Tabs defaultValue="profile" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-8">
+                <TabsTrigger value="profile" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Perfil
+                </TabsTrigger>
+                <TabsTrigger value="organization" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Organización
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="profile">
+                <ProfileSettings 
+                  initialProfile={profile} 
+                  onProfileUpdate={handleProfileUpdate} 
+                />
+              </TabsContent>
+              
+              <TabsContent value="organization">
+                <OrganizationSettings />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -5,9 +5,9 @@ interface GenerateDefinitionResponse {
 }
 
 export const aiApi = {
-  generateDefinition: async (term: string): Promise<GenerateDefinitionResponse> => {
-    console.log("🔄 Enviando request a IA con término:", term);
-    const response = await api.post('/ai/generate-definition', { term });
+  generateDefinition: async (term: string, procedureId?: string): Promise<GenerateDefinitionResponse> => {
+    console.log("🔄 Enviando request a IA con término:", term, "y procedureId:", procedureId);
+    const response = await api.post('/ai/generate-definition', { term, procedureId });
     console.log("📦 Respuesta completa del backend:", response);
     console.log("📦 response.data:", response.data);
     console.log("📦 Tipo de response.data:", typeof response.data);

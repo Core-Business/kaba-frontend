@@ -66,7 +66,7 @@ export function ApprovalSection({
               <div className="space-y-2">
                 <p className="text-sm">No hay personas agregadas</p>
                 <p className="text-xs">
-                  Haz clic en "Agregar" para añadir a alguien que {title.toLowerCase()}
+                  Haz clic en &quot;Agregar&quot; para añadir a alguien que {title.toLowerCase()}
                 </p>
               </div>
             </div>
