@@ -85,24 +85,47 @@ export function ObjectiveFormEnhanced() {
       return;
     }
 
-    setObjectiveBeforeAi(poa?.objective || "");
+    const currentText = poa?.objective || "";
+    setObjectiveBeforeAi(currentText);
     setIsLoadingAiEnhance(true);
 
     try {
       const { enhanceText } = await import('@/ai/flows/enhance-text');
-      
-      const promptMap = {
-        refine: "Mejora la redacción para ser más profesional y clara.",
-        shorten: "Resume el texto manteniendo la idea principal.",
-        expand: "Expande el texto con más detalles relevantes.",
-        generate: "Genera un objetivo basado en el contexto."
+
+      const wordCount = currentText.split(/\s+/).filter(Boolean).length;
+      const enhanceInput: Parameters<typeof enhanceText>[0] = {
+        text: currentText,
+        context: "objective",
       };
 
-      const result = await enhanceText({
-        text: poa?.objective || "",
-        maxWords: 100, // Default generous limit
-        context: promptMap[action] as any // TODO: Fix proper typing for context enum
-      });
+      if (action === "shorten") {
+        enhanceInput.maxWords = Math.max(20, Math.floor(wordCount * 0.7));
+      } else if (action === "expand") {
+        enhanceInput.expandByPercent = 40;
+        enhanceInput.maxWords = Math.max(50, Math.floor(wordCount * 1.4));
+      } else {
+        enhanceInput.maxWords = 100; // Mejora general
+      }
+
+      const cleanedKpis = helperData.kpis.filter(kpi => kpi.trim() !== "");
+      const hasHelperData =
+        helperData.generalDescription.trim() ||
+        helperData.needOrProblem.trim() ||
+        helperData.purposeOrExpectedResult.trim() ||
+        helperData.targetAudience.trim() ||
+        helperData.desiredImpact.trim() ||
+        cleanedKpis.length > 0;
+
+      if (hasHelperData) {
+        if (helperData.generalDescription.trim()) enhanceInput.generalDescription = helperData.generalDescription;
+        if (helperData.needOrProblem.trim()) enhanceInput.needOrProblem = helperData.needOrProblem;
+        if (helperData.purposeOrExpectedResult.trim()) enhanceInput.purposeOrExpectedResult = helperData.purposeOrExpectedResult;
+        if (helperData.targetAudience.trim()) enhanceInput.targetAudience = helperData.targetAudience;
+        if (helperData.desiredImpact.trim()) enhanceInput.desiredImpact = helperData.desiredImpact;
+        if (cleanedKpis.length > 0) enhanceInput.kpis = cleanedKpis;
+      }
+
+      const result = await enhanceText(enhanceInput);
 
       updateField("objective", result.enhancedText);
       toast({ title: "Objetivo Actualizado", description: "El texto ha sido procesado con IA." });
