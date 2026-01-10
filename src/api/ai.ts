@@ -99,7 +99,18 @@ export const aiApi = {
   generateObjective: async (
     data: GenerateObjectiveRequest,
   ): Promise<GenerateObjectiveResponse> => {
+    console.log('=== DEBUG API: generateObjective request ===');
+    console.log('Request data:', data);
+
     const response = await api.post('/ai/generate-objective', data);
+
+    console.log('=== DEBUG API: generateObjective response ===');
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers);
+    console.log('Response data:', response.data);
+    console.log('typeof response.data:', typeof response.data);
+    console.log('Keys in response.data:', Object.keys(response.data || {}));
+
     return response.data;
   },
 
