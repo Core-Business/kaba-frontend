@@ -7,6 +7,7 @@ import { Save, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ObjectiveEditor } from "./objective/ObjectiveEditor";
 import { ContextPanel, type HelperData } from "./objective/ContextPanel";
+import { aiApi } from "@/api/ai";
 
 const defaultHelperData: HelperData = {
   generalDescription: '',
@@ -90,10 +91,8 @@ export function ObjectiveFormEnhanced() {
     setIsLoadingAiEnhance(true);
 
     try {
-      const { enhanceText } = await import('@/ai/flows/enhance-text');
-
       const wordCount = currentText.split(/\s+/).filter(Boolean).length;
-      const enhanceInput: Parameters<typeof enhanceText>[0] = {
+      const enhanceInput: Parameters<typeof aiApi.enhanceText>[0] = {
         text: currentText,
         context: "objective",
       };
@@ -125,7 +124,7 @@ export function ObjectiveFormEnhanced() {
         if (cleanedKpis.length > 0) enhanceInput.kpis = cleanedKpis;
       }
 
-      const result = await enhanceText(enhanceInput);
+      const result = await aiApi.enhanceText(enhanceInput);
 
       updateField("objective", result.enhancedText);
       toast({ title: "Objetivo Actualizado", description: "El texto ha sido procesado con IA." });
@@ -138,23 +137,31 @@ export function ObjectiveFormEnhanced() {
   };
 
   const handleGenerateFromContext = async () => {
+    if (!poa) return;
+
     setIsLoadingAiGenerate(true);
-    setObjectiveBeforeAi(poa?.objective || "");
+    setObjectiveBeforeAi(poa.objective || "");
 
     try {
-      const { generateObjectiveSafe } = await import('@/ai/flows/generate-objective-safe');
-      
-      const result = await generateObjectiveSafe({
-        ...helperData,
-        kpis: helperData.kpis.filter(k => k.trim() !== ""),
-        maxWords: 50
+      const result = await aiApi.generateObjective({
+        procedureName: poa.name,
+        companyName: poa.header.companyName,
+        department: poa.header.departmentArea,
+        activities: poa.activities
+          .map((a) => a.activityName)
+          .filter(Boolean) as string[],
+        scope: poa.scope,
       });
 
-      updateField("objective", result.generatedObjective);
+      updateField("objective", result.objective);
       toast({ title: "Objetivo Generado", description: "Se ha creado un nuevo objetivo." });
     } catch (error) {
       console.error("AI Generate Error:", error);
-      toast({ title: "Error", description: "No se pudo generar el objetivo.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo generar el objetivo.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoadingAiGenerate(false);
     }

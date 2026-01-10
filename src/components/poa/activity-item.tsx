@@ -9,8 +9,7 @@ import { Trash2, GripVertical, Wand2, PlusCircle, ChevronDown, ChevronRight, Spa
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { AiEnhanceButton } from "./common-form-elements";
-import { enhanceText } from "@/ai/flows/enhance-text";
-import { generateActivityName } from "@/ai/flows/generate-activity-name";
+import { aiApi } from "@/api/ai";
 import React, { useState, useEffect, useRef } from "react"; 
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -107,15 +106,20 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
     setDescriptionBeforeAi(activity.description);
     setIsLoadingAiEnhanceDesc(true);
     try {
-      const result = await enhanceText({ text: activity.description, context: "activity_description" });
+      const result = await aiApi.enhanceText({ text: activity.description, context: "activity_description" });
       onUpdate(activity.id, { description: result.enhancedText });
       toast({ title: "Descripción Editada con IA", description: "La descripción de la actividad ha sido editada por IA." });
     } catch (error) {
       console.error("Error editando descripción con IA:", error);
-      toast({ title: "Fallo en Edición de Descripción", description: "No se pudo editar la descripción.", variant: "destructive" });
-      setDescriptionBeforeAi(null); 
+      toast({
+        title: "Fallo en Edición de Descripción",
+        description: error instanceof Error ? error.message : "No se pudo editar la descripción.",
+        variant: "destructive"
+      });
+      setDescriptionBeforeAi(null);
+    } finally {
+      setIsLoadingAiEnhanceDesc(false);
     }
-    setIsLoadingAiEnhanceDesc(false);
   };
   
   const handleAiExpandDescription = async () => {
@@ -124,11 +128,11 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
     setIsLoadingAiExpandDesc(true);
     try {
       const currentWords = activity.description.split(/\s+/).filter(Boolean).length;
-      const targetMaxWords = Math.max(20, Math.round(currentWords * 1.5)); 
+      const targetMaxWords = Math.max(20, Math.round(currentWords * 1.5));
 
-      const result = await enhanceText({ 
-        text: activity.description, 
-        context: "activity_description", 
+      const result = await aiApi.enhanceText({
+        text: activity.description,
+        context: "activity_description",
         expandByPercent: 50,
         maxWords: targetMaxWords
       });
@@ -136,10 +140,15 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
       toast({ title: "Descripción Ampliada con IA", description: "La descripción de la actividad ha sido ampliada por IA." });
     } catch (error) {
       console.error("Error ampliando descripción con IA:", error);
-      toast({ title: "Fallo en Ampliación de Descripción", description: "No se pudo ampliar la descripción.", variant: "destructive" });
-      setDescriptionBeforeAi(null); 
+      toast({
+        title: "Fallo en Ampliación de Descripción",
+        description: error instanceof Error ? error.message : "No se pudo ampliar la descripción.",
+        variant: "destructive"
+      });
+      setDescriptionBeforeAi(null);
+    } finally {
+      setIsLoadingAiExpandDesc(false);
     }
-    setIsLoadingAiExpandDesc(false);
   };
 
   const handleUndoDescriptionAi = () => {
@@ -163,14 +172,21 @@ export const ActivityItem = React.forwardRef<HTMLDivElement, ActivityItemProps>(
     setNameBeforeAi(activity.activityName || "");
     setIsGeneratingName(true);
     try {
-        const result = await generateActivityName({ description: activity.description });
+        const result = await aiApi.generateActivityName({
+          activityDescription: activity.description
+        });
         onUpdate(activity.id, { activityName: result.activityName });
         toast({ title: "Nombre de Actividad Generado", description: "Se ha generado un nombre para la actividad." });
     } catch (error) {
         console.error("Error generando nombre de actividad:", error);
-        toast({ title: "Fallo al Generar Nombre", description: "No se pudo generar el nombre de la actividad.", variant: "destructive" });
+        toast({
+          title: "Fallo al Generar Nombre",
+          description: error instanceof Error ? error.message : "No se pudo generar el nombre de la actividad.",
+          variant: "destructive"
+        });
+    } finally {
+      setIsGeneratingName(false);
     }
-    setIsGeneratingName(false);
   };
 
   const handleUndoNameAi = () => {

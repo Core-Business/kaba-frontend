@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { SectionTitle } from "./common-form-elements";
 import { Button } from "@/components/ui/button";
-import { generateIntroduction } from "@/ai/flows/generate-introduction";
+import { aiApi } from "@/api/ai";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { BookOpen, Save } from "lucide-react";
@@ -41,7 +41,7 @@ export function IntroductionForm() {
 
     setIsGeneratingAiIntro(true);
     try {
-      const result = await generateIntroduction({
+      const result = await aiApi.generateIntroduction({
         procedureDescription: poa.procedureDescription || undefined,
         procedureName: poa.name,
         companyName: poa.header.companyName,
@@ -62,11 +62,15 @@ export function IntroductionForm() {
       console.error("Error generating introduction:", error);
       toast({
         title: "Fallo al Generar Introducción",
-        description: "No se pudo generar la introducción.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "No se pudo generar la introducción.",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingAiIntro(false);
     }
-    setIsGeneratingAiIntro(false);
   };
 
   const handleSave = async () => {

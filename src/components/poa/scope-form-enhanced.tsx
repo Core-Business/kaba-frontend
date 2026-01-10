@@ -9,9 +9,7 @@ import { ScopeEditor } from "./scope/ScopeEditor";
 import { ScopeContextPanel } from "./scope/ScopeContextPanel";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
 import type { POAScopeHelperData, POAActivity } from "@/lib/schema";
-import { enhanceText } from "@/ai/flows/enhance-text";
-import { generateScope } from "@/ai/flows/generate-scope";
-import { generateScopeFromActivities } from "@/ai/flows/generate-scope-from-activities";
+import { aiApi } from "@/api/ai";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -111,7 +109,7 @@ export function ScopeFormEnhanced() {
     setScopeBeforeAi(poa.scope);
     setIsLoadingAiEnhance(true);
     try {
-        const result = await enhanceText({
+        const result = await aiApi.enhanceText({
             text: poa.scope,
             context: "scope",
             maxWords: maxWords,
@@ -120,30 +118,37 @@ export function ScopeFormEnhanced() {
         toast({ title: "Mejorado con IA", description: "El texto ha sido optimizado." });
     } catch (error) {
         console.error("Enhance Error", error);
-        toast({ title: "Error", description: "Falló la mejora con IA.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Falló la mejora con IA.",
+          variant: "destructive"
+        });
+    } finally {
+      setIsLoadingAiEnhance(false);
     }
-    setIsLoadingAiEnhance(false);
   };
 
   const handleAiGenerate = async () => {
-    setScopeBeforeAi(poa?.scope || "");
+    if (!poa) return;
+    setScopeBeforeAi(poa.scope || "");
     setIsLoadingAiGenerate(true);
     try {
-        const inputForAI = {
-            ...helperData,
-            maxWords,
-            usuariosYRoles: (helperData.usuariosYRoles || []).filter(u => u.id && (u.usuario?.trim() !== '' || u.rol?.trim() !== '')),
-            conexionesDocumentales: (helperData.conexionesDocumentales || []).filter(c => c.id && (c.documento?.trim() !== '' || c.codigo?.trim() !== '')),
-            referenciaANormas: (helperData.referenciaANormas || []).filter(r => r.id && (r.referencia?.trim() !== '' || r.codigo?.trim() !== '')),
-        };
-        const result = await generateScope(inputForAI);
-        updateField("scope", result.generatedScope);
+        const result = await aiApi.generateScope({
+            procedureName: poa.name,
+            objective: poa.objective,
+        });
+        updateField("scope", result.scope);
         toast({ title: "Generado con IA", description: "Nuevo alcance creado basado en los datos auxiliares." });
     } catch (error) {
         console.error("Generate Error", error);
-        toast({ title: "Error", description: "Falló la generación.", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Falló la generación.",
+          variant: "destructive"
+        });
+    } finally {
+      setIsLoadingAiGenerate(false);
     }
-    setIsLoadingAiGenerate(false);
   };
 
   const performGenerateFromActivities = async () => {
@@ -151,25 +156,24 @@ export function ScopeFormEnhanced() {
       setScopeBeforeAi(poa.scope || null);
       setIsLoadingAiGenerateFromActivities(true);
       try {
-          const inputForAI = {
-              procedureName: poa.header.title || "",
-              companyName: poa.header.companyName,
-              objective: poa.objective,
-              activities: poa.activities.map((a: POAActivity) => ({
-                  responsible: a.responsible,
-                  description: a.description
-              })),
-              maxWords: maxWords
-          };
-          const result = await generateScopeFromActivities(inputForAI);
-          updateField("scope", result.generatedScope);
+          const activities = poa.activities
+            .map((a: POAActivity) => a.activityName)
+            .filter(Boolean) as string[];
+
+          const result = await aiApi.generateScopeFromActivities({ activities });
+          updateField("scope", result.scope);
           toast({ title: "Generado desde Actividades", description: "Alcance creado analizando las actividades." });
       } catch (error) {
           console.error("Activities Generate Error", error);
-          toast({ title: "Error", description: "Falló la generación.", variant: "destructive" });
+          toast({
+            title: "Error",
+            description: error instanceof Error ? error.message : "Falló la generación.",
+            variant: "destructive"
+          });
+      } finally {
+        setIsLoadingAiGenerateFromActivities(false);
+        setShowOverwriteDialog(false);
       }
-      setIsLoadingAiGenerateFromActivities(false);
-      setShowOverwriteDialog(false);
   };
   
   const handleGenerateFromActivitiesClick = () => {
