@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pencil, Save, X, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 import { usePOA } from "@/hooks/use-poa";
-import { usePOAAPI } from "@/hooks/use-poa-api";
+import { useUpdateDefinitionsMutation } from "@/hooks/use-poa-api";
 import { aiApi } from "@/api/ai";
 import { useToast } from "@/hooks/use-toast";
 import type { POADefinition } from "@/lib/schema";
@@ -19,7 +19,6 @@ interface EditingDefinition extends POADefinition {
 
 export function DefinitionsForm() {
   const { poa, updateDefinitions } = usePOA();
-  const { updateDefinitions: updateDefinitionsAPI } = usePOAAPI();
   const { toast } = useToast();
   
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -30,7 +29,7 @@ export function DefinitionsForm() {
   const newTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const definitions = poa?.definitions || [];
-  const updateDefinitionsMutation = updateDefinitionsAPI();
+  const updateDefinitionsMutation = useUpdateDefinitionsMutation();
 
   // Función helper para crear la definición limpia
   const createCleanDefinition = (def: EditingDefinition | POADefinition): POADefinition => {
@@ -207,19 +206,28 @@ export function DefinitionsForm() {
       const termToGenerate = editingDefinition.term.trim();
       console.log("🔄 Generando definición para término:", termToGenerate);
       
-      const response = await aiApi.generateDefinition(termToGenerate);
+      const response = await aiApi.generateDefinition(termToGenerate, poa?.procedureId);
       console.log("✅ Respuesta de IA recibida:", response);
       console.log("✅ Tipo de respuesta:", typeof response);
-      console.log("✅ response.definition:", response.definition);
-      console.log("✅ Tipo de response.definition:", typeof response.definition);
+      console.log("✅ response.definition:", (response as { definition?: unknown }).definition);
+      console.log("✅ Tipo de response.definition:", typeof (response as { definition?: unknown }).definition);
       
       // Extraer la definición de la respuesta
-      const newDefinition = response.definition || (response as any).data?.definition || (response as any);
+      const candidate = response as {
+        definition?: unknown;
+        data?: { definition?: unknown };
+      };
+      const newDefinition =
+        typeof candidate.definition === "string"
+          ? candidate.definition
+          : typeof candidate.data?.definition === "string"
+            ? candidate.data.definition
+            : null;
       console.log("🎯 Definición extraída:", newDefinition);
       console.log("🎯 Tipo de definición:", typeof newDefinition);
       
       // Validar que tenemos una definición válida
-      if (!newDefinition || typeof newDefinition !== 'string') {
+      if (!newDefinition) {
         console.error("❌ Definición inválida recibida:", newDefinition);
         toast({
           title: "Error de IA",
@@ -259,15 +267,17 @@ export function DefinitionsForm() {
         title: "Definición generada",
         description: "La IA ha generado una definición. Puedes editarla antes de guardar.",
       });
-    } catch (error: any) {
-      console.error("❌ ERROR COMPLETO:", error);
-      console.error("❌ Error message:", error?.message);
-      console.error("❌ Error response:", error?.response);
-      console.error("❌ Error response data:", error?.response?.data);
+    } catch (unknownError) {
+      console.error("❌ ERROR COMPLETO:", unknownError);
+      if (unknownError instanceof Error) {
+        console.error("❌ Error message:", unknownError.message);
+      }
       
       toast({
         title: "Error de IA",
-        description: `No se pudo generar la definición con IA. Error: ${error?.message || 'Desconocido'}`,
+        description: `No se pudo generar la definición con IA. Error: ${
+          unknownError instanceof Error ? unknownError.message : 'Desconocido'
+        }`,
         variant: "destructive",
       });
     } finally {
@@ -298,7 +308,7 @@ export function DefinitionsForm() {
         {definitions.length === 0 && !isEditing ? (
           <div className="text-center py-8 text-muted-foreground">
             <p className="text-lg mb-2">No hay definiciones agregadas</p>
-            <p className="text-sm">Haz clic en "Añadir Término" para comenzar</p>
+            <p className="text-sm">Haz clic en &quot;Añadir Término&quot; para comenzar</p>
           </div>
         ) : (
           <Table>

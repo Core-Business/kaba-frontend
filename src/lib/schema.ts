@@ -19,7 +19,7 @@ export const poaActivitySchema = z.object({
   activityName: z.string().optional(),
   responsible: z.string().min(1, "El responsable es requerido."),
   description: z.string().min(1, "La descripción es requerida."),
-  nextActivityType: z.enum(['individual', 'decision', 'alternatives']),
+  nextActivityType: z.enum(['individual', 'decision', 'alternatives', 'alternative_end', 'process_end']),
   nextIndividualActivityRef: z.string().optional(),
   decisionBranches: poaActivityDecisionBranchesSchema.optional(),
   alternativeBranches: z.array(poaActivityAlternativeBranchSchema).optional(),

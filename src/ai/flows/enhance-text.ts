@@ -43,10 +43,11 @@ const EnhanceTextOutputSchema = z.object({
 export type EnhanceTextOutput = z.infer<typeof EnhanceTextOutputSchema>;
 
 export async function enhanceText(input: EnhanceTextInput): Promise<EnhanceTextOutput> {
+  if (!enhanceTextFlow) throw new Error('AI service not initialized');
   return enhanceTextFlow(input);
 }
 
-const enhanceTextPrompt = ai.definePrompt({
+const enhanceTextPrompt = ai?.definePrompt({
   name: 'enhanceTextPrompt',
   input: {schema: EnhanceTextInputSchema},
   output: {schema: EnhanceTextOutputSchema},
@@ -121,19 +122,11 @@ Texto original:
 Texto mejorado en español (directo y conciso):`,
 });
 
-const enhanceTextFlow = ai.defineFlow(
+const enhanceTextFlow = ai?.defineFlow(
   {
     name: 'enhanceTextFlow',
     inputSchema: EnhanceTextInputSchema,
     outputSchema: EnhanceTextOutputSchema,
-    retry: {
-      maxAttempts: 5, // Aumentado de 3 a 5
-      backoff: {
-        initialDelayMs: 1000, // Aumentado de 500ms a 1000ms (1 segundo)
-        maxDelayMs: 10000, // Aumentado de 5000ms a 10000ms (10 segundos)
-        multiplier: 2,
-      },
-    },
   },
   async (input: EnhanceTextInput) => {
     // Prepare input for the prompt by setting boolean context flags
@@ -155,6 +148,7 @@ const enhanceTextFlow = ai.defineFlow(
         processedInput.kpis = input.kpis && input.kpis.length > 0 ? input.kpis.filter(kpi => kpi.trim() !== '') : undefined;
     }
 
+    if (!enhanceTextPrompt) throw new Error('AI prompt not initialized');
     const {output} = await enhanceTextPrompt(processedInput);
     return output!;
   }

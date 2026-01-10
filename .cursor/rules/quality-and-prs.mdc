@@ -1,0 +1,13 @@
+---
+description: Cuando se hable de calidad de código, flujos de PR o comandos de verificación en el frontend.
+alwaysApply: false
+---
+
+## Calidad, rutas y PRs – Frontend (modo sugerido: Apply Intelligently)
+
+- Procura que los cambios sean compatibles con:
+  - `npm run lint`
+  - `npm run typecheck`
+  - y, cuando aplique, las pruebas E2E de Cypress.
+- Para sugerencias de Git, asume ramas como `feature/...`, `fix/...`, `chore/...` y merges vía PR sobre `master` (no commits directos).
+

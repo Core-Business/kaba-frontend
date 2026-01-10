@@ -1,0 +1,12 @@
+---
+description: Cuando se modifiquen flujos de login/logout, AuthContext, selección de workspace o rutas protegidas.
+alwaysApply: false
+---
+
+## Autenticación, contextos y navegación – Frontend (modo sugerido: Apply Intelligently)
+
+- Cambios en login, logout o selección de workspace deben usar `AuthContext` y los hooks/contextos existentes.
+- Respeta los flujos actuales:
+  - Manejo de errores 401/403/429.
+  - Redirecciones como `/workspace-revoked`.
+

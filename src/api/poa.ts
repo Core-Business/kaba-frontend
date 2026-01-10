@@ -1,18 +1,43 @@
 import { api } from "./http";
-import type { POA, POAResponsible, POADefinition, POAReference, POAAttachment } from "@/lib/schema";
+import type {
+  POA,
+  POAActivity,
+  POAHeader,
+  POAObjectiveHelperData,
+  POAScopeHelperData,
+  POAResponsible,
+  POADefinition,
+  POAReference,
+  POAAttachment,
+  POAChangeControlEntry,
+  CreateChangeControlEntry,
+  UpdateChangeControlEntry,
+  POARecord,
+  CreateRecord,
+  UpdateRecord,
+} from "@/lib/schema";
+import type { AxiosError } from "axios";
 
 export interface CreatePOARequest {
   name: string;
   userId?: string;
-  header?: any;
+  header?: POAHeader;
   objective?: string;
   procedureDescription?: string;
   introduction?: string;
   scope?: string;
-  activities?: any[];
+  activities?: POAActivity[];
+  objectiveHelperData?: POAObjectiveHelperData;
+  scopeHelperData?: POAScopeHelperData;
+  responsibilities?: POAResponsible[];
+  definitions?: POADefinition[];
+  references?: POAReference[];
+  approvals?: POA["approvals"];
+  changeControl?: POAChangeControlEntry[];
+  records?: POARecord[];
 }
 
-export interface UpdatePOARequest extends Partial<CreatePOARequest> {}
+export type UpdatePOARequest = Partial<CreatePOARequest>;
 
 // Nuevos tipos para Responsabilidades
 export interface GenerateResponsibilitiesRequest {
@@ -41,30 +66,26 @@ export interface UpdateReferencesRequest {
 
 // Función para transformar POA del frontend al formato del backend
 function transformPOAForBackend(poa: POA): UpdatePOARequest {
-  return {
-    name: poa.name,
-    userId: poa.userId,
-    header: poa.header ? {
-      title: poa.header.title,
-      author: poa.header.author,
-      companyName: poa.header.companyName,
-      documentCode: poa.header.documentCode,
-      departmentArea: poa.header.departmentArea,
-      status: poa.header.status,
-      fileLocation: poa.header.fileLocation,
-      version: poa.header.version,
-      date: poa.header.date,
-      logoUrl: poa.header.logoUrl,
-      logoFileName: poa.header.logoFileName,
-    } : undefined,
-    objective: poa.objective,
-    procedureDescription: poa.procedureDescription,
-    introduction: poa.introduction,
-    scope: poa.scope,
-    activities: poa.activities || [],
-    // Excluir campos que no debe manejar el frontend
-    // id, createdAt, updatedAt, procedureId se manejan en el backend
+  const {
+    id: ignoredId,
+    _id: ignoredMongoId,
+    organizationId: ignoredOrganizationId,
+    workspaceId: ignoredWorkspaceId,
+    createdAt: ignoredCreatedAt,
+    updatedAt: ignoredUpdatedAt,
+    procedureId: ignoredProcedureId,
+    responsibilities: ignoredResponsibilities,
+    approvals: ignoredApprovals,
+    changeControl: ignoredChangeControl,
+    records: ignoredRecords,
+    ...rest
+  } = poa as POA & {
+    _id?: string;
+    organizationId?: string;
+    workspaceId?: string;
   };
+
+  return rest;
 }
 
 export const POAAPI = {
@@ -105,6 +126,13 @@ export const POAAPI = {
   async generateDocument(procedureId: string): Promise<{ html: string }> {
     const response = await api.post(`/procedures/${procedureId}/poa/generate-document`);
     return response.data?.data;
+  },
+
+  async downloadPdf(procedureId: string): Promise<Blob> {
+    const response = await api.get(`/procedures/${procedureId}/poa/download-pdf`, {
+      responseType: 'blob',
+    });
+    return response.data;
   },
 
   // --- Métodos para Responsabilidades ---
@@ -162,7 +190,8 @@ export const POAAPI = {
       const response = await api.patch(`/procedures/${procedureId}/poa/references`, req);
       console.log('✅ API: Respuesta del backend:', response.data);
       return response.data?.data;
-    } catch (error: any) {
+    } catch (unknownError: unknown) {
+      const error = unknownError as AxiosError<{ message?: string }>;
       console.error('❌ API: Error al actualizar referencias:', {
         error: error.message,
         status: error.response?.status,
@@ -170,7 +199,7 @@ export const POAAPI = {
         data: error.response?.data,
         config: error.config
       });
-      throw error;
+      throw unknownError;
     }
   },
 
@@ -186,13 +215,13 @@ export const POAAPI = {
     },
 
     // Agregar nueva entrada
-    add: async (procedureId: string, data: any) => {
+    add: async (procedureId: string, data: CreateChangeControlEntry) => {
       const response = await api.post(`/procedures/${procedureId}/poa/change-control`, data);
       return response.data?.data;
     },
 
     // Actualizar última entrada
-    updateLast: async (procedureId: string, data: any) => {
+    updateLast: async (procedureId: string, data: UpdateChangeControlEntry) => {
       const response = await api.put(`/procedures/${procedureId}/poa/change-control/last`, data);
       return response.data?.data;
     },
@@ -204,7 +233,7 @@ export const POAAPI = {
     },
 
     // Actualizar todo el control de cambios
-    updateAll: async (procedureId: string, data: any) => {
+    updateAll: async (procedureId: string, data: POAChangeControlEntry[]) => {
       const response = await api.patch(`/procedures/${procedureId}/poa/change-control`, data);
       return response.data?.data;
     },
@@ -222,13 +251,13 @@ export const POAAPI = {
     },
 
     // Agregar nuevo registro
-    add: async (procedureId: string, data: any) => {
+    add: async (procedureId: string, data: CreateRecord) => {
       const response = await api.post(`/procedures/${procedureId}/poa/records`, data);
       return response.data?.data;
     },
 
     // Actualizar registro específico
-    update: async (procedureId: string, recordId: string, data: any) => {
+    update: async (procedureId: string, recordId: string, data: UpdateRecord) => {
       const response = await api.put(`/procedures/${procedureId}/poa/records/${recordId}`, data);
       return response.data?.data;
     },
@@ -240,7 +269,7 @@ export const POAAPI = {
     },
 
     // Actualizar todos los registros (formulario)
-    updateAll: async (procedureId: string, data: any) => {
+    updateAll: async (procedureId: string, data: POARecord[]) => {
       const response = await api.patch(`/procedures/${procedureId}/poa/records`, data);
       return response.data?.data;
     },

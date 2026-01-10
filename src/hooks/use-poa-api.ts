@@ -1,93 +1,118 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { POAAPI, CreatePOARequest, UpdatePOARequest, UpdateDefinitionsRequest, UpdateReferencesRequest } from "@/api/poa";
+import {
+  POAAPI,
+  type CreatePOARequest,
+  type UpdateDefinitionsRequest,
+  type UpdateReferencesRequest,
+} from "@/api/poa";
 import type { POA } from "@/lib/schema";
 
-export function usePOAAPI() {
+type ProcedureScoped<T extends object = Record<string, never>> = T & {
+  procedureId: string;
+};
+
+const poaQueryKey = (procedureId: string | null | undefined) =>
+  ["poa", procedureId ?? ""] as const;
+
+export const usePoaQuery = (procedureId?: string | null) =>
+  useQuery({
+    queryKey: poaQueryKey(procedureId),
+    queryFn: () => {
+      if (!procedureId) {
+        throw new Error("procedureId is required to fetch a POA");
+      }
+      return POAAPI.getByProcedureId(procedureId);
+    },
+    enabled: Boolean(procedureId),
+  });
+
+export const useCreatePoaMutation = () => {
   const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ procedureId, poa }: ProcedureScoped<{ poa: CreatePOARequest }>) =>
+      POAAPI.create(procedureId, poa),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const getByProcedureId = (procedureId: string) =>
-    useQuery({ 
-      queryKey: ["poa", procedureId], 
-      queryFn: () => POAAPI.getByProcedureId(procedureId),
-      enabled: !!procedureId
-    });
+export const useAutoCreatePoaMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      procedureId,
+      partialPoa,
+    }: ProcedureScoped<{ partialPoa?: Partial<CreatePOARequest> }>) =>
+      POAAPI.autoCreate(procedureId, partialPoa),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const create = () => 
-    useMutation({
-      mutationFn: ({ procedureId, poa }: { procedureId: string; poa: CreatePOARequest }) =>
-        POAAPI.create(procedureId, poa),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
+export const useUpdatePoaMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ procedureId, poa }: ProcedureScoped<{ poa: POA }>) =>
+      POAAPI.update(procedureId, poa),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const autoCreate = () => 
-    useMutation({
-      mutationFn: ({ procedureId, partialPoa }: { procedureId: string; partialPoa?: Partial<CreatePOARequest> }) =>
-        POAAPI.autoCreate(procedureId, partialPoa),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
+export const usePartialUpdatePoaMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ procedureId, poa }: ProcedureScoped<{ poa: POA }>) =>
+      POAAPI.partialUpdate(procedureId, poa),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const update = () => 
-    useMutation({
-      mutationFn: ({ procedureId, poa }: { procedureId: string; poa: POA }) =>
-        POAAPI.update(procedureId, poa),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
+export const useDeletePoaMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ procedureId }: ProcedureScoped) => POAAPI.delete(procedureId),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const partialUpdate = () => 
-    useMutation({
-      mutationFn: ({ procedureId, poa }: { procedureId: string; poa: POA }) =>
-        POAAPI.partialUpdate(procedureId, poa),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
+export const useGeneratePoaDocumentMutation = () =>
+  useMutation({
+    mutationFn: ({ procedureId }: ProcedureScoped) =>
+      POAAPI.generateDocument(procedureId),
+  });
 
-  const remove = () =>
-    useMutation({
-      mutationFn: POAAPI.delete,
-      onSuccess: (_, procedureId) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
+export const useUpdateDefinitionsMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      procedureId,
+      definitions,
+    }: ProcedureScoped<{ definitions: UpdateDefinitionsRequest }>) =>
+      POAAPI.updateDefinitions(procedureId, definitions),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};
 
-  const generateDocument = () =>
-    useMutation({
-      mutationFn: POAAPI.generateDocument,
-    });
-
-  const updateDefinitions = () =>
-    useMutation({
-      mutationFn: ({ procedureId, definitions }: { procedureId: string; definitions: UpdateDefinitionsRequest }) =>
-        POAAPI.updateDefinitions(procedureId, definitions),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
-
-  const updateReferences = () =>
-    useMutation({
-      mutationFn: ({ procedureId, references }: { procedureId: string; references: UpdateReferencesRequest }) =>
-        POAAPI.updateReferences(procedureId, references),
-      onSuccess: (_, { procedureId }) => {
-        queryClient.invalidateQueries({ queryKey: ["poa", procedureId] });
-      },
-    });
-
-  return { 
-    getByProcedureId, 
-    create, 
-    autoCreate, 
-    update, 
-    partialUpdate, 
-    remove, 
-    generateDocument,
-    updateDefinitions,
-    updateReferences
-  };
-} 
+export const useUpdateReferencesMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      procedureId,
+      references,
+    }: ProcedureScoped<{ references: UpdateReferencesRequest }>) =>
+      POAAPI.updateReferences(procedureId, references),
+    onSuccess: (_, { procedureId }) => {
+      queryClient.invalidateQueries({ queryKey: poaQueryKey(procedureId) });
+    },
+  });
+};

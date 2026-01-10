@@ -1,6 +1,5 @@
 "use client";
 
-import { usePOABackend } from "@/hooks/use-poa-backend";
 import { usePOA } from "@/hooks/use-poa";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -10,13 +9,9 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Brain, Wand2, Lightbulb } from "lucide-react";
-import { useParams } from "next/navigation";
 
 export function ObjectiveFormSimple() {
-  const params = useParams();
-  const poaId = typeof params.poaId === 'string' ? params.poaId : '';
-  const { poa, saveToBackend } = usePOABackend(poaId);
-  const { updateField } = usePOA();
+  const { poa, saveToBackend, isBackendLoading, backendProcedureId, updateField } = usePOA();
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -25,7 +20,7 @@ export function ObjectiveFormSimple() {
   };
 
   const handleSave = async () => {
-    if (!poa) return;
+    if (!poa || !backendProcedureId) return;
     
     setIsLoading(true);
     try {
@@ -53,7 +48,7 @@ export function ObjectiveFormSimple() {
     });
   };
 
-  if (!poa) return <div>Cargando datos del Procedimiento POA...</div>;
+  if (isBackendLoading || !poa) return <div>Cargando datos del Procedimiento POA...</div>;
 
   return (
     <Card className="shadow-lg w-full">
