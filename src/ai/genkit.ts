@@ -1,17 +1,19 @@
 import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import {openAICompatible} from '@genkit-ai/compat-oai';
 
 // Configuración condicional de Genkit
 const hasApiKey = !!(
-  process.env.GOOGLE_API_KEY || 
-  process.env.GEMINI_API_KEY ||
-  process.env.NEXT_PUBLIC_GOOGLE_API_KEY ||
-  process.env.NEXT_PUBLIC_GEMINI_API_KEY
+  process.env.OPENAI_API_KEY ||
+  process.env.NEXT_PUBLIC_OPENAI_API_KEY
 );
 
 export const ai = hasApiKey ? genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
+  plugins: [openAICompatible({
+    name: 'openai',
+    apiKey: process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    baseURL: 'https://api.openai.com/v1'
+  })],
+  model: 'openai/gpt-4o-mini',
 }) : null;
 
 // Función helper para verificar si AI está disponible
