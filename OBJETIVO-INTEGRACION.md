@@ -4,7 +4,7 @@
 
 ### **1. Formulario de Objetivos Mejorado**
 - **Archivo**: `src/components/poa/objective-form-enhanced.tsx`
-- **Integración**: Completa con backend usando `usePOABackend`
+- **Integración**: Completa con backend a través de `usePOA` (POAContext centraliza fetch/auto-save)
 - **Funcionalidades**:
   - ✅ Edición de texto del objetivo
   - ✅ Auto-guardado cada 2 minutos
@@ -83,8 +83,7 @@ Para habilitar funcionalidades de IA:
 ### **Componentes**
 ```
 ObjectiveFormEnhanced
-├── usePOABackend(poaId)     # Integración con backend
-├── usePOA()                 # Contexto local
+├── usePOA()                 # Estado local + sincronización backend
 ├── useState hooks           # Estados de UI
 └── useToast()              # Notificaciones
 ```
@@ -92,7 +91,7 @@ ObjectiveFormEnhanced
 ### **Flujo de Datos**
 ```
 1. Usuario edita texto → updateField()
-2. Auto-save trigger → usePOABackend.saveToBackend()
+2. Auto-save trigger → POAContext guarda vía saveToBackend()
 3. Backend response → POA actualizado
 4. UI feedback → Toast notification
 ```

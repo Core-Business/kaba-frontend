@@ -1,9 +1,6 @@
-
 "use client";
 
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useParams } from "next/navigation";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
@@ -14,48 +11,68 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { enhanceText } from "@/ai/flows/enhance-text";
 import { generateScope } from "@/ai/flows/generate-scope";
+import { generateScopeFromActivities } from "@/ai/flows/generate-scope-from-activities";
 import type { GenerateScopeInput } from "@/ai/flows/generate-scope";
-import { useState, useEffect, useCallback } from "react";
+import type { GenerateScopeFromActivitiesInput } from "@/ai/flows/generate-scope-from-activities";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2 } from "lucide-react";
+import { Save, PlusCircle, Trash2, Brain, Wand2, Lightbulb, Undo2, FileText } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma } from "@/lib/schema";
+import type { POAScopeHelperData, POAScopeUsuarioRol, POAScopeConexionDocumental, POAScopeReferenciaNorma, POAActivity } from "@/lib/schema";
 import { defaultPOAScopeHelperData } from "@/lib/schema";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+type HelperField = 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas';
+type HelperItem<T extends HelperField> =
+  T extends 'usuariosYRoles'
+    ? POAScopeUsuarioRol
+    : T extends 'conexionesDocumentales'
+      ? POAScopeConexionDocumental
+      : POAScopeReferenciaNorma;
+type HelperArray<T extends HelperField> = HelperItem<T>[];
+
+const ensureHelperArray = <T extends HelperField>(value: POAScopeHelperData[T]): HelperArray<T> =>
+  (Array.isArray(value) ? [...value] : []) as HelperArray<T>;
+
+const createHelperItem = <T extends HelperField>(field: T): HelperItem<T> => {
+  if (field === 'usuariosYRoles') {
+    return { id: crypto.randomUUID(), usuario: '', rol: '' } as HelperItem<T>;
+  }
+  if (field === 'conexionesDocumentales') {
+    return { id: crypto.randomUUID(), documento: '', codigo: '' } as HelperItem<T>;
+  }
+  return { id: crypto.randomUUID(), referencia: '', codigo: '' } as HelperItem<T>;
+};
 
 
 export function ScopeForm() {
-  const params = useParams();
-  const poaId = params.poaId as string;
-  
-  // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
-  const procedureId = (() => {
-    if (!poaId || poaId === 'new') return null;
-    
-    if (poaId.startsWith('proc-')) {
-      // Formato: proc-{procedureId}-{timestamp}
-      const withoutPrefix = poaId.replace('proc-', '');
-      const parts = withoutPrefix.split('-');
-      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
-    } else {
-      // Formato directo: {procedureId}
-      return poaId;
-    }
-  })();
-  
-  console.log('ScopeForm - poaId:', poaId, 'procedureId:', procedureId);
-  
-  // Usar usePOABackend para obtener datos del backend, usePOA para operaciones locales
-  const { poa: poaBackend, saveToBackend, isLoading } = usePOABackend(procedureId);
-  const { updateField, setIsDirty, updateScopeHelperData: updatePoaScopeHelperData } = usePOA();
+  const {
+    poa,
+    backendProcedureId,
+    isBackendLoading,
+    saveToBackend,
+    updateField,
+    setIsDirty,
+    updateScopeHelperData: updatePoaScopeHelperData,
+  } = usePOA();
   const [isLoadingAiEnhance, setIsLoadingAiEnhance] = useState(false);
   const [isLoadingAiGenerate, setIsLoadingAiGenerate] = useState(false);
+  const [isLoadingAiGenerateFromActivities, setIsLoadingAiGenerateFromActivities] = useState(false);
   const [maxWords, setMaxWords] = useState(100);
   const { toast } = useToast();
   const [scopeBeforeAi, setScopeBeforeAi] = useState<string | null>(null);
   const [isHelpSectionVisible, setIsHelpSectionVisible] = useState(true);
-
-  // Usar poa del backend
-  const poa = poaBackend;
+  const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
 
   const [helperData, setHelperData] = useState<POAScopeHelperData>(() => {
     const initialSource = poa?.scopeHelperData || defaultPOAScopeHelperData;
@@ -70,23 +87,28 @@ export function ScopeForm() {
     };
   });
 
+  const lastPoaIdRef = useRef<string | undefined>(poa?.id);
+
   useEffect(() => {
     if (!poa) return;
-    const contextSource = poa.scopeHelperData || defaultPOAScopeHelperData;
-    const newLocalStateCandidate: POAScopeHelperData = {
-        ...defaultPOAScopeHelperData,
-        ...contextSource,
-        productosClave: contextSource.productosClave || '',
-        direccionGerencia: contextSource.direccionGerencia || '',
-        usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
-        conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
-        referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
-    };
-    if (JSON.stringify(helperData) !== JSON.stringify(newLocalStateCandidate)) {
+    
+    // Only update local state from context if the POA ID has changed (e.g., navigation or initial load)
+    if (poa.id !== lastPoaIdRef.current) {
+        lastPoaIdRef.current = poa.id;
+        const contextSource = poa.scopeHelperData || defaultPOAScopeHelperData;
+        const newLocalStateCandidate: POAScopeHelperData = {
+            ...defaultPOAScopeHelperData,
+            ...contextSource,
+            productosClave: contextSource.productosClave || '',
+            direccionGerencia: contextSource.direccionGerencia || '',
+            usuariosYRoles: contextSource.usuariosYRoles && contextSource.usuariosYRoles.length > 0 ? contextSource.usuariosYRoles.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), usuario: '', rol: '' }],
+            conexionesDocumentales: contextSource.conexionesDocumentales && contextSource.conexionesDocumentales.length > 0 ? contextSource.conexionesDocumentales.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), documento: '', codigo: '' }],
+            referenciaANormas: contextSource.referenciaANormas && contextSource.referenciaANormas.length > 0 ? contextSource.referenciaANormas.map(item => ({...item, id: item.id || crypto.randomUUID()})) : [{ id: crypto.randomUUID(), referencia: '', codigo: '' }],
+        };
         setHelperData(newLocalStateCandidate);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [poa?.scopeHelperData]);
+  }, [poa?.id]);
 
   useEffect(() => {
     if (poa && (JSON.stringify(helperData) !== JSON.stringify(poa.scopeHelperData || defaultPOAScopeHelperData))) {
@@ -95,6 +117,9 @@ export function ScopeForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [helperData, poa?.id]);
 
+  const isActivitiesLocked = useMemo(() => {
+    return poa?.activities.some((act: POAActivity) => act.nextActivityType === 'process_end') || false;
+  }, [poa?.activities]);
 
   const handleMainScopeChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     updateField("scope", e.target.value);
@@ -126,33 +151,30 @@ export function ScopeForm() {
     [setIsDirty]
   );
 
-  const addHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas') => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as Array<any> || []);
-      let newItem: any;
-      if (field === 'usuariosYRoles') newItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
-      else if (field === 'conexionesDocumentales') newItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else if (field === 'referenciaANormas') newItem = { id: crypto.randomUUID(), referencia: '', codigo: '' };
-      else return prev;
+  const addHelperObjectItem = useCallback(
+    (field: HelperField) => {
+      setHelperData(prev => {
+        const currentArray = ensureHelperArray(prev[field]);
+        const newItem = createHelperItem(field);
+        return { ...prev, [field]: [...currentArray, newItem] };
+      });
+      setIsDirty(true);
+    },
+    [setIsDirty],
+  );
 
-      return { ...prev, [field]: [...currentArray, newItem] };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
-
-  const removeHelperObjectItem = useCallback((field: 'usuariosYRoles' | 'conexionesDocumentales' | 'referenciaANormas', index: number) => {
-    setHelperData(prev => {
-      const currentArray = (prev[field] as Array<any> || []);
-      const newArray = currentArray.filter((_, i) => i !== index);
-      let defaultItem: any;
-      if (field === 'usuariosYRoles') defaultItem = { id: crypto.randomUUID(), usuario: '', rol: '' };
-      else if (field === 'conexionesDocumentales') defaultItem = { id: crypto.randomUUID(), documento: '', codigo: '' };
-      else if (field === 'referenciaANormas') defaultItem = { id: crypto.randomUUID(), referencia: '', codigo: '' };
-      
-      return { ...prev, [field]: newArray.length > 0 ? newArray : (defaultItem ? [defaultItem] : []) };
-    });
-    setIsDirty(true);
-  }, [setIsDirty]);
+  const removeHelperObjectItem = useCallback(
+    (field: HelperField, index: number) => {
+      setHelperData(prev => {
+        const currentArray = ensureHelperArray(prev[field]);
+        const newArray = currentArray.filter((_, i) => i !== index);
+        const defaultItem = createHelperItem(field);
+        return { ...prev, [field]: newArray.length > 0 ? newArray : [defaultItem] };
+      });
+      setIsDirty(true);
+    },
+    [setIsDirty],
+  );
 
 
   const handleAiEnhance = useCallback(async () => {
@@ -160,7 +182,7 @@ export function ScopeForm() {
       toast({ title: "Texto Requerido", description: "Por favor, escribe un alcance para editarlo con IA.", variant: "destructive" });
       return;
     }
-    setScopeBeforeAi(poa.scope);
+    setScopeBeforeAi(poa.scope || null);
     setIsLoadingAiEnhance(true);
     try {
         const enhanceInput: Parameters<typeof enhanceText>[0] = {
@@ -183,7 +205,7 @@ export function ScopeForm() {
     if (!poa) return;
     const canGenerateFromHelper = Object.values(helperData).some(val => 
         Array.isArray(val) ? 
-        val.some(item => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some(v => typeof v === 'string' && v.trim() !== '')))
+        val.some((item: any) => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some((v: any) => typeof v === 'string' && v.trim() !== '')))
         : (typeof val === 'string' && val.trim() !== '')
     );
 
@@ -192,7 +214,7 @@ export function ScopeForm() {
         return;
     }
 
-    setScopeBeforeAi(poa.scope);
+    setScopeBeforeAi(poa.scope || null);
     setIsLoadingAiGenerate(true);
     try {
       const inputForAI: GenerateScopeInput = {
@@ -213,6 +235,42 @@ export function ScopeForm() {
     setIsLoadingAiGenerate(false);
   }, [poa, updateField, toast, maxWords, helperData]);
 
+  const performGenerateFromActivities = async () => {
+    if (!poa) return;
+    setScopeBeforeAi(poa.scope || null);
+    setIsLoadingAiGenerateFromActivities(true);
+    try {
+        const inputForAI: GenerateScopeFromActivitiesInput = {
+            procedureName: poa.header.title || "",
+            companyName: poa.header.companyName,
+            objective: poa.objective,
+            activities: poa.activities.map(a => ({
+                responsible: a.responsible,
+                description: a.description
+            })),
+            maxWords: maxWords
+        };
+
+        const result = await generateScopeFromActivities(inputForAI);
+        updateField("scope", result.generatedScope);
+        toast({ title: "Alcance Generado", description: "Se ha generado el alcance basado en las actividades." });
+    } catch (error) {
+        console.error("Error generando alcance desde actividades:", error);
+        toast({ title: "Error", description: "No se pudo generar el alcance.", variant: "destructive" });
+        setScopeBeforeAi(null);
+    }
+    setIsLoadingAiGenerateFromActivities(false);
+    setShowOverwriteDialog(false);
+  };
+
+  const handleGenerateFromActivitiesClick = () => {
+    if (poa?.scope && poa.scope.trim().length > 0) {
+        setShowOverwriteDialog(true);
+    } else {
+        performGenerateFromActivities();
+    }
+  };
+
   const handleUndoAi = useCallback(() => {
     if (scopeBeforeAi !== null && poa) {
       updateField("scope", scopeBeforeAi);
@@ -222,7 +280,7 @@ export function ScopeForm() {
   }, [scopeBeforeAi, poa, updateField, toast]);
 
   const handleSave = useCallback(async () => {
-    if (!poa || !procedureId) {
+    if (!poa || !backendProcedureId) {
       toast({
         title: "Error",
         description: "No hay datos para guardar o falta el ID del procedimiento.",
@@ -232,7 +290,7 @@ export function ScopeForm() {
     }
 
     try {
-      console.log('Guardando alcance con procedureId:', procedureId);
+      console.log('Guardando alcance con procedureId:', backendProcedureId);
       await saveToBackend();
       toast({
         title: "Alcance Guardado",
@@ -246,14 +304,14 @@ export function ScopeForm() {
         variant: "destructive",
       });
     }
-  }, [poa, procedureId, saveToBackend, toast]);
+  }, [poa, backendProcedureId, saveToBackend, toast]);
 
-  if (isLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
+  if (isBackendLoading || !poa) return <div className="flex justify-center items-center h-64"><LoadingSpinner className="h-8 w-8" /><p className="ml-2">Cargando datos...</p></div>;
 
   const canEnhanceMainScope = !!poa.scope && poa.scope.length > 5;
   const canGenerateFromHelperNow = Object.values(helperData).some(val => 
     Array.isArray(val) ? 
-    val.some(item => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some(v => typeof v === 'string' && v.trim() !== '')))
+    val.some((item: any) => typeof item === 'string' ? item.trim() !== '' : (typeof item === 'object' && item !== null && Object.values(item).some((v: any) => typeof v === 'string' && v.trim() !== '')))
     : (typeof val === 'string' && val.trim() !== '')
   );
 
@@ -265,7 +323,34 @@ export function ScopeForm() {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="space-y-1">
-          <Label htmlFor="scope">Definición del Alcance</Label>
+          <div className="flex justify-between items-end mb-2">
+            <Label htmlFor="scope">Definición del Alcance</Label>
+            
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span tabIndex={0}> {/* Wrap in span to allow tooltip on disabled button */}
+                            <Button 
+                                onClick={handleGenerateFromActivitiesClick} 
+                                disabled={!isActivitiesLocked || isLoadingAiGenerateFromActivities}
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                            >
+                                {isLoadingAiGenerateFromActivities ? <LoadingSpinner className="mr-2 h-3 w-3" /> : <FileText className="mr-2 h-3 w-3" />}
+                                Generar con base en Actividades
+                            </Button>
+                        </span>
+                    </TooltipTrigger>
+                    {!isActivitiesLocked && (
+                        <TooltipContent>
+                            <p>Completa y cierra la sección de Actividades para usar esta función</p>
+                        </TooltipContent>
+                    )}
+                </Tooltip>
+            </TooltipProvider>
+
+          </div>
           <Textarea
             id="scope"
             value={poa.scope || ""}
@@ -297,8 +382,8 @@ export function ScopeForm() {
             onClick={handleAiEnhance}
             isLoading={isLoadingAiEnhance}
             textExists={canEnhanceMainScope}
-            onUndo={scopeBeforeAi !== null && !isLoadingAiGenerate ? handleUndoAi : undefined}
-            canUndo={scopeBeforeAi !== null && !isLoadingAiGenerate}
+            onUndo={scopeBeforeAi !== null && !isLoadingAiGenerate && !isLoadingAiGenerateFromActivities ? handleUndoAi : undefined}
+            canUndo={scopeBeforeAi !== null && !isLoadingAiGenerate && !isLoadingAiGenerateFromActivities}
           >
             <Wand2 className="mr-2 h-4 w-4" />
             {isLoadingAiEnhance ? "Editando..." : "Edición con IA"}
@@ -327,7 +412,7 @@ export function ScopeForm() {
                 {isLoadingAiGenerate ? <LoadingSpinner className="mr-2 h-4 w-4" /> : <Brain className="mr-2 h-4 w-4" />}
                 {isLoadingAiGenerate ? "Generando..." : "Generar Alcance"}
               </Button>
-              {scopeBeforeAi !== null && !isLoadingAiEnhance && (
+              {scopeBeforeAi !== null && !isLoadingAiEnhance && !isLoadingAiGenerateFromActivities && (
                 <Button
                   type="button"
                   variant="outline"
@@ -370,8 +455,8 @@ export function ScopeForm() {
                             <Label>Usuarios y Roles</Label>
                             {(helperData.usuariosYRoles || [{ id: crypto.randomUUID(), usuario: '', rol: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario', e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol', e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.usuario || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'usuario' as any, e.target.value)} placeholder="Usuario" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.rol || ""} onChange={(e) => handleHelperObjectChange('usuariosYRoles', index, 'rol' as any, e.target.value)} placeholder="Rol que ejecuta" className="flex-grow min-w-[150px]"/>
                                 {(helperData.usuariosYRoles || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('usuariosYRoles', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -427,8 +512,8 @@ export function ScopeForm() {
                             <Label>Documentos, POAs, Guías o Manuales Relacionados</Label>
                             {(helperData.conexionesDocumentales || [{ id: crypto.randomUUID(), documento: '', codigo: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento', e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo', e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
+                                <Input value={item.documento || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'documento' as any, e.target.value)} placeholder="Documento/Proceso" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('conexionesDocumentales', index, 'codigo' as any, e.target.value)} placeholder="Código (Opcional)" className="flex-grow min-w-[100px]"/>
                                 {(helperData.conexionesDocumentales || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('conexionesDocumentales', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -441,8 +526,8 @@ export function ScopeForm() {
                             <Label>Normativas, Estándares o Políticas Aplicables</Label>
                             {(helperData.referenciaANormas || [{ id: crypto.randomUUID(), referencia: '', codigo: '' }]).map((item, index) => (
                                 <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mt-1 p-2 border rounded-md">
-                                <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia', e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
-                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo', e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
+                                <Input value={item.referencia || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'referencia' as any, e.target.value)} placeholder="Norma/Estándar" className="flex-grow min-w-[150px]"/>
+                                <Input value={item.codigo || ""} onChange={(e) => handleHelperObjectChange('referenciaANormas', index, 'codigo' as any, e.target.value)} placeholder="Cláusula/Sección (Opcional)" className="flex-grow min-w-[100px]"/>
                                 {(helperData.referenciaANormas || []).length > 1 && (
                                     <Button type="button" variant="ghost" size="icon" onClick={() => removeHelperObjectItem('referenciaANormas', index)} className="text-destructive shrink-0 self-center sm:self-auto"><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -479,6 +564,22 @@ export function ScopeForm() {
           Guardar Alcance
         </Button>
       </CardFooter>
+
+      <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Sobrescribir Alcance Actual?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    Ya existe texto en la definición del alcance. Al generar uno nuevo con IA, se perderá el contenido actual.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={performGenerateFromActivities}>Sobrescribir y Generar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/api/http';
+import { isAxiosError } from 'axios';
 
 interface OrganizationContext {
   id: string;
@@ -36,9 +37,9 @@ export function useContexts() {
     },
     staleTime: 60 * 1000,     // 60 segundos para evitar llamadas excesivas
     gcTime: 5 * 60 * 1000,    // 5 minutos
-    retry: (failureCount, error: any) => {
+    retry: (failureCount, error: unknown) => {
       // No reintentar en errores de auth
-      if (error?.response?.status === 401 || error?.response?.status === 403) {
+      if (isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
         return false;
       }
       return failureCount < 3;

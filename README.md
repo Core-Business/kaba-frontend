@@ -134,14 +134,21 @@ const createMutation = create();
 
 ### Gestión de POAs
 ```tsx
-import { usePOABackend } from "@/hooks/use-poa-backend";
+import { usePOA } from "@/hooks/use-poa";
 
 const { 
-  poa, 
-  createNewPOA, 
-  autoCreatePOA, 
-  saveToBackend 
-} = usePOABackend(procedureId);
+  poa,
+  backendProcedureId,
+  isBackendLoading,
+  saveToBackend,
+  setBackendProcedureId,
+} = usePOA();
+
+// Builder layout establece el procedureId activo una sola vez:
+useEffect(() => {
+  setBackendProcedureId(procedureIdFromRoute);
+  return () => setBackendProcedureId(null);
+}, [procedureIdFromRoute, setBackendProcedureId]);
 ```
 
 ## 🎯 Criterios de Aceptación ✅

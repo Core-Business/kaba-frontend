@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { usePathname, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ClipboardEdit,
   Target,
@@ -20,7 +21,6 @@ import {
   ScanSearch,
   BookOpenText,
   Printer,
-  Home,
   ChevronLeft,
   Users,
   BookOpen,
@@ -32,15 +32,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePOA } from "@/hooks/use-poa";
-import { usePOABackend } from "@/hooks/use-poa-backend";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import type { POA as POASchemaType } from "@/lib/schema";
 import { AppHeader } from "@/components/layout/app-header";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
-const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Encabezado", href: "header", icon: ClipboardEdit },
@@ -58,19 +63,17 @@ const navItems = [
   { name: "Vista Previa", href: "document", icon: Printer },
 ];
 
-type StoredPOASummary = {
-  id: string;
-  name: string;
-  logo?: string;
-  updatedAt?: string;
-};
-
-const ORIGINAL_MOCK_POAS_SUMMARIES: StoredPOASummary[] = [
-  { id: "1", name: "Plan de Despliegue de Software", updatedAt: new Date().toISOString() },
-  { id: "2", name: "Incorporación de Nuevos Empleados", updatedAt: new Date().toISOString() },
-  { id: "3", name: "Campaña de Marketing Q3", updatedAt: new Date().toISOString() },
-];
-
+const gatedSections = new Set([
+  "responsibilities",
+  "definitions",
+  "references",
+  "records",
+  "introduction",
+  "change-control",
+  "approvals",
+  "attachments",
+  "document",
+]);
 
 export default function BuilderLayout({
   children,
@@ -80,112 +83,146 @@ export default function BuilderLayout({
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
-  
+
   const poaId = params.poaId as string;
-  
+
   // Extraer procedureId del formato: proc-{procedureId}-{timestamp} o directamente {procedureId}
   const procedureId = (() => {
-    if (!poaId || poaId === 'new') return null;
-    
-    if (poaId.startsWith('proc-')) {
+    if (!poaId || poaId === "new") return null;
+
+    if (poaId.startsWith("proc-")) {
       // Formato: proc-{procedureId}-{timestamp}
-      const withoutPrefix = poaId.replace('proc-', '');
-      const parts = withoutPrefix.split('-');
+      const withoutPrefix = poaId.replace("proc-", "");
+      const parts = withoutPrefix.split("-");
       // Si hay al menos 2 partes, el último es timestamp, el resto es procedureId
-      return parts.length >= 2 ? parts.slice(0, -1).join('-') : withoutPrefix;
+      return parts.length >= 2 ? parts.slice(0, -1).join("-") : withoutPrefix;
     } else {
       // Formato directo: {procedureId}
       return poaId;
     }
   })();
-  
-  // Usar el hook del backend en lugar del localStorage
-  const { 
-    poa, 
-    isDirty, 
-    isLoading: isLoadingBackend,
-    saveToBackend 
-  } = usePOABackend(procedureId);
-  
-  // Mantener el hook local como fallback
-  const { loadPoa, createNew, setIsDirty, saveCurrentPOA } = usePOA();
+
+  const {
+    poa,
+    isDirty,
+    setIsDirty,
+    setBackendProcedureId,
+    isBackendLoading,
+    saveToBackend,
+    createNew,
+    completion,
+  } = usePOA();
 
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [nextPath, setNextPath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showLockedDialog, setShowLockedDialog] = useState(false);
+  const hasAttemptedAutoCreation = useRef(false);
 
-  // El hook usePOABackend maneja toda la lógica de carga/guardado
-  // Solo necesitamos manejar casos especiales como "new"
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const currentSection = pathSegments.length >= 3 ? pathSegments[2] : "header";
+
   useEffect(() => {
     if (poaId === "new") {
+      setBackendProcedureId(null);
+    } else {
+      setBackendProcedureId(procedureId);
+    }
+
+    return () => {
+      setBackendProcedureId(null);
+    };
+  }, [poaId, procedureId, setBackendProcedureId]);
+
+  // El hook centralizado maneja la lógica de carga/guardado
+  useEffect(() => {
+    if (poaId === "new") {
+      if (hasAttemptedAutoCreation.current) {
+        return;
+      }
+
+      hasAttemptedAutoCreation.current = true;
+
       // Auto-crear procedimiento en el backend y redirigir al ID real
       const autoCreateNewProcedure = async () => {
         try {
-          console.log('🔄 Auto-creando procedimiento desde /builder/new...');
-          
-          // Importar dinámicamente el hook de procedimientos
-          const { useProcedures } = await import('@/hooks/use-procedures');
-          
+          console.log("🔄 Auto-creando procedimiento desde /builder/new...");
           // No podemos usar hooks aquí, así que haremos la llamada directa a la API
-          const response = await fetch('/api/procedures', {
-            method: 'POST',
+          const response = await fetch("/api/procedures", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('kaba.token')}`,
-              'X-Organization-Id': JSON.parse(localStorage.getItem('kaba.lastWorkspace') || '{}').orgId || '',
-              'X-Workspace-Id': JSON.parse(localStorage.getItem('kaba.lastWorkspace') || '{}').wsId || '',
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("kaba.token")}`,
+              "X-Organization-Id":
+                JSON.parse(localStorage.getItem("kaba.lastWorkspace") || "{}")
+                  .orgId || "",
+              "X-Workspace-Id":
+                JSON.parse(localStorage.getItem("kaba.lastWorkspace") || "{}")
+                  .wsId || "",
             },
             body: JSON.stringify({
               title: `Nuevo Procedimiento ${new Date().toLocaleDateString()}`,
               description: "Procedimiento creado automáticamente",
               code: `PROC-${Date.now()}`,
               version: 1,
-              status: "draft"
+              status: "draft",
             }),
           });
 
           if (!response.ok) {
-            throw new Error('No se pudo crear el procedimiento');
+            throw new Error("No se pudo crear el procedimiento");
           }
 
           const result = await response.json();
           const newProcedure = result.data;
-          
-          console.log('✅ Procedimiento auto-creado:', newProcedure.id);
-          
+
+          console.log("✅ Procedimiento auto-creado:", newProcedure.id);
+
           // Redirigir al ID real del procedimiento creado
           router.push(`/builder/${newProcedure.id}`);
         } catch (error) {
-          console.error('❌ Error auto-creando procedimiento:', error);
+          console.error("❌ Error auto-creando procedimiento:", error);
           // Fallback: usar localStorage como antes
-          createNew('new', 'Nuevo Procedimiento POA Sin Título');
+          createNew("new", "Nuevo Procedimiento POA Sin Título");
         }
       };
-      
+
       autoCreateNewProcedure();
       return;
     }
-    
-    if (!procedureId && poaId !== 'new') {
-      console.error('No se pudo extraer procedureId de:', poaId);
-      console.error('Redirigiendo al dashboard...');
-      router.push('/dashboard');
+
+    // Resetear el intento al abandonar la ruta /builder/new
+    if (hasAttemptedAutoCreation.current) {
+      hasAttemptedAutoCreation.current = false;
+    }
+
+    if (!procedureId && poaId !== "new") {
+      console.error("No se pudo extraer procedureId de:", poaId);
+      console.error("Redirigiendo al dashboard...");
+      router.push("/dashboard");
       return;
     }
   }, [poaId, procedureId, createNew, router]);
 
+  useEffect(() => {
+    if (!poaId) return;
+    if (!completion.allCriticalComplete && gatedSections.has(currentSection)) {
+      router.replace(`/builder/${poaId}/header`);
+    }
+  }, [completion.allCriticalComplete, currentSection, poaId, router]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (isDirty) {
         event.preventDefault();
-        event.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+        event.returnValue =
+          "Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?";
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isDirty]);
 
@@ -205,7 +242,7 @@ export default function BuilderLayout({
           router.push(nextPath);
           setNextPath(null);
         } catch (error) {
-          console.error('Error guardando antes de navegar:', error);
+          console.error("Error guardando antes de navegar:", error);
           // Si falla el guardado, mantener el modal abierto para que el usuario decida
           setShowUnsavedDialog(true);
         } finally {
@@ -215,16 +252,17 @@ export default function BuilderLayout({
     }
   };
 
-  const handleDashboardNavigationClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (isDirty) {
-          e.preventDefault();
-          setNextPath('/dashboard');
-          setShowUnsavedDialog(true);
-      } else {
-          router.push('/dashboard');
-      }
+  const handleDashboardNavigationClick = (
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    if (isDirty) {
+      e.preventDefault();
+      setNextPath("/dashboard");
+      setShowUnsavedDialog(true);
+    } else {
+      router.push("/dashboard");
+    }
   };
-
 
   if (!poaId) {
     return (
@@ -245,60 +283,101 @@ export default function BuilderLayout({
   }
 
   // Mostrar loading mientras se carga desde el backend
-  if (poaId !== "new" && (isLoadingBackend || !poa)) {
+  if (poaId !== "new" && (isBackendLoading || !poa)) {
     return (
       <div className="flex h-screen items-center justify-center">
         <LoadingSpinner className="h-12 w-12 text-primary" />
         <p className="ml-4 text-lg">
-          {isLoadingBackend ? 'Cargando desde el servidor...' : 'Preparando editor...'}
+          {isBackendLoading
+            ? "Cargando desde el servidor..."
+            : "Preparando editor..."}
         </p>
       </div>
     );
   }
 
-
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-1 min-h-screen bg-background p-4 md:p-6 lg:p-8 gap-4 md:gap-6 lg:gap-8">
-        <Sidebar collapsible="icon" variant="sidebar" side="left" className="border-r shadow-md shrink-0">
+      <div className="flex flex-1 min-h-screen bg-background w-full">
+        <Sidebar
+          collapsible="icon"
+          variant="sidebar"
+          side="left"
+          className="border-r shadow-sm shrink-0 bg-sidebar border-sidebar-border"
+        >
           <SidebarHeader className="p-4">
-            <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" onClick={handleDashboardNavigationClick} className="text-sidebar-foreground hover:bg-sidebar-accent">
-                    <ChevronLeft className="h-5 w-5 mr-1" /> Volver al Panel
-                </Button>
-                <SidebarTrigger className="md:hidden text-sidebar-foreground hover:bg-sidebar-accent" />
+            <div className="flex items-center justify-between overflow-hidden">
+              <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+                <Image 
+                  src="/images/logo-kaba-blue.png" 
+                  alt="KABA" 
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto"
+                  priority
+                />
+              </div>
+              <SidebarTrigger className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" />
             </div>
           </SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="p-2">
             <SidebarMenu>
               {navItems.map((item) => {
                 // Siempre usar el poaId original de la URL para mantener consistencia
                 const currentPoaIdForLink = poaId;
                 const itemPath = `/builder/${currentPoaIdForLink}/${item.href}`;
-                const isActive = pathname === itemPath ||
-                                (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}`) ||
-                                (item.href === 'header' && pathname === `/builder/${currentPoaIdForLink}/header`);
+                const isActive =
+                  pathname === itemPath ||
+                  (item.href === "header" &&
+                    pathname === `/builder/${currentPoaIdForLink}`) ||
+                  (item.href === "header" &&
+                    pathname === `/builder/${currentPoaIdForLink}/header`);
+                const isLockedSection =
+                  gatedSections.has(item.href) &&
+                  !completion.allCriticalComplete;
 
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      className="justify-start text-sm"
-                      tooltip={{ children: item.name, side: 'right', className: 'bg-primary text-primary-foreground' }}
+                      className={cn(
+                        "justify-start text-sm transition-all duration-normal mb-1",
+                        isActive
+                          ? "bg-blue-50 text-blue-600 font-medium rounded-full"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground rounded-md"
+                      )}
+                      tooltip={{
+                        children: item.name,
+                        side: "right",
+                        className: "bg-blue-600 text-white",
+                      }}
                     >
-                       <Link
+                      <Link
                         href={itemPath}
                         onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                          if (isLockedSection) {
+                            e.preventDefault();
+                            setShowLockedDialog(true);
+                            return;
+                          }
                           if (isDirty) {
                             e.preventDefault();
                             setNextPath(itemPath);
                             setShowUnsavedDialog(true);
                           }
                         }}
+                        className="flex items-center gap-3 px-3 py-2 w-full"
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.name}</span>
+                        <item.icon
+                          className={cn(
+                            "h-5 w-5",
+                            isActive
+                              ? "text-blue-600"
+                              : "text-sidebar-foreground/70"
+                          )}
+                        />
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -306,34 +385,53 @@ export default function BuilderLayout({
               })}
             </SidebarMenu>
           </SidebarContent>
-          <SidebarFooter className="p-2 border-t border-sidebar-border">
-              <SidebarMenuButton
-                  asChild
-                  className="justify-start text-sm w-full"
-                  tooltip={{ children: "POA - Inicio", side: 'right', className: 'bg-primary text-primary-foreground' }}
+          <SidebarFooter className="p-4 border-t border-sidebar-border">
+            <div className="group-data-[collapsible=icon]:hidden space-y-3">
+              <div className="rounded-lg bg-gray-100/50 border border-border/50 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-0.5">
+                      POA - Inicio
+                    </p>
+                    <p className="text-sm font-medium text-foreground truncate leading-tight">
+                      Procedimiento Operativo
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDashboardNavigationClick}
+                className="w-full justify-start text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
               >
-                <Link
-                  href="/dashboard"
-                  onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                    if (isDirty) {
-                      e.preventDefault();
-                      setNextPath('/dashboard');
-                      setShowUnsavedDialog(true);
-                    }
-                  }}
-                >
-                  <Home className="h-5 w-5" />
-                  <span>POA - Inicio</span>
-                </Link>
-              </SidebarMenuButton>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Volver al Panel
+              </Button>
+            </div>
+
+            <div className="hidden group-data-[collapsible=icon]:flex flex-col items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDashboardNavigationClick}
+                title="Volver al Panel"
+                className="text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </div>
           </SidebarFooter>
         </Sidebar>
 
         <div className="flex flex-col flex-1 min-w-0">
           <AppHeader />
-          <main className="flex-1 w-full overflow-y-auto bg-muted/40 rounded-lg shadow-md">
-            {children}
-          </main>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col">
+            <main className="w-full flex-1">
+              {children}
+            </main>
+          </div>
         </div>
       </div>
 
@@ -342,24 +440,28 @@ export default function BuilderLayout({
           <AlertDialogHeader>
             <AlertDialogTitle>Cambios sin Guardar</AlertDialogTitle>
             <AlertDialogDescription>
-              Tienes cambios sin guardar en esta sección. ¿Quieres guardar los cambios antes de salir?
+              Tienes cambios sin guardar en esta sección. ¿Quieres guardar los
+              cambios antes de salir?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel 
-              onClick={() => { setShowUnsavedDialog(false); setNextPath(null); }}
+            <AlertDialogCancel
+              onClick={() => {
+                setShowUnsavedDialog(false);
+                setNextPath(null);
+              }}
               disabled={isSaving}
             >
               Cancelar Navegación
             </AlertDialogCancel>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => confirmNavigation(true)}
               disabled={isSaving}
             >
               Descartar Cambios y Salir
             </Button>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => confirmNavigation(false)}
               disabled={isSaving}
             >
@@ -369,8 +471,25 @@ export default function BuilderLayout({
                   Guardando...
                 </>
               ) : (
-                'Guardar y Salir'
+                "Guardar y Salir"
               )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showLockedDialog} onOpenChange={setShowLockedDialog}>
+        <AlertDialogContent className="sm:max-w-[500px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Completa los primeros pasos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Antes de avanzar a este paso debes completar el Encabezado,
+              Objetivo y agregar Actividades.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowLockedDialog(false)}>
+              Entendido
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -378,8 +497,3 @@ export default function BuilderLayout({
     </SidebarProvider>
   );
 }
-    
-
-      
-
-    

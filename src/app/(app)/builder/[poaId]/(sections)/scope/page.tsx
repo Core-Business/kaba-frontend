@@ -1,5 +1,5 @@
-import { ScopeForm } from "@/components/poa/scope-form";
+import { ScopeFormEnhanced } from "@/components/poa/scope-form-enhanced";
 
 export default function ScopePage() {
-  return <ScopeForm />;
+  return <ScopeFormEnhanced />;
 }

@@ -20,30 +20,6 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  organizationName: string;
-}
-
-export interface RegisterResponse {
-  accessToken: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-  };
-  workspace: {
-    orgId: string;
-    wsId: string;
-    wsName: string;
-    role: 'WORKSPACE_ADMIN' | 'EDITOR' | 'VIEWER';
-  };
-}
-
 export interface UserContextsResponse {
   userId: string;
   currentOrganization: string;
@@ -70,6 +46,84 @@ export interface SwitchWorkspaceResponse {
   refreshToken: string;
   tokenType: string;
   expiresIn: number;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ██████╗ ████████╗██████╗     ██╗███╗   ██╗████████╗███████╗██████╗ ███████╗ █████╗  ██████╗███████╗███████╗
+// ██╔═══██╗╚══██╔══╝██╔══██╗    ██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝
+// ██║   ██║   ██║   ██████╔╝    ██║██╔██╗ ██║   ██║   █████╗  ██████╔╝█████╗  ███████║██║     █████╗  ███████╗
+// ██║   ██║   ██║   ██╔═══╝     ██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝  ╚════██║
+// ╚██████╔╝   ██║   ██║         ██║██║ ╚████║   ██║   ███████╗██║  ██║██║     ██║  ██║╚██████╗███████╗███████║
+//  ╚═════╝    ╚═╝   ╚═╝         ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝
+// ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+export interface RegisterEmailRequest {
+  email: string;
+}
+
+export interface RegisterEmailResponse {
+  message: string;
+}
+
+export interface VerifyOTPRequest {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyOTPResponse {
+  message: string;
+  requiresProfile: boolean;
+}
+
+export interface ResendOTPRequest {
+  email: string;
+}
+
+export interface ResendOTPResponse {
+  message: string;
+}
+
+export interface CompleteProfileRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  organizationName: string;
+  role?: string;
+}
+
+export interface CompleteProfileResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export interface ForgotPasswordOTPRequest {
+  email: string;
+}
+
+export interface ForgotPasswordOTPResponse {
+  message: string;
+}
+
+export interface VerifyResetOTPRequest {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyResetOTPResponse {
+  message: string;
+  resetToken?: string;
+}
+
+export interface ResetPasswordWithTokenRequest {
+  resetToken: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordWithTokenResponse {
+  message: string;
 }
 
 export const AuthAPI = {
@@ -117,56 +171,6 @@ export const AuthAPI = {
     };
   },
 
-  async register(registerData: RegisterRequest): Promise<RegisterResponse> {
-    const response = await api.post("/auth/register", registerData);
-    
-    // El backend devuelve: { statusCode, message, data: { accessToken, ... } }
-    const authData = response.data?.data;
-    
-    // Validate response structure
-    if (!authData?.accessToken) {
-      console.error('Respuesta del registro:', response.data);
-      throw new Error("Token de acceso no recibido del servidor");
-    }
-    
-    // Decodificar el JWT para obtener información del usuario y contexto
-    let userInfo = { 
-      id: 'unknown', 
-      email: registerData.email, 
-      firstName: registerData.firstName,
-      lastName: registerData.lastName
-    };
-    let workspaceInfo = { orgId: '', wsId: '', wsName: registerData.organizationName, role: 'WORKSPACE_ADMIN' as const };
-    
-    try {
-      const payload = JSON.parse(atob(authData.accessToken.split('.')[1]));
-      userInfo = {
-        id: payload.sub || 'unknown',
-        email: payload.email || registerData.email,
-        firstName: registerData.firstName,
-        lastName: registerData.lastName
-      };
-      
-      // Extraer contexto del JWT
-      if (payload.org && payload.ws && payload.role) {
-        workspaceInfo = {
-          orgId: payload.org,
-          wsId: payload.ws,
-          wsName: registerData.organizationName,
-          role: payload.role
-        };
-      }
-    } catch (error) {
-      console.warn('No se pudo decodificar el JWT:', error);
-    }
-    
-    return {
-      accessToken: authData.accessToken,
-      user: userInfo,
-      workspace: workspaceInfo
-    };
-  },
-
   async getContexts(): Promise<UserContextsResponse> {
     const response = await api.get("/auth/contexts");
     return response.data;
@@ -191,6 +195,53 @@ export const AuthAPI = {
       resourceId
     });
     return response.data;
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // ██████╗ ████████╗██████╗     ███╗   ███╗███████╗████████╗██╗  ██╗ ██████╗ ██████╗ ███████╗
+  // ██╔═══██╗╚══██╔══╝██╔══██╗    ████╗ ████║██╔════╝╚══██╔══╝██║  ██║██╔═══██╗██╔══██╗██╔════╝
+  // ██║   ██║   ██║   ██████╔╝    ██╔████╔██║█████╗     ██║   ███████║██║   ██║██║  ██║███████╗
+  // ██║   ██║   ██║   ██╔═══╝     ██║╚██╔╝██║██╔══╝     ██║   ██╔══██║██║   ██║██║  ██║╚════██║
+  // ╚██████╔╝   ██║   ██║         ██║ ╚═╝ ██║███████╗   ██║   ██║  ██║╚██████╔╝██████╔╝███████║
+  //  ╚═════╝    ╚═╝   ╚═╝         ╚═╝     ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝
+  // ══════════════════════════════════════════════════════════════════════════════════════════
+
+  async registerEmail(email: string): Promise<RegisterEmailResponse> {
+    const response = await api.post("/auth/register-email", { email });
+    return response.data?.data || response.data;
+  },
+
+  async verifyOTP(email: string, otp: string): Promise<VerifyOTPResponse> {
+    const response = await api.post("/auth/verify-otp", { email, otp });
+    return response.data?.data || response.data;
+  },
+
+  async resendOTP(email: string): Promise<ResendOTPResponse> {
+    const response = await api.post("/auth/resend-otp", { email });
+    return response.data?.data || response.data;
+  },
+
+  async completeProfile(profileData: CompleteProfileRequest): Promise<CompleteProfileResponse> {
+    const response = await api.post("/auth/complete-profile", profileData);
+    return response.data?.data || response.data;
+  },
+
+  async forgotPasswordOTP(email: string): Promise<ForgotPasswordOTPResponse> {
+    const response = await api.post("/auth/forgot-password-otp", { email });
+    return response.data?.data || response.data;
+  },
+
+  async verifyResetOTP(email: string, otp: string): Promise<VerifyResetOTPResponse> {
+    const response = await api.post("/auth/verify-reset-otp", { email, otp });
+    return response.data?.data || response.data;
+  },
+
+  async resetPasswordWithToken(resetToken: string, newPassword: string): Promise<ResetPasswordWithTokenResponse> {
+    const response = await api.post("/auth/reset-password-with-token", { 
+      resetToken, 
+      newPassword 
+    });
+    return response.data?.data || response.data;
   },
 
   logout() {

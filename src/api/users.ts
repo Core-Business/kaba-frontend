@@ -75,4 +75,26 @@ export const UsersAPI = {
     // En el futuro se podría crear un endpoint específico para cambiar contraseña
     await this.updateUser(userId, { password: passwordData.newPassword });
   },
+
+  async uploadAvatar(file: File): Promise<User> {
+    const token = localStorage.getItem("kaba.token");
+    if (!token) {
+      throw new Error("No authentication token found");
+    }
+
+    // Decodificar el JWT para obtener el ID del usuario
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.sub;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.post(`/users/${userId}/avatar`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data?.data;
+  },
 }; 

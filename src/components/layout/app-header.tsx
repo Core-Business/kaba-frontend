@@ -3,10 +3,10 @@
 
 import Link from "next/link";
 import { UserNav } from "./user-nav";
-import { Building, FileText, PlusSquare, MinusSquare } from "lucide-react"; 
+import { Building, FileText } from "lucide-react";
 import { usePOA } from "@/hooks/use-poa";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+
 
 const navItemsForTitle = [
   { name: "Encabezado", href: "header" },
@@ -24,11 +24,10 @@ const navItemsForTitle = [
 ];
 
 export function AppHeader() {
-  const { poa, expandAllActivitiesInContext, collapseAllActivitiesInContext } = usePOA();
+  const { poa } = usePOA();
   const pathname = usePathname();
 
   let leftContent;
-  let activityControls = null;
 
   if (poa && pathname.startsWith('/builder/')) {
     const pathSegments = pathname.split('/');
@@ -58,20 +57,6 @@ export function AppHeader() {
       </div>
     );
 
-    if (pathname.endsWith('/activities')) {
-      activityControls = (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={expandAllActivitiesInContext} title="Expandir Todas las Actividades">
-            <PlusSquare className="h-4 w-4 mr-1" />
-            <span className="hidden md:inline">Expandir Todo</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={collapseAllActivitiesInContext} title="Contraer Todas las Actividades">
-            <MinusSquare className="h-4 w-4 mr-1" />
-            <span className="hidden md:inline">Contraer Todo</span>
-          </Button>
-        </div>
-      );
-    }
 
   } else {
     leftContent = (
@@ -89,7 +74,6 @@ export function AppHeader() {
           {leftContent}
         </div>
         <div className="flex flex-shrink-0 items-center space-x-4">
-          {activityControls}
           <UserNav />
         </div>
       </div>

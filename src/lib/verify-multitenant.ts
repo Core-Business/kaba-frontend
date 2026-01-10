@@ -8,7 +8,7 @@
  * 4. El AuthContext expone la interfaz correcta
  */
 
-export function verifyMultiTenantSetup() {
+export async function verifyMultiTenantSetup() {
   const results = {
     localStorage: false,
     headers: false,
@@ -38,7 +38,7 @@ export function verifyMultiTenantSetup() {
 
     // 2. Verificar que existe el hook useContexts
     try {
-      const useContextsModule = require('@/hooks/useContexts');
+      const useContextsModule = await import('@/hooks/useContexts');
       if (useContextsModule.useContexts && typeof useContextsModule.useContexts === 'function') {
         results.authContext = true;
       } else {
@@ -50,7 +50,7 @@ export function verifyMultiTenantSetup() {
 
     // 3. Verificar que el interceptor HTTP existe
     try {
-      const httpModule = require('@/api/http');
+      const httpModule = await import('@/api/http');
       if (httpModule.api && httpModule.api.interceptors) {
         results.interceptors = true;
       } else {
@@ -223,9 +223,9 @@ export function verifyClearAuth() {
 /**
  * Función helper para testing en consola del navegador
  */
-export function runMultiTenantVerification() {
+export async function runMultiTenantVerification() {
   if (typeof window !== 'undefined') {
-    const result = verifyMultiTenantSetup();
+    const result = await verifyMultiTenantSetup();
     console.group('🔍 Verificación Multi-Tenant (Fase 1)');
     console.log(result.summary);
     console.log('Detalles:', result.details);
@@ -240,7 +240,7 @@ export function runMultiTenantVerification() {
 /**
  * Ejecutar todas las verificaciones finales
  */
-export function runFinalVerifications() {
+export async function runFinalVerifications() {
   if (typeof window === 'undefined') {
     console.warn('Las verificaciones deben ejecutarse en el navegador');
     return null;
@@ -248,7 +248,7 @@ export function runFinalVerifications() {
 
   console.group('🔍 Verificaciones Finales - PR #6 Fase 1');
   
-  const multiTenant = verifyMultiTenantSetup();
+  const multiTenant = await verifyMultiTenantSetup();
   console.log('1. Multi-Tenant:', multiTenant.summary);
   
   const tokenRefresh = verifyTokenRefresh();

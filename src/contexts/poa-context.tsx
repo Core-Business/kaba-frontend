@@ -1,12 +1,14 @@
 
 "use client";
 
-import type { POA, POAActivity, POAHeader, POAActivityDecisionBranches, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition, POAReference } from '@/lib/schema';
+import type { POA, POAActivity, POAHeader, POAActivityAlternativeBranch, POAObjectiveHelperData, POAScopeHelperData, POADefinition, POAReference } from '@/lib/schema';
 import { createNewPOA as createNewPOASchema, defaultPOAObjectiveHelperData, defaultPOAScopeHelperData } from '@/lib/schema';
+import type { CreatePOARequest } from '@/api/poa';
 import type React from 'react';
-import { createContext, useCallback, useState, useEffect } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { getActivitiesInProceduralOrder } from '@/lib/activity-utils';
+import { usePOABackendController } from '@/hooks/use-poa-backend';
 
 const LOCAL_STORAGE_POA_LIST_KEY = "poaApp_poas";
 const LOCAL_STORAGE_POA_DETAIL_PREFIX = "poaApp_poa_detail_";
@@ -39,6 +41,26 @@ interface POAContextType {
   setScrollToActivityId: (id: string | null) => void;
   updateDefinitions: (definitions: POADefinition[]) => void;
   updateReferences: (references: POAReference[]) => void;
+  backendProcedureId: string | null;
+  setBackendProcedureId: (procedureId: string | null) => void;
+  isBackendLoading: boolean;
+  backendError: unknown;
+  saveToBackend: () => Promise<POA | undefined>;
+  createBackendPOA: (procedureId: string, poaData?: Partial<POA>) => Promise<POA>;
+  autoCreateBackendPOA: (procedureId: string, partialData?: Partial<CreatePOARequest>) => Promise<POA>;
+  refetchBackendPOA: () => Promise<unknown>;
+  backendMutations: {
+    isCreating: boolean;
+    isAutoCreating: boolean;
+    isUpdating: boolean;
+    isPartialUpdating: boolean;
+  };
+  completion: {
+    headerComplete: boolean;
+    objectiveComplete: boolean;
+    activitiesComplete: boolean;
+    allCriticalComplete: boolean;
+  };
 }
 
 export const POAContext = createContext<POAContextType | undefined>(undefined);
@@ -61,6 +83,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { toast } = useToast();
   const [expandedActivityIds, setExpandedActivityIds] = useState<Set<string>>(new Set());
   const [scrollToActivityId, setScrollToActivityId] = useState<string | null>(null);
+  const [backendProcedureId, setBackendProcedureId] = useState<string | null>(null);
+  const lastBackendProcedureIdRef = useRef<string | null>(null);
 
   const updatePoaListInStorage = (poaToUpdate: POA) => {
     if (typeof window !== 'undefined') {
@@ -134,18 +158,23 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateHeader = useCallback((updates: Partial<POAHeader>) => {
     setPoa(currentPoa => {
       if (!currentPoa) return null;
-      setIsDirty(true);
       const newHeader = { ...currentPoa.header, ...updates };
       let newName = currentPoa.name;
       if (updates.title && updates.title !== currentPoa.header.title) {
         newName = updates.title;
       }
 
-      return {
+      const updatedPoa = {
         ...currentPoa,
         name: newName,
         header: newHeader,
       };
+
+      if (JSON.stringify(updatedPoa) !== JSON.stringify(currentPoa)) {
+        setIsDirty(true);
+      }
+
+      return updatedPoa;
     });
   }, []);
 
@@ -226,8 +255,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...options,
       };
       
-      let activitiesToProcess = [...currentPoa.activities, newActivity];
-      let finalActivities = renumberUserNumbers(activitiesToProcess);
+      const activitiesToProcess = [...currentPoa.activities, newActivity];
+      const finalActivities = renumberUserNumbers(activitiesToProcess);
 
       const newlyAddedActivityIndex = finalActivities.findIndex(act => act.id === newActivity.id);
       if (newlyAddedActivityIndex !== -1) {
@@ -293,8 +322,8 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       
-      let remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
-      let finalActivities = renumberUserNumbers(remainingActivities);
+      const remainingActivities = currentPoa.activities.filter(act => !activitiesToDelete.has(act.id));
+      const finalActivities = renumberUserNumbers(remainingActivities);
       
       setExpandedActivityIds(prev => {
         const newSet = new Set(prev);
@@ -413,7 +442,7 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      let updatedActivities = currentPoa.activities.map(act => {
+      const updatedActivities = currentPoa.activities.map(act => {
         if (act.id === activityId) {
           return {
             ...act,
@@ -499,6 +528,60 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
+  const {
+    isLoading: isBackendLoading,
+    error: backendError,
+    saveToBackend,
+    createNewPOA,
+    autoCreatePOA,
+    refetch,
+    isCreating,
+    isAutoCreating,
+    isUpdating,
+    isPartialUpdating,
+  } = usePOABackendController({
+    procedureId: backendProcedureId,
+    poa,
+    isDirty,
+    setIsDirty,
+    loadPoa,
+    saveToLocalStorage: saveCurrentPOA,
+  });
+
+  const completion = useMemo(() => {
+    const headerComplete = Boolean(
+      poa?.header?.title?.trim() &&
+      poa?.header?.companyName?.trim() &&
+      poa?.header?.departmentArea?.trim() &&
+      poa?.header?.status?.trim()
+    );
+
+    const objectiveComplete = Boolean(poa?.objective && poa.objective.trim().length > 0);
+    const activitiesComplete = Boolean(poa?.activities && poa.activities.length > 0);
+
+    return {
+      headerComplete,
+      objectiveComplete,
+      activitiesComplete,
+      allCriticalComplete: headerComplete && objectiveComplete && activitiesComplete,
+    };
+  }, [poa]);
+
+  useEffect(() => {
+    if (lastBackendProcedureIdRef.current === backendProcedureId) {
+      return;
+    }
+
+    lastBackendProcedureIdRef.current = backendProcedureId;
+    if (!backendProcedureId) {
+      setPoa(null);
+      setIsDirty(false);
+    } else {
+      setPoa(null);
+      setIsDirty(false);
+    }
+  }, [backendProcedureId, setIsDirty, setPoa]);
+
   return (
     <POAContext.Provider value={{
       poa,
@@ -528,6 +611,21 @@ export const POAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setScrollToActivityId,
       updateDefinitions,
       updateReferences,
+      backendProcedureId,
+      setBackendProcedureId,
+      isBackendLoading,
+      backendError,
+      saveToBackend,
+      createBackendPOA: createNewPOA,
+      autoCreateBackendPOA: autoCreatePOA,
+      refetchBackendPOA: refetch,
+      backendMutations: {
+        isCreating,
+        isAutoCreating,
+        isUpdating,
+        isPartialUpdating,
+      },
+      completion,
     }}>
       {children}
     </POAContext.Provider>

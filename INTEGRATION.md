@@ -63,17 +63,21 @@ await createMutation.mutateAsync({
 
 ### **Gestión de POAs**
 ```tsx
-import { usePOABackend } from "@/hooks/use-poa-backend";
+import { usePOA } from "@/hooks/use-poa";
 
-const { 
-  poa, 
-  createNewPOA, 
-  autoCreatePOA, 
-  saveToBackend 
-} = usePOABackend(procedureId);
+const {
+  poa,
+  backendProcedureId,
+  isBackendLoading,
+  saveToBackend,
+  setBackendProcedureId,
+} = usePOA();
 
-// Auto-crear POA desde procedimiento
-await autoCreatePOA(procedureId);
+// Establece el procedimiento activo una única vez (ej. en el layout del builder)
+useEffect(() => {
+  setBackendProcedureId(procedureIdFromRoute);
+  return () => setBackendProcedureId(null);
+}, [procedureIdFromRoute, setBackendProcedureId]);
 
 // Guardar manual
 await saveToBackend();
@@ -112,7 +116,7 @@ await saveToBackend();
 ### **1. Desarrollo Solo Frontend**
 ```bash
 cd kaba-frontend
-pnpm dev
+npm run dev
 ```
 > Frontend disponible en `http://localhost:9002`
 
@@ -124,15 +128,15 @@ npm run start:dev
 
 # Terminal 2: Frontend  
 cd kaba-frontend
-pnpm dev
+npm run dev
 ```
 
 ### **3. Scripts Disponibles**
 ```bash
-pnpm dev          # Desarrollo
-pnpm build        # Construcción
-pnpm lint         # Linting
-pnpm typecheck    # Verificación TypeScript
+npm run dev          # Desarrollo
+npm run build        # Construcción
+npm run lint         # Linting
+npm run typecheck    # Verificación TypeScript
 ```
 
 ## 🔧 **CONFIGURACIÓN BACKEND NECESARIA**

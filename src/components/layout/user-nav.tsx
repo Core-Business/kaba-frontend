@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, LifeBuoy } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { UsersAPI } from "@/api/users";
 import { AuthAPI } from "@/api/auth";
@@ -30,32 +30,42 @@ interface UserInfo {
 export function UserNav() {
   const router = useRouter();
   const { user, clearAuth } = useAuth();
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [remoteUserInfo, setRemoteUserInfo] = useState<UserInfo | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      // Si tenemos user del contexto, usarlo directamente
-      setUserInfo({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        role: 'user'
-      });
-    } else {
-      loadUserInfo();
+  const contextUserInfo = useMemo<UserInfo | null>(() => {
+    if (!user) {
+      return null;
     }
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
+      role: "user",
+    };
   }, [user]);
 
-  const loadUserInfo = async () => {
+  const loadUserInfo = useCallback(async () => {
     try {
       const userData = await UsersAPI.getCurrentUser();
-      setUserInfo(userData);
+      setRemoteUserInfo(userData);
     } catch (error) {
       console.error('Error loading user info:', error);
       // Si no se puede cargar la info del usuario, mantener null
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (contextUserInfo) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      loadUserInfo();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [contextUserInfo, loadUserInfo]);
+
+  const userInfo = contextUserInfo ?? remoteUserInfo;
 
   const handleLogout = async () => {
     try {
