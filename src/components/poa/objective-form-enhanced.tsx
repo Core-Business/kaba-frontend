@@ -143,7 +143,6 @@ export function ObjectiveFormEnhanced() {
     setObjectiveBeforeAi(poa.objective || "");
 
     try {
-      console.log('=== DEBUG: Llamando a generateObjective ===');
       const result = await aiApi.generateObjective({
         procedureName: poa.name,
         companyName: poa.header.companyName,
@@ -154,24 +153,10 @@ export function ObjectiveFormEnhanced() {
         scope: poa.scope,
       });
 
-      console.log('=== DEBUG: Respuesta recibida ===');
-      console.log('Full result:', result);
-      console.log('result.objective:', result.objective);
-      console.log('typeof result:', typeof result);
-      console.log('Keys:', Object.keys(result));
-      console.log('Has objective key?', 'objective' in result);
-      console.log('Current poa.objective before update:', poa.objective);
-
       updateField("objective", result.objective);
-
-      console.log('=== DEBUG: updateField ejecutado ===');
       toast({ title: "Objetivo Generado", description: "Se ha creado un nuevo objetivo." });
     } catch (error) {
-      console.error("=== DEBUG: AI Generate Error ===", error);
-      if (error instanceof Error) {
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-      }
+      console.error("AI Generate Error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "No se pudo generar el objetivo.",
